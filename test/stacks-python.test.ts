@@ -52,6 +52,16 @@ it("adds mypy when it is configured and leaves pytest out without tests", async 
   expect(stack.release.version).toBeNull();
 });
 
+it("lets mypy pick its own files when the config names them", async () => {
+  const commands = async (files: Record<string, string>) =>
+    JSON.parse((await pythonStack.resolve(await repo(files))).ci?.with.commands ?? "");
+  expect(await commands({ "pyproject.toml": `${PYPROJECT}\n[tool.mypy]\nfiles = ["src", "hooks"]\n` })).toContain(
+    "mypy",
+  );
+  expect(await commands({ "requirements.txt": "", "mypy.ini": "[mypy]\nfiles = src\n" })).toContain("mypy");
+  expect(await commands({ "requirements.txt": "", "mypy.ini": "[mypy]\nstrict = True\n" })).toContain("mypy .");
+});
+
 it("runs everything through uv when the project has uv.lock", async () => {
   const stack = await pythonStack.resolve(
     await repo({ "pyproject.toml": `${PYPROJECT}\n[tool.mypy]\nstrict = true\n`, "uv.lock": "" }, ["tests"]),
