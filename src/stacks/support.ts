@@ -52,3 +52,8 @@ export async function readText(root: string, file: string): Promise<string | nul
     return null;
   }
 }
+
+/** The body of the `[name]` table of a TOML file, or "". */
+export function tomlSection(toml: string, name: string): string {
+  return toml.split(/^\[/m).find((part) => part.startsWith(`${name}]`)) ?? "";
+}

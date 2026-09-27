@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { pythonStack } from "../src/stacks/python.js";
+import { tomlSection } from "../src/stacks/support.js";
 import { tempDir } from "./helpers.js";
 
 async function repo(files: Record<string, string>, dirs: string[] = []): Promise<string> {
@@ -92,4 +93,10 @@ it("takes versions, os and a test command from stack options", async () => {
     commands: '["ruff format --check .","ruff check .","python -m unittest"]',
   });
   expect(stack.test).toBe("python -m unittest");
+});
+
+it("reads a TOML table by name", () => {
+  const toml = '[project]\nname = "a"\n\n[tool.mypy]\nfiles = ["src"]\n';
+  expect(tomlSection(toml, "tool.mypy")).toContain('files = ["src"]');
+  expect(tomlSection(toml, "tool.ruff")).toBe("");
 });

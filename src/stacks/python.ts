@@ -1,19 +1,14 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { StagedJob } from "../model.js";
-import { checkKeys, filesMatching, optionalString, readText, stringList } from "./support.js";
+import { checkKeys, filesMatching, optionalString, readText, stringList, tomlSection } from "./support.js";
 import type { StackPack } from "./types.js";
 
 const OPTION_KEYS = ["versions", "os", "test"];
 
 /** The `version = "…"` of the `[project]` table, if any. */
 function projectVersion(pyproject: string): string | null {
-  return /^version\s*=\s*"([^"]+)"/m.exec(section(pyproject, "project"))?.[1] ?? null;
-}
-
-/** The body of the `[name]` table of a TOML file, or "". */
-function section(toml: string, name: string): string {
-  return toml.split(/^\[/m).find((part) => part.startsWith(`${name}]`)) ?? "";
+  return /^version\s*=\s*"([^"]+)"/m.exec(tomlSection(pyproject, "project"))?.[1] ?? null;
 }
 
 export const pythonStack: StackPack = {
@@ -27,7 +22,7 @@ export const pythonStack: StackPack = {
     const mypyIni = (await readText(root, "mypy.ini")) ?? "";
     const mypy = has("mypy.ini") || pyproject.includes("[tool.mypy]");
     // a config that names its files decides what mypy checks; otherwise check the whole tree
-    const mypyFiles = /^files\s*=/m.test(mypyIni) || /^files\s*=/m.test(section(pyproject, "tool.mypy"));
+    const mypyFiles = /^files\s*=/m.test(mypyIni) || /^files\s*=/m.test(tomlSection(pyproject, "tool.mypy"));
     const hasTests = has("tests") || has("test") || filesMatching(root, ".", /^test_.*\.py$/).length > 0;
     const customTest = optionalString("python", options, "test");
     const pytest = customTest === undefined && hasTests;

@@ -58,6 +58,14 @@ describe("repositories without a node stack", () => {
 });
 
 describe("release extra files", () => {
+  it("writes version-file for stacks that keep their version in a source file", () => {
+    const release = { type: "ruby" as const, version: "1.2.0", versionFile: "lib/demo/version.rb" };
+    const outputs = releaseModule.outputs(makeContext({ stacks: [nodeResolved({ release })] }));
+    const pkg = JSON.parse(file(outputs, "release-please-config.json").content).packages["."];
+    expect(pkg["release-type"]).toBe("ruby");
+    expect(pkg["version-file"]).toBe("lib/demo/version.rb");
+  });
+
   const xml = { type: "xml" as const, path: "Directory.Build.props", xpath: "//Project/PropertyGroup/Version" };
   const config = (extraFiles?: (typeof xml)[]) => {
     const release = { type: "simple" as const, version: "1.0.0", ...(extraFiles ? { extraFiles } : {}) };
