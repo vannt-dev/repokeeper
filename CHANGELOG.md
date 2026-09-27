@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/vannt-dev/repokeeper/compare/v0.2.3...v0.3.0) (2026-09-27)
+
+
+### Features
+
+* github apply and an opt-in drift check ([#14](https://github.com/vannt-dev/repokeeper/issues/14)) ([3947d31](https://github.com/vannt-dev/repokeeper/commit/3947d312eea1b75756314b27f0832e56a36b5bfb))
+
 ## [0.2.3](https://github.com/vannt-dev/repokeeper/compare/v0.2.2...v0.2.3) (2026-09-27)
 
 
