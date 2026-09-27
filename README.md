@@ -107,6 +107,18 @@ It prints every change first and applies them with `--yes`, or after you confirm
 access to the repository. Legacy branch protection, visibility, secrets and collaborators are never
 touched.
 
+## Pilots
+
+Each stack is tried on a real or demo repository before a release. The demo repositories carry the
+[`repokeeper-demo`](https://github.com/topics/repokeeper-demo) topic:
+[dart](https://github.com/vannt-dev/repokeeper-demo-dart),
+[dotnet](https://github.com/vannt-dev/repokeeper-demo-dotnet),
+[go](https://github.com/vannt-dev/repokeeper-demo-go),
+[kotlin](https://github.com/vannt-dev/repokeeper-demo-kotlin),
+[php](https://github.com/vannt-dev/repokeeper-demo-php),
+[ruby](https://github.com/vannt-dev/repokeeper-demo-ruby) and
+[rust](https://github.com/vannt-dev/repokeeper-demo-rust).
+
 ## License
 
 MIT
