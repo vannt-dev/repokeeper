@@ -102,3 +102,11 @@ jobs:
       build-tool: gradle
       gradle-version: current
       commands: '["gradle check"]'
+  php:
+    uses: ./.github/workflows/stack-php.yml
+    with:
+      working-directory: fixtures/php
+      os: '["ubuntu-latest"]'
+      php-versions: '["8.3","8.4"]'
+      install-command: composer install --no-interaction --no-progress
+      commands: '["composer validate --strict","composer test"]'

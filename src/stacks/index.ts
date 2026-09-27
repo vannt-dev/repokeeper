@@ -5,6 +5,7 @@ import { goStack } from "./go.js";
 import { javaStack } from "./java.js";
 import { kotlinStack } from "./kotlin.js";
 import { nodeStack } from "./node.js";
+import { phpStack } from "./php.js";
 import { pythonStack } from "./python.js";
 import { rustStack } from "./rust.js";
 import { scriptStack } from "./script.js";
@@ -20,6 +21,7 @@ const PACKS: Record<StackId, StackPack> = {
   go: goStack,
   rust: rustStack,
   kotlin: kotlinStack,
+  php: phpStack,
 };
 
 export function getStackPack(id: StackId): StackPack {

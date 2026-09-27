@@ -7,6 +7,7 @@ import { goStack } from "../src/stacks/go.js";
 import { javaStack } from "../src/stacks/java.js";
 import { kotlinStack } from "../src/stacks/kotlin.js";
 import { nodeStack } from "../src/stacks/node.js";
+import { phpStack } from "../src/stacks/php.js";
 import { pythonStack } from "../src/stacks/python.js";
 import { rustStack } from "../src/stacks/rust.js";
 import { scriptStack } from "../src/stacks/script.js";
@@ -41,6 +42,7 @@ const REUSABLE = [
   "repokeeper-check.yml",
   "stack-go.yml",
   "stack-rust.yml",
+  "stack-php.yml",
 ];
 
 /** Fixture jobs in workflow-tests.yml and the pack that resolves each fixture. Each stack task appends its rows. */
@@ -56,6 +58,7 @@ const FIXTURES: { job: string; dir: string; pack: StackPack }[] = [
   { job: "go", dir: "fixtures/go", pack: goStack },
   { job: "rust", dir: "fixtures/rust", pack: rustStack },
   { job: "kotlin", dir: "fixtures/kotlin", pack: kotlinStack },
+  { job: "php", dir: "fixtures/php", pack: phpStack },
 ];
 
 const read = (name: string) => readFileSync(`.github/workflows/${name}`, "utf8");
