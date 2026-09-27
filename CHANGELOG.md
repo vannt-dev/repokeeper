@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/vannt-dev/repokeeper/compare/v0.2.1...v0.2.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* pilot findings from 0.2.1 ([#10](https://github.com/vannt-dev/repokeeper/issues/10)) ([b72553e](https://github.com/vannt-dev/repokeeper/commit/b72553ec0af6d4624b398d3cf6b28abeb0b20a09))
+
 ## [0.2.1](https://github.com/vannt-dev/repokeeper/compare/v0.2.0...v0.2.1) (2026-09-27)
 
 
