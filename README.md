@@ -52,8 +52,10 @@ Requires Node.js 22.12 or newer.
 
 `ci.yml` and `release.yml` call reusable workflows from this repository (`stack-node.yml`,
 `commitlint.yml`, `release-please.yml`) at the moving major tag, so fixes reach every repository
-without a pull request. repokeeper owns the `name`, `on` and `permissions` keys and the jobs it
-adds; jobs you add yourself are left alone, and so is the formatting of the rest of the file.
+without a pull request. repokeeper owns the `name`, `on`, `permissions` and `concurrency` keys and
+the jobs it adds; jobs you add yourself are left alone, and so is the formatting of the rest of the
+file. A new push to a pull request cancels that pull request's earlier `ci` run; runs on the default
+branch always finish.
 
 The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
 and PSScriptAnalyzer on `*.ps1`, which fails on errors and warnings (not on information-level rules). To

@@ -2,24 +2,87 @@ name: workflow-tests
 
 on:
   pull_request:
+    paths:
+      - .github/workflows/**
+      - fixtures/**
   push:
     branches: [main]
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Pull requests run only the fixtures whose files or workflow changed, on ubuntu and the newest
+# version; the full matrix, Windows included, runs on every push to main.
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Pick the fixtures a change touches
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "run=,all," >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          declare -A paths=(
+            [node-npm]="fixtures/node/ .github/workflows/stack-node.yml"
+            [node-pnpm]="fixtures/node-pnpm/ .github/workflows/stack-node.yml"
+            [python]="fixtures/python/ .github/workflows/stack-python.yml"
+            [dart]="fixtures/dart/ .github/workflows/stack-dart.yml"
+            [script]="fixtures/script/ .github/workflows/stack-script.yml"
+            [java-maven]="fixtures/java-maven/ .github/workflows/stack-java.yml"
+            [java-gradle]="fixtures/java-gradle/ .github/workflows/stack-java.yml"
+            [dotnet]="fixtures/dotnet/ .github/workflows/stack-dotnet.yml"
+            [go]="fixtures/go/ .github/workflows/stack-go.yml"
+            [rust]="fixtures/rust/ .github/workflows/stack-rust.yml"
+            [kotlin]="fixtures/kotlin/ .github/workflows/stack-java.yml"
+            [php]="fixtures/php/ .github/workflows/stack-php.yml"
+            [ruby]="fixtures/ruby/ .github/workflows/stack-ruby.yml"
+          )
+          files=$(git diff --name-only "$BASE" "$HEAD")
+          run=","
+          if grep -qx '.github/workflows/workflow-tests.yml' <<<"$files"; then run=",all,"; fi
+          for job in "${!paths[@]}"; do
+            for path in ${paths[$job]}; do
+              if grep -qF -- "$path" <<<"$files"; then
+                run+="$job,"
+                break
+              fi
+            done
+          done
+          echo "fixtures to run: $run"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
   node-npm:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',node-npm,')
     uses: ./.github/workflows/stack-node.yml
     with:
       working-directory: fixtures/node
-      os: '["ubuntu-latest","windows-latest"]'
-      node-versions: '["22","24"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      node-versions: ${{ github.event_name == 'push' && '["22","24"]' || '["24"]' }}
       package-manager: npm
       install-command: npm ci
       cache: npm
       scripts: '["test"]'
   node-pnpm:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',node-pnpm,')
     uses: ./.github/workflows/stack-node.yml
     with:
       working-directory: fixtures/node-pnpm
@@ -30,24 +93,30 @@ jobs:
       cache: ""
       scripts: '["test"]'
   python:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',python,')
     uses: ./.github/workflows/stack-python.yml
     with:
       working-directory: fixtures/python
-      os: '["ubuntu-latest","windows-latest"]'
-      python-versions: '["3.11","3.13"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      python-versions: ${{ github.event_name == 'push' && '["3.11","3.13"]' || '["3.13"]' }}
       manager: pip
       install-command: python -m pip install -e . && python -m pip install ruff pytest
       commands: '["ruff format --check .","ruff check .","python -m pytest"]'
   dart:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',dart,')
     uses: ./.github/workflows/stack-dart.yml
     with:
       working-directory: fixtures/dart
-      os: '["ubuntu-latest","windows-latest"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
       sdk-versions: '["stable"]'
       flutter: "false"
       install-command: dart pub get
       commands: '["dart format --output=none --set-exit-if-changed .","dart analyze","dart test"]'
   script:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',script,')
     uses: ./.github/workflows/stack-script.yml
     with:
       working-directory: fixtures/script
@@ -55,15 +124,19 @@ jobs:
       powershell-scripts: "true"
       test-command: ""
   java-maven:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',java-maven,')
     uses: ./.github/workflows/stack-java.yml
     with:
       working-directory: fixtures/java-maven
-      os: '["ubuntu-latest","windows-latest"]'
-      java-versions: '["17","21"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      java-versions: ${{ github.event_name == 'push' && '["17","21"]' || '["21"]' }}
       build-tool: maven
       gradle-version: ""
       commands: '["mvn -B verify"]'
   java-gradle:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',java-gradle,')
     uses: ./.github/workflows/stack-java.yml
     with:
       working-directory: fixtures/java-gradle
@@ -73,27 +146,35 @@ jobs:
       gradle-version: current
       commands: '["gradle check"]'
   dotnet:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',dotnet,')
     uses: ./.github/workflows/stack-dotnet.yml
     with:
       working-directory: fixtures/dotnet
-      os: '["ubuntu-latest","windows-latest"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
       dotnet-versions: '["8.0","9.0"]'
       commands: '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]'
   go:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',go,')
     uses: ./.github/workflows/stack-go.yml
     with:
       working-directory: fixtures/go
-      os: '["ubuntu-latest","windows-latest"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
       go-versions: '["stable"]'
       commands: '["test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }","go vet ./...","go test ./..."]'
   rust:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',rust,')
     uses: ./.github/workflows/stack-rust.yml
     with:
       working-directory: fixtures/rust
-      os: '["ubuntu-latest","windows-latest"]'
+      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
       rust-versions: '["stable"]'
       commands: '["cargo fmt --all --check","cargo clippy --workspace --all-targets -- -D warnings","cargo test --workspace --all-targets","cargo test --workspace --doc"]'
   kotlin:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',kotlin,')
     uses: ./.github/workflows/stack-java.yml
     with:
       working-directory: fixtures/kotlin
@@ -103,18 +184,22 @@ jobs:
       gradle-version: current
       commands: '["gradle check"]'
   php:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',php,')
     uses: ./.github/workflows/stack-php.yml
     with:
       working-directory: fixtures/php
       os: '["ubuntu-latest"]'
-      php-versions: '["8.3","8.4"]'
+      php-versions: ${{ github.event_name == 'push' && '["8.3","8.4"]' || '["8.4"]' }}
       install-command: composer install --no-interaction --no-progress
       commands: '["composer validate --no-check-publish","composer test"]'
   ruby:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',ruby,')
     uses: ./.github/workflows/stack-ruby.yml
     with:
       working-directory: fixtures/ruby
       os: '["ubuntu-latest"]'
-      ruby-versions: '["3.3","3.4"]'
+      ruby-versions: ${{ github.event_name == 'push' && '["3.3","3.4"]' || '["3.4"]' }}
       install-command: bundle install
       commands: '["bundle exec rake test"]'
