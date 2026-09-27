@@ -31,9 +31,8 @@ jobs:
           registry-url: https://registry.npmjs.org
           cache: npm
       - run: npm ci
+      # npm signs in through trusted publishing (OIDC), so no token secret is needed.
       - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: Move the major tag to this release
         env:
           TAG: ${{ needs.release.outputs.tag_name }}
