@@ -110,3 +110,11 @@ jobs:
       php-versions: '["8.3","8.4"]'
       install-command: composer install --no-interaction --no-progress
       commands: '["composer validate --strict","composer test"]'
+  ruby:
+    uses: ./.github/workflows/stack-ruby.yml
+    with:
+      working-directory: fixtures/ruby
+      os: '["ubuntu-latest"]'
+      ruby-versions: '["3.3","3.4"]'
+      install-command: bundle install
+      commands: '["bundle exec rake test"]'

@@ -1,0 +1,65 @@
+name: stack-ruby
+
+on:
+  workflow_call:
+    inputs:
+      ruby-versions:
+        description: JSON list of Ruby versions
+        type: string
+        default: '["3.3","3.4"]'
+      os:
+        description: JSON list of runner labels
+        type: string
+        default: '["ubuntu-latest"]'
+      install-command:
+        description: Command that installs dependencies
+        type: string
+        default: bundle install
+      commands:
+        description: JSON list of shell commands run in order
+        type: string
+        default: "[]"
+      working-directory:
+        description: Directory holding the Gemfile
+        type: string
+        default: .
+
+permissions:
+  contents: read
+
+jobs:
+  ruby:
+    name: ruby ${{ matrix.ruby }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        ruby: ${{ fromJSON(inputs.ruby-versions) }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with:
+          ruby-version: ${{ matrix.ruby }}
+          working-directory: ${{ inputs.working-directory }}
+      - name: Install dependencies
+        env:
+          INSTALL: ${{ inputs.install-command }}
+        run: bash -c "$INSTALL"
+      - name: Run checks
+        env:
+          COMMANDS: ${{ inputs.commands }}
+        run: |
+          node -e 'for (const c of JSON.parse(process.env.COMMANDS)) console.log(c)' | while IFS= read -r command; do
+            echo "::group::$command"
+            bash -c "$command" </dev/null
+            echo "::endgroup::"
+          done

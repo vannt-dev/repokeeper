@@ -64,9 +64,9 @@ describe("parseConfig", () => {
   });
 
   it("lists the allowed values of an enum", () => {
-    const text = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [ruby]\nmodules:\n  health: false\n";
+    const text = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [cobol]\nmodules:\n  health: false\n";
     expect(errorOf(text)).toBe(
-      ".repokeeper.yml:4: stacks.0 must be one of: node, python, dart, script, java, dotnet, go, rust, kotlin, php",
+      ".repokeeper.yml:4: stacks.0 must be one of: node, python, dart, script, java, dotnet, go, rust, kotlin, php, ruby",
     );
   });
 

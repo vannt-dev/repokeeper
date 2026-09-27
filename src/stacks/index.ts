@@ -7,6 +7,7 @@ import { kotlinStack } from "./kotlin.js";
 import { nodeStack } from "./node.js";
 import { phpStack } from "./php.js";
 import { pythonStack } from "./python.js";
+import { rubyStack } from "./ruby.js";
 import { rustStack } from "./rust.js";
 import { scriptStack } from "./script.js";
 import type { StackPack } from "./types.js";
@@ -22,6 +23,7 @@ const PACKS: Record<StackId, StackPack> = {
   rust: rustStack,
   kotlin: kotlinStack,
   php: phpStack,
+  ruby: rubyStack,
 };
 
 export function getStackPack(id: StackId): StackPack {
