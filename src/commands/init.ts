@@ -16,11 +16,30 @@ import { readCurrent } from "../sync/state.js";
 import { computeSync, pathsToWrite, type SyncResult } from "../sync/sync.js";
 import { STANDARD_VERSION } from "../version.js";
 import { buildContext } from "./context.js";
-import { type CommandOptions, printResult } from "./report.js";
+import { type CommandOptions, nextSteps, printResult } from "./report.js";
 
-export async function guardUncommitted(root: string, result: SyncResult, force: boolean): Promise<void> {
+/** A dirty path is still safe to write when every part repokeeper manages in it is exactly what it last wrote. */
+async function onlyRepokeeperChanges(root: string, path: string, lock: Lock | null): Promise<boolean> {
+  const entries = lock?.entries.filter((e) => e.target.path === path) ?? [];
+  if (entries.length === 0) return false;
+  for (const entry of entries) {
+    const current = await readCurrent(root, entry.target);
+    if (current === null || hashText(current) !== entry.hash) return false;
+  }
+  return true;
+}
+
+export async function guardUncommitted(
+  root: string,
+  result: SyncResult,
+  force: boolean,
+  lock: Lock | null = null,
+): Promise<void> {
   if (force) return;
-  const dirty = await dirtyPaths(root, pathsToWrite(result));
+  const dirty = [];
+  for (const d of await dirtyPaths(root, pathsToWrite(result))) {
+    if (!(await onlyRepokeeperChanges(root, d.path, lock))) dirty.push(d);
+  }
   if (dirty.length === 0) return;
   const names = dirty.map((d) => (d.untracked ? `${d.path} (untracked)` : d.path)).join(", ");
   const hint = dirty.some((d) => d.untracked)
@@ -60,9 +79,8 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   await writeFile(join(root, CONFIG_FILE), renderConfig(config));
   await applySync(root, result, null, STANDARD_VERSION);
   io.out(`applied standard ${STANDARD_VERSION}; wrote ${CONFIG_FILE}`);
-  io.out(
-    `next: install dependencies (this installs the git hooks), then commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`,
-  );
+  for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
+  io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
   return 0;
 }
 

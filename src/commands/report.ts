@@ -1,7 +1,9 @@
 import type { Io } from "../cli.js";
-import { describeOutput, type Output } from "../model.js";
+import { crlfTrackedFiles } from "../git.js";
+import { describeOutput, type ModuleContext, type Output } from "../model.js";
 import type { RemovalAction } from "../sync/decide.js";
 import type { SyncResult } from "../sync/sync.js";
+import { TOOL_VERSIONS } from "../version.js";
 
 export interface CommandOptions {
   dryRun: boolean;
@@ -50,6 +52,31 @@ export function printResult(io: Io, result: SyncResult): void {
     io.out(`${label.padEnd(10)} ${entry.target.path}${note}`);
   }
   io.out(`${unchanged} output(s) already match the standard`);
+}
+
+const WROTE: string[] = ["create", "write", "adopt"];
+
+/** What the user still has to do after a write: install the hooks, renormalize line endings. */
+export async function nextSteps(root: string, ctx: ModuleContext, result: SyncResult): Promise<string[]> {
+  const steps: string[] = [];
+  const wrote = (path: string) => result.decisions.some((d) => d.output.path === path && WROTE.includes(d.action));
+  if (ctx.config.modules.hooks && wrote("lefthook.yml")) {
+    steps.push(
+      ctx.stacks.some((s) => s.id === "node")
+        ? "install dependencies; this installs the git hooks"
+        : `run \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\` to enable the git hooks`,
+    );
+  }
+  if (wrote(".gitattributes")) {
+    const crlf = await crlfTrackedFiles(root);
+    if (crlf.length > 0) {
+      const files = crlf.length === 1 ? "1 file is" : `${crlf.length} files are`;
+      steps.push(
+        `${files} stored with CRLF line endings; run \`git add --renormalize .\` so they follow .gitattributes`,
+      );
+    }
+  }
+  return steps;
 }
 
 export function hasDrift(result: SyncResult): boolean {

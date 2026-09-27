@@ -11,7 +11,7 @@ import { STANDARD_VERSION } from "../version.js";
 import { assertSupportedStandard } from "./check.js";
 import { buildContext } from "./context.js";
 import { guardUncommitted } from "./init.js";
-import { type CommandOptions, printResult } from "./report.js";
+import { type CommandOptions, nextSteps, printResult } from "./report.js";
 
 export async function updateCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
   const config = await loadConfig(root);
@@ -25,13 +25,14 @@ export async function updateCommand(root: string, options: CommandOptions, io: I
     accept: new Set(options.accept),
     owned: config.owned,
   });
-  if (!options.dryRun) await guardUncommitted(root, result, options.force);
+  if (!options.dryRun) await guardUncommitted(root, result, options.force, lock);
   printResult(io, result);
   if (options.dryRun) {
     io.out("dry run: nothing written");
     return 0;
   }
   await applySync(root, result, lock, STANDARD_VERSION);
+  const steps = await nextSteps(root, ctx, result);
   if (config.standard !== STANDARD_VERSION) {
     const path = join(root, CONFIG_FILE);
     await writeFile(path, setStandard(await readFile(path, "utf8"), STANDARD_VERSION));
@@ -43,6 +44,7 @@ export async function updateCommand(root: string, options: CommandOptions, io: I
     );
     return 1;
   }
+  for (const step of steps) io.out(`next: ${step}`);
   io.out(
     `repository is on standard ${STANDARD_VERSION}; commit with "chore(repokeeper): update standard to ${STANDARD_VERSION}"`,
   );
