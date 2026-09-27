@@ -248,7 +248,9 @@ commit message `chore(repokeeper): update standard to <version>`.
 ## 8. GitHub settings
 
 `repokeeper github apply` reads the `github:` section, fetches current settings through the REST API
-and prints a diff. It applies changes only with `--yes` or an interactive confirmation.
+and prints a diff. It applies changes only with `--yes` or an interactive confirmation. Only the keys
+present in `github:` are managed. `required_checks` has no default: check names must match the check
+runs pull requests show (such as `commits / commitlint`), and a wrong name would block every merge.
 
 Managed: a repository ruleset named `repokeeper` targeting the default branch (required pull request,
 required status checks, no force push) — rulesets rather than legacy branch protection, which

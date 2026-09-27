@@ -1,7 +1,7 @@
 import { stringify } from "yaml";
 import { defaultBranch } from "../config/types.js";
 import { MANAGED_HEADER, type ModuleContext, type Output, type PlatformAdapter, type ReleaseInfo } from "../model.js";
-import { REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
+import { PACKAGE_VERSION, REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
 
 const yamlFile = (module: string, path: string, data: unknown): Output => ({
   kind: "file",
@@ -130,6 +130,14 @@ export const githubPlatform: PlatformAdapter = {
     }
     if (ctx.config.modules.commits) {
       jobs.push(workflowKey("ci", path, ["jobs", "commits"], { uses: workflowRef(ctx, "commitlint.yml") }));
+    }
+    if (ctx.config.modules.drift) {
+      jobs.push(
+        workflowKey("ci", path, ["jobs", "repokeeper"], {
+          uses: workflowRef(ctx, "repokeeper-check.yml"),
+          with: { version: PACKAGE_VERSION },
+        }),
+      );
     }
     if (jobs.length === 0) return [];
     return [

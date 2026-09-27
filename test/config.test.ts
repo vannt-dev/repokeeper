@@ -26,7 +26,7 @@ describe("parseConfig", () => {
     expect(parseConfig(renderConfig(base))).toEqual(base);
   });
 
-  it("defaults boolean modules to true and optional lists to empty", () => {
+  it("defaults boolean modules to true (drift to false) and optional lists to empty", () => {
     const config = parseConfig(
       "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n",
     );
@@ -38,6 +38,7 @@ describe("parseConfig", () => {
       release: true,
       deps: true,
       gitignore: true,
+      drift: false,
       health: false,
     });
     expect(config.owned).toEqual([]);
@@ -52,6 +53,14 @@ describe("parseConfig", () => {
     const text =
       "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n  hoks: true\n";
     expect(errorOf(text)).toBe(".repokeeper.yml:7: modules.hoks is not a known key");
+  });
+
+  it("checks the github section key by key", () => {
+    const base = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n";
+    expect(errorOf(`${base}github:\n  merge:\n    squosh: true\n`)).toBe(
+      ".repokeeper.yml:9: github.merge.squosh is not a known key",
+    );
+    expect(errorOf(`${base}github:\n  topics: [CLI]\n`)).toMatch(/^\.repokeeper\.yml:8: github\.topics\.0 must match/);
   });
 
   it("lists the allowed values of an enum", () => {

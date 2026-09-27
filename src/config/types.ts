@@ -1,3 +1,4 @@
+import type { GithubSettings } from "../github/settings.js";
 export const STACK_IDS = ["node", "python", "dart", "script", "java", "dotnet"] as const;
 export type StackId = (typeof STACK_IDS)[number];
 
@@ -19,6 +20,8 @@ export interface ModulesConfig {
   release: boolean;
   deps: boolean;
   gitignore: boolean;
+  /** A ci job that runs `repokeeper check`; off unless asked for. */
+  drift: boolean;
   health: HealthConfig | false;
 }
 
@@ -30,7 +33,7 @@ export interface RepokeeperConfig {
   modules: ModulesConfig;
   owned: string[];
   stack_options: Record<string, Record<string, unknown>>;
-  github?: Record<string, unknown>;
+  github?: GithubSettings;
 }
 
 /** The branch workflows run on and contributors branch from: `github.default_branch`, or `main`. */
@@ -59,6 +62,7 @@ export function defaultConfig(input: {
       release: true,
       deps: true,
       gitignore: true,
+      drift: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],

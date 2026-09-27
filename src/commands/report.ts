@@ -18,6 +18,7 @@ export interface CommandOptions {
   stacks: import("../config/types.js").StackId[];
   relock: boolean;
   json: boolean;
+  yes: boolean;
 }
 
 /** How to name the output under `owned`: the path, or `path#key` for one key of a shared file. */
