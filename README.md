@@ -28,7 +28,13 @@ repokeeper update   # move to the latest standard without overwriting your edits
 
 `init` never overwrites a file you already have: it reports it as unmanaged. Pass
 `--adopt <path>` to let repokeeper manage it, or list it under `owned` in `.repokeeper.yml` to keep it
-yours. Every write command accepts `--dry-run`.
+yours. `owned` also takes a single key of a shared file, such as `.github/workflows/ci.yml#on` or
+`package.json#devDependencies.lefthook`; repokeeper then leaves that key, and everything under it,
+alone. Every write command accepts `--dry-run`.
+
+`init` reads the default branch from `origin/HEAD` and records it as `github.default_branch` when it
+isn't `main`. The release manifest starts from the latest `vX.Y.Z` tag when the stack has no version
+of its own.
 
 Requires Node.js 22.12 or newer.
 
@@ -37,7 +43,18 @@ Requires Node.js 22.12 or newer.
 `ci.yml` and `release.yml` call reusable workflows from this repository (`stack-node.yml`,
 `commitlint.yml`, `release-please.yml`) at the moving major tag, so fixes reach every repository
 without a pull request. repokeeper owns the `name`, `on` and `permissions` keys and the jobs it
-adds; jobs you add yourself are left alone.
+adds; jobs you add yourself are left alone, and so is the formatting of the rest of the file.
+
+The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
+and PSScriptAnalyzer on `*.ps1`, which fails on warnings too. To relax a rule, add a
+`PSScriptAnalyzerSettings.psd1` at the repository root; PSScriptAnalyzer picks it up on its own:
+
+```powershell
+@{
+    # installers print for the person running them
+    ExcludeRules = @('PSAvoidUsingWriteHost')
+}
+```
 
 `release.yml` runs [release-please](https://github.com/googleapis/release-please): it keeps a release
 pull request open, and merging it tags the release and updates `CHANGELOG.md`. Two settings make this

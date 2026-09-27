@@ -83,6 +83,7 @@ Units and their contracts:
 | `file` | `lefthook.yml`, CI caller workflow, `commitlint.config.mjs`, templates | Whole file |
 | `block` | `.gitignore`, `.gitattributes` | Text between `repokeeper:start <id>` / `repokeeper:end <id>` markers, in the file's comment syntax |
 | `json` | `package.json` `scripts` entries, `devDependencies` of tools repokeeper configures | Named keys only |
+| `yaml` | Keys of workflows such as `ci.yml` | Named keys only; only their lines are rewritten, the rest of the file keeps its formatting |
 
 Block edits preserve the file's existing line endings and every byte outside the block.
 
@@ -108,12 +109,12 @@ modules:
     copyright: Van Nguyen   # LICENSE holder; init reads git config user.name
     contact: https://github.com/vannt-dev   # Code of Conduct contact; init derives it from the origin remote
     codeowners: ["@vannt-dev"]
-owned: []                # paths the user manages; repokeeper neither writes nor checks them
+owned: []                # paths, or path#key / path#block, the user manages; repokeeper neither writes nor checks them
 stack_options:
   node: { versions: ["22", "24"] }
   python: { versions: ["3.11", "3.12", "3.13"] }
-github:                  # used only by `repokeeper github apply`
-  default_branch: main
+github:                  # default_branch also drives the workflow triggers and CONTRIBUTING; the rest is for `repokeeper github apply`
+  default_branch: main   # init sets it from origin/HEAD when that isn't main
   protect:
     required_checks: [ci]
     require_pull_request: true
@@ -168,7 +169,7 @@ export default defineStack({
 | node | `package.json` | Biome if configured, otherwise Prettier + ESLint | package manager `test` script; npm/pnpm/yarn from the lockfile | Node 22, 24 |
 | python | `pyproject.toml`, `requirements.txt` | Ruff format + check, mypy when configured | pytest | 3.11 – 3.13 |
 | dart | `pubspec.yaml` | `dart format`, `flutter analyze` or `dart analyze` | `flutter test` or `dart test` | Flutter stable |
-| script | `*.sh`, `*.ps1` at the root or in `scripts/`, no other stack | shfmt + ShellCheck, PSScriptAnalyzer (in CI; no local hook). markdownlint is left out: it fails most existing READMEs on line length | repo-declared command, if any | ubuntu-latest, windows-latest |
+| script | `*.sh`, `*.ps1` at the root or in `scripts/`, no other stack | shfmt + ShellCheck, PSScriptAnalyzer (in CI; no local hook; a root `PSScriptAnalyzerSettings.psd1` relaxes rules). markdownlint is left out: it fails most existing READMEs on line length | repo-declared command, if any | ubuntu-latest, windows-latest |
 | java | `pom.xml`, `build.gradle`, `build.gradle.kts` | Spotless (google-java-format) through the build | `mvn -B verify` or `./gradlew check` | Temurin 17, 21 |
 | dotnet | `*.sln`, `*.csproj` | `dotnet format --verify-no-changes` | `dotnet test` | .NET 8.0, 9.0 |
 
