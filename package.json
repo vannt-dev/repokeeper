@@ -1,6 +1,6 @@
 {
   "name": "repokeeper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Keep every repository on one maintained standard: commits, git hooks, CI, releases, dependency updates and repo settings.",
   "type": "module",
   "bin": {
