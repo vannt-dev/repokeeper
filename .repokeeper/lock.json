@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "standard": "1.2.1",
+  "standard": "1.2.2",
   "entries": [
     {
       "id": "block:.gitattributes#editorconfig",
@@ -45,7 +45,7 @@
     {
       "id": "file:.github/dependabot.yml",
       "module": "deps",
-      "hash": "241cc7d23efd39f43ac51801e44a235f1e774737bfb9db007581d75d6c858039",
+      "hash": "576cbb6f6aa0b6159fecf25d103631a2e4509fb85e55e7bebe35590d5de62472",
       "target": {
         "kind": "file",
         "path": ".github/dependabot.yml"

@@ -5,7 +5,7 @@ export const PACKAGE_VERSION: string = (
 ).version;
 
 /** The standard this build of repokeeper applies. Bump it whenever generated output changes. */
-export const STANDARD_VERSION = "1.2.1";
+export const STANDARD_VERSION = "1.2.2";
 
 export const TOOL_VERSIONS = {
   lefthook: "2.1.14",
