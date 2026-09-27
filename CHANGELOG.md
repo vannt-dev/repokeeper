@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/vannt-dev/repokeeper/compare/v0.3.0...v0.4.0) (2026-09-27)
+
+
+### Features
+
+* go, rust, kotlin, php and ruby stack packs ([#17](https://github.com/vannt-dev/repokeeper/issues/17)) ([0f9d541](https://github.com/vannt-dev/repokeeper/commit/0f9d5410960005a1394099a95b0a0eb0d150c758))
+
 ## [0.3.0](https://github.com/vannt-dev/repokeeper/compare/v0.2.3...v0.3.0) (2026-09-27)
 
 
