@@ -25,7 +25,21 @@ export function parseRemoteUrl(url: string): { owner: string; name: string } | n
 
 export async function repoInfo(root: string): Promise<RepoInfo> {
   const url = await git(root, ["remote", "get-url", "origin"]);
-  return (url ? parseRemoteUrl(url) : null) ?? { owner: null, name: basename(root) };
+  const remote = (url ? parseRemoteUrl(url) : null) ?? { owner: null, name: basename(root) };
+  return { ...remote, releasedVersion: await latestReleaseVersion(root) };
+}
+
+/** The branch `origin/HEAD` points at, or null when the remote's default branch isn't known locally. */
+export async function remoteDefaultBranch(root: string): Promise<string | null> {
+  const ref = (await git(root, ["symbolic-ref", "--short", "refs/remotes/origin/HEAD"]))?.trim();
+  return ref?.startsWith("origin/") ? ref.slice("origin/".length) : null;
+}
+
+/** The highest `vX.Y.Z` tag as `X.Y.Z`; major tags such as `v0` are skipped. */
+export async function latestReleaseVersion(root: string): Promise<string | null> {
+  const tags = (await git(root, ["tag", "--list", "v*", "--sort=-v:refname"])) ?? "";
+  const tag = tags.split("\n").find((t) => /^v\d+\.\d+\.\d+$/.test(t.trim()));
+  return tag ? tag.trim().slice(1) : null;
 }
 
 export async function gitUserName(root: string): Promise<string | null> {

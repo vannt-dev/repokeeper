@@ -33,6 +33,12 @@ export interface RepokeeperConfig {
   github?: Record<string, unknown>;
 }
 
+/** The branch workflows run on and contributors branch from: `github.default_branch`, or `main`. */
+export function defaultBranch(config: RepokeeperConfig): string {
+  const branch = config.github?.default_branch;
+  return typeof branch === "string" && branch.length > 0 ? branch : "main";
+}
+
 export function defaultConfig(input: {
   stacks: StackId[];
   standard: string;

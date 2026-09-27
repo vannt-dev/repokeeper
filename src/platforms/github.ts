@@ -1,4 +1,5 @@
 import { stringify } from "yaml";
+import { defaultBranch } from "../config/types.js";
 import { MANAGED_HEADER, type ModuleContext, type Output, type PlatformAdapter, type ReleaseInfo } from "../model.js";
 import { REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
 
@@ -25,11 +26,6 @@ const workflowKey = (module: string, path: string, keyPath: string[], value: unk
   value,
   order: WORKFLOW_KEYS,
 });
-
-function defaultBranch(ctx: ModuleContext): string {
-  const branch = ctx.config.github?.default_branch;
-  return typeof branch === "string" && branch.length > 0 ? branch : "main";
-}
 
 const RELEASE_PLEASE_SCHEMA = "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json";
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
@@ -134,7 +130,7 @@ export const githubPlatform: PlatformAdapter = {
     if (jobs.length === 0) return [];
     return [
       workflowKey("ci", path, ["name"], "ci"),
-      workflowKey("ci", path, ["on"], { pull_request: null, push: { branches: [defaultBranch(ctx)] } }),
+      workflowKey("ci", path, ["on"], { pull_request: null, push: { branches: [defaultBranch(ctx.config)] } }),
       workflowKey("ci", path, ["permissions"], { contents: "read" }),
       ...jobs,
     ];
@@ -164,10 +160,10 @@ export const githubPlatform: PlatformAdapter = {
         kind: "seed",
         module: "release",
         path: ".release-please-manifest.json",
-        content: json({ ".": release.version ?? "0.0.0" }),
+        content: json({ ".": release.version ?? ctx.repo.releasedVersion ?? "0.0.0" }),
       },
       workflowKey("release", path, ["name"], "release"),
-      workflowKey("release", path, ["on"], { push: { branches: [defaultBranch(ctx)] } }),
+      workflowKey("release", path, ["on"], { push: { branches: [defaultBranch(ctx.config)] } }),
       workflowKey("release", path, ["permissions"], { contents: "read" }),
       workflowKey("release", path, ["jobs", "release"], {
         uses: workflowRef(ctx, "release-please.yml"),

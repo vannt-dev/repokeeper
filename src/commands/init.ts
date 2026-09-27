@@ -5,7 +5,7 @@ import type { Io } from "../cli.js";
 import { CONFIG_FILE, loadConfig, renderConfig } from "../config/load.js";
 import { defaultConfig } from "../config/types.js";
 import { UsageError } from "../errors.js";
-import { dirtyPaths, gitUserName, repoInfo } from "../git.js";
+import { dirtyPaths, gitUserName, remoteDefaultBranch, repoInfo } from "../git.js";
 import { outputId } from "../model.js";
 import { planOutputs } from "../plan.js";
 import { detectStacks } from "../stacks/index.js";
@@ -46,6 +46,8 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
     contact: repo.owner ? `https://github.com/${repo.owner}` : "the repository maintainers",
     codeowners: repo.owner ? [`@${repo.owner}`] : [],
   });
+  const branch = await remoteDefaultBranch(root);
+  if (branch && branch !== "main") config.github = { default_branch: branch };
   const ctx = await buildContext(root, config, repo);
   const adopt = options.adoptAll ? ("all" as const) : new Set(options.adopt);
   const result = await computeSync(root, planOutputs(ctx), null, { adopt, accept: new Set() });

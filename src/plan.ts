@@ -1,15 +1,14 @@
 import { type Module, type ModuleContext, type Output, outputId } from "./model.js";
 import { MODULES } from "./modules/index.js";
-
-const toPosix = (path: string) => path.replace(/\\/g, "/").replace(/^\.\//, "");
+import { isOwned } from "./owned.js";
+import { targetOf } from "./sync/lock.js";
 
 /** Pure: the outputs the standard asks for, given the config and resolved stacks. */
 export function planOutputs(ctx: ModuleContext, modules: Module[] = MODULES): Output[] {
-  const owned = new Set(ctx.config.owned.map(toPosix));
   const outputs = modules
     .filter((module) => module.enabled(ctx.config))
     .flatMap((module) => module.outputs(ctx))
-    .filter((output) => !owned.has(output.path));
+    .filter((output) => !isOwned(ctx.config.owned, targetOf(output)));
   const seen = new Set<string>();
   for (const output of outputs) {
     const id = outputId(output);

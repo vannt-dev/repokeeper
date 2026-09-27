@@ -1,5 +1,6 @@
 import type { Io } from "../cli.js";
-import { describeOutput } from "../model.js";
+import { describeOutput, type Output } from "../model.js";
+import type { RemovalAction } from "../sync/decide.js";
 import type { SyncResult } from "../sync/sync.js";
 
 export interface CommandOptions {
@@ -13,10 +14,23 @@ export interface CommandOptions {
   json: boolean;
 }
 
-const HINTS: Record<string, (path: string) => string> = {
-  conflict: (p) =>
-    `edited locally; take repokeeper's version with --accept ${p}, or add it to owned in .repokeeper.yml`,
-  unmanaged: (p) => `exists and is not managed; let repokeeper manage it with --adopt ${p}, or add it to owned`,
+/** How to name the output under `owned`: the path, or `path#key` for one key of a shared file. */
+function ownedName(output: Output): string {
+  if (output.kind === "yaml" || output.kind === "json") return `"${output.path}#${output.keyPath.join(".")}"`;
+  if (output.kind === "block") return `"${output.path}#${output.id}"`;
+  return "it";
+}
+
+const HINTS: Record<string, (output: Output) => string> = {
+  conflict: (o) =>
+    `edited locally; take repokeeper's version with --accept ${o.path}, or add ${ownedName(o)} to owned in .repokeeper.yml`,
+  unmanaged: (o) =>
+    `exists and is not managed; let repokeeper manage it with --adopt ${o.path}, or add ${ownedName(o)} to owned`,
+};
+
+const REMOVAL_NOTES: Partial<Record<RemovalAction, string>> = {
+  "orphan-edited": " (no longer generated, but edited locally; left in place)",
+  left: " (no longer generated; left for the tools that use it, delete it if none do)",
 };
 
 export function printResult(io: Io, result: SyncResult): void {
@@ -26,18 +40,18 @@ export function printResult(io: Io, result: SyncResult): void {
       unchanged++;
       continue;
     }
-    const hint = HINTS[action]?.(output.path);
+    const hint = HINTS[action]?.(output);
     io.out(`${action.padEnd(10)} ${describeOutput(output)}${hint ? ` (${hint})` : ""}`);
   }
   for (const { entry, action } of result.removals) {
-    if (action === "gone") continue;
-    const label = action === "delete" ? "delete" : "kept";
-    const note = action === "delete" ? "" : " (no longer generated, but edited locally; left in place)";
+    if (action === "gone" || action === "release") continue;
+    const label = action === "orphan-edited" ? "kept" : action;
+    const note = REMOVAL_NOTES[action] ?? "";
     io.out(`${label.padEnd(10)} ${entry.target.path}${note}`);
   }
   io.out(`${unchanged} output(s) already match the standard`);
 }
 
 export function hasDrift(result: SyncResult): boolean {
-  return result.decisions.some((d) => d.action !== "unchanged") || result.removals.length > 0;
+  return result.decisions.some((d) => d.action !== "unchanged") || result.removals.some((r) => r.action !== "release");
 }

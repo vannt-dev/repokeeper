@@ -1,11 +1,11 @@
 {
   "lockVersion": 1,
-  "standard": "1.2.0",
+  "standard": "1.2.1",
   "entries": [
     {
       "id": "block:.gitattributes#editorconfig",
       "module": "editorconfig",
-      "hash": "23f639d92d34b61d14a737aded8b30d3de249a0f19b7ac32b9789bf3f7d32c4d",
+      "hash": "e70ac9143c0c20c9ccae58abde2993797ec8cf7885322b000654d798267c4a48",
       "target": {
         "kind": "block",
         "path": ".gitattributes",

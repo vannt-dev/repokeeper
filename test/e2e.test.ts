@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { appendFile, readFile, rm, writeFile } from "node:fs/promises";
+import { appendFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
@@ -201,6 +201,55 @@ describe("repokeeper end to end", () => {
     expect(await readFile(join(dir, ".gitignore"), "utf8")).toContain("## Python (github/gitignore)");
     commitAll(dir);
     expect((await repokeeper(dir, "check")).code).toBe(0);
+  });
+
+  it("adds its jobs to an existing workflow, keeps its formatting and lets the user own single keys", async () => {
+    const dir = await nodeRepo();
+    const workflow = join(dir, ".github/workflows/ci.yml");
+    const mine =
+      "name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n";
+    await mkdir(join(dir, ".github/workflows"), { recursive: true });
+    await writeFile(workflow, mine);
+    commitAll(dir);
+
+    const init = await repokeeper(dir, "init");
+    expect(init.out).toContain('add ".github/workflows/ci.yml#on" to owned');
+    const text = await readFile(workflow, "utf8");
+    expect(text.startsWith("name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n\n")).toBe(true);
+    expect(text).toContain(
+      "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n  commits:\n",
+    );
+    expect((await repokeeper(dir, "check")).code).toBe(1);
+
+    const config = join(dir, ".repokeeper.yml");
+    const owned = "owned:\n  - .github/workflows/ci.yml#name\n  - .github/workflows/ci.yml#on\n";
+    await writeFile(config, (await readFile(config, "utf8")).replace("owned: []\n", owned));
+    commitAll(dir);
+    const check = await repokeeper(dir, "check");
+    expect(check.out).toContain("repository matches the standard");
+    expect(check.code).toBe(0);
+  });
+
+  it("follows the remote's default branch and continues from the latest release tag", async () => {
+    const dir = await tempDir();
+    await writeFile(join(dir, "install.sh"), "#!/bin/sh\necho hi\n");
+    sh(dir, "init", "-q", "-b", "master");
+    sh(dir, "config", "user.name", "Demo User");
+    sh(dir, "config", "user.email", "demo@example.com");
+    sh(dir, "remote", "add", "origin", "https://github.com/demo-owner/demo.git");
+    sh(dir, "add", "-A");
+    sh(dir, "commit", "-qm", "chore: initial");
+    sh(dir, "tag", "v0.1.0");
+    sh(dir, "tag", "v0.2.0");
+    sh(dir, "tag", "v0");
+    sh(dir, "update-ref", "refs/remotes/origin/master", "HEAD");
+    sh(dir, "symbolic-ref", "refs/remotes/origin/HEAD", "refs/remotes/origin/master");
+
+    expect((await repokeeper(dir, "init")).code).toBe(0);
+    expect(parse(await readFile(join(dir, ".repokeeper.yml"), "utf8")).github).toEqual({ default_branch: "master" });
+    expect(parse(await readFile(join(dir, ".github/workflows/ci.yml"), "utf8")).on.push.branches).toEqual(["master"]);
+    expect(await readFile(join(dir, "CONTRIBUTING.md"), "utf8")).toContain("Create a branch from `master`.");
+    expect(JSON.parse(await readFile(join(dir, ".release-please-manifest.json"), "utf8"))).toEqual({ ".": "0.2.0" });
   });
 
   it("changes nothing on a dry run and prints JSON for check", async () => {

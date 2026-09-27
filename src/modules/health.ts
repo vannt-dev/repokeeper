@@ -1,3 +1,4 @@
+import { defaultBranch } from "../config/types.js";
 import { UsageError } from "../errors.js";
 import { MANAGED_HEADER, type Module, type Output } from "../model.js";
 import { readTemplate } from "../templates.js";
@@ -60,12 +61,12 @@ export const healthModule: Module = {
     const run = install.length ? `Run ${install.map((c) => `\`${c}\``).join(" and ")}.` : "";
     const hooks = ctx.stacks.some((s) => s.id === "node")
       ? "Installing the dependencies also installs the git hooks (lefthook)."
-      : `Then run \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\` once to enable the git hooks (they need Node.js 22 or newer).`;
+      : `${run ? "Then run" : "Run"} \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\` once to enable the git hooks (they need Node.js 22 or newer).`;
     const setup = [run, hooks].filter(Boolean).join(" ");
     outputs.push(
       md(
         "CONTRIBUTING.md",
-        `# Contributing\n\n<!-- ${MANAGED_HEADER} -->\n\nThanks for helping improve this project.\n\n## Local setup\n\n${setup}\n\n## Workflow\n\n1. Create a branch from \`main\`.\n2. Write commit messages in [Conventional Commits](https://www.conventionalcommits.org/) form, for example \`feat: add export button\` or \`fix(api): handle empty input\`. The \`commit-msg\` hook checks them.\n3. Open a pull request. It is merged once the checks pass and it has been reviewed.\n\nPlease follow the [Code of Conduct](CODE_OF_CONDUCT.md).\n`,
+        `# Contributing\n\n<!-- ${MANAGED_HEADER} -->\n\nThanks for helping improve this project.\n\n## Local setup\n\n${setup}\n\n## Workflow\n\n1. Create a branch from \`${defaultBranch(ctx.config)}\`.\n2. Write commit messages in [Conventional Commits](https://www.conventionalcommits.org/) form, for example \`feat: add export button\` or \`fix(api): handle empty input\`. The \`commit-msg\` hook checks them.\n3. Open a pull request. It is merged once the checks pass and it has been reviewed.\n\nPlease follow the [Code of Conduct](CODE_OF_CONDUCT.md).\n`,
       ),
     );
 

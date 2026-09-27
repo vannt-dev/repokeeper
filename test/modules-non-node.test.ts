@@ -34,6 +34,23 @@ describe("repositories without a node stack", () => {
     expect(contributing.content).toContain(`\`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\``);
   });
 
+  it("start the setup with the hook install when the stack has no install command", () => {
+    const script = nodeResolved({ id: "script", staged: [], test: null, install: null, gitignore: [], dependabot: [] });
+    const contributing = file(healthModule.outputs(makeContext({ stacks: [script] })), "CONTRIBUTING.md");
+    expect(contributing.content).toContain(
+      `## Local setup\n\nRun \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\``,
+    );
+    expect(contributing.content).not.toContain("Then run");
+  });
+
+  it("name the configured default branch in the workflow", () => {
+    const ctx = makeContext({ config: { github: { default_branch: "master" } } });
+    expect(file(healthModule.outputs(ctx), "CONTRIBUTING.md").content).toContain("Create a branch from `master`.");
+    expect(file(healthModule.outputs(makeContext()), "CONTRIBUTING.md").content).toContain(
+      "Create a branch from `main`.",
+    );
+  });
+
   it("keep the node setup sentence for node repositories", () => {
     const contributing = file(healthModule.outputs(makeContext()), "CONTRIBUTING.md");
     expect(contributing.content).toContain("Installing the dependencies also installs the git hooks (lefthook).");

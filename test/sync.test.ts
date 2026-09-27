@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { hasDrift } from "../src/commands/report.js";
 import type { Output } from "../src/model.js";
 import { applySync } from "../src/sync/apply.js";
 import { readLock } from "../src/sync/lock.js";
@@ -98,5 +99,20 @@ describe("sync", () => {
     expect(await readFile(join(root, ".gitignore"), "utf8")).toBe("");
     expect(await readFile(join(root, "package.json"), "utf8")).toContain("^9");
     expect((await readLock(root))?.entries).toEqual([]);
+  });
+
+  it("hands output over to the user when it becomes owned, without deleting it", async () => {
+    const root = await tempDir();
+    await syncTo(root, v1);
+    const owned = ["nested/dir/a.txt", "package.json#devDependencies"];
+    const result = await syncTo(root, v1.slice(1, 2), { ...none, owned });
+    expect(Object.fromEntries(result.removals.map((r) => [r.entry.target.path, r.action]))).toEqual({
+      "nested/dir/a.txt": "release",
+      "package.json": "release",
+    });
+    expect(hasDrift(result)).toBe(false);
+    expect(await readFile(join(root, "nested/dir/a.txt"), "utf8")).toBe("a1\n");
+    expect(await readFile(join(root, "package.json"), "utf8")).toContain("lefthook");
+    expect((await readLock(root))?.entries.map((e) => e.target.path)).toEqual([".gitignore"]);
   });
 });
