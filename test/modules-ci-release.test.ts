@@ -5,7 +5,7 @@ import { parse } from "yaml";
 import type { Output } from "../src/model.js";
 import { ciModule } from "../src/modules/ci.js";
 import { pickRelease, releaseModule } from "../src/modules/release.js";
-import { WORKFLOW_REF } from "../src/version.js";
+import { PACKAGE_VERSION, WORKFLOW_REF } from "../src/version.js";
 import { makeContext, nodeResolved, syncOnce, tempDir } from "./helpers.js";
 
 const keys = (outputs: Output[]) =>
@@ -37,6 +37,15 @@ describe("ci module", () => {
     const out = keys(ciModule.outputs(ctx));
     expect(out.on).toEqual({ pull_request: null, push: { branches: ["trunk"] } });
     expect(out["jobs.commits"]).toBeUndefined();
+  });
+
+  it("adds a drift check pinned to this repokeeper version when the drift module is on", () => {
+    expect(keys(ciModule.outputs(makeContext()))["jobs.repokeeper"]).toBeUndefined();
+    const out = keys(ciModule.outputs(makeContext({ modules: { drift: true } })));
+    expect(out["jobs.repokeeper"]).toEqual({
+      uses: `vannt-dev/repokeeper/.github/workflows/repokeeper-check.yml@${WORKFLOW_REF}`,
+      with: { version: PACKAGE_VERSION },
+    });
   });
 
   it("produces nothing when no job would run", () => {

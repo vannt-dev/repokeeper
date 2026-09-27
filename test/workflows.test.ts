@@ -35,6 +35,7 @@ const REUSABLE = [
   "stack-python.yml",
   "stack-java.yml",
   "stack-dotnet.yml",
+  "repokeeper-check.yml",
 ];
 
 /** Fixture jobs in workflow-tests.yml and the pack that resolves each fixture. Each stack task appends its rows. */
