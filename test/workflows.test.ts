@@ -24,9 +24,12 @@ interface Job {
   steps?: Step[];
   uses?: string;
   with?: Record<string, string>;
+  needs?: string | string[];
+  if?: string;
 }
 interface Workflow {
   on: { workflow_call?: { inputs?: Record<string, unknown>; outputs?: Record<string, unknown> } };
+  concurrency?: Record<string, string>;
   jobs: Record<string, Job>;
 }
 
@@ -107,6 +110,27 @@ describe.each(FIXTURES)("fixture $dir", ({ job, dir, pack }) => {
     expect(fixtureJob?.uses).toBe(`./.github/workflows/${ci?.workflow}`);
     expect(fixtureJob?.with?.["working-directory"]).toBe(dir);
     expect(comparable(fixtureJob?.with)).toEqual(comparable(ci?.with));
+  });
+
+  it("runs only when its fixture or workflow changed, or on the default branch", async () => {
+    const tests = workflow("workflow-tests.yml");
+    const fixtureJob = tests.jobs[job];
+    expect(fixtureJob?.needs).toBe("changes");
+    expect(fixtureJob?.if).toBe(
+      `contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',${job},')`,
+    );
+    const script = tests.jobs.changes?.steps?.map((s) => s.run ?? "").join("\n") ?? "";
+    const ci = (await pack.resolve(dir)).ci;
+    expect(script).toContain(`[${job}]="${dir}/ .github/workflows/${ci?.workflow}"`);
+  });
+});
+
+it("workflow-tests cancels superseded pull request runs", () => {
+  expect(workflow("workflow-tests.yml").concurrency).toEqual({
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+    group: "${{ github.workflow }}-${{ github.ref }}",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+    "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
   });
 });
 
