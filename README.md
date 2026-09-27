@@ -36,6 +36,15 @@ alone. Every write command accepts `--dry-run`.
 isn't `main`. The release manifest starts from the latest `vX.Y.Z` tag when the stack has no version
 of its own.
 
+After writing, repokeeper prints what is left to do (installing the git hooks, and
+`git add --renormalize .` when tracked files are stored with CRLF). `init`, `update` and `check` also
+point out what they can't fix: `.gitattributes` lines above the repokeeper block that the block
+overrides, and pull request workflows of your own that run the same tests as the repokeeper ci job.
+
+Stack notes: Python runs `mypy` on the files its config names (`files = …`), or on the whole tree
+otherwise. The dotnet stack needs SDK-style projects; `init` stops with the names of .NET Framework
+projects, which the dotnet CLI can't build.
+
 Requires Node.js 22.12 or newer.
 
 ## CI and releases
