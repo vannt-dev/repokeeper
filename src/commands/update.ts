@@ -33,7 +33,7 @@ export async function updateCommand(root: string, options: CommandOptions, io: I
   }
   await applySync(root, result, lock, STANDARD_VERSION);
   const steps = await nextSteps(root, ctx, result);
-  await printWarnings(root, config, io);
+  await printWarnings(root, ctx, io);
   if (config.standard !== STANDARD_VERSION) {
     const path = join(root, CONFIG_FILE);
     await writeFile(path, setStandard(await readFile(path, "utf8"), STANDARD_VERSION));

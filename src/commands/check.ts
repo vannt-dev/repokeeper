@@ -49,7 +49,7 @@ export async function checkCommand(root: string, options: CommandOptions, io: Io
     return clean ? 0 : 1;
   }
   printResult(io, result);
-  await printWarnings(root, config, io);
+  await printWarnings(root, ctx, io);
   if (behind)
     io.out(`standard   ${config.standard} applied, ${STANDARD_VERSION} available (run \`repokeeper update\`)`);
   io.out(clean ? "repository matches the standard" : "repository has drifted from the standard");

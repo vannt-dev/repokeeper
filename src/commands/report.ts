@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Io } from "../cli.js";
-import type { RepokeeperConfig } from "../config/types.js";
+import { duplicateTestRuns } from "../duplicates.js";
 import { crlfTrackedFiles } from "../git.js";
 import { describeOutput, type ModuleContext, type Output } from "../model.js";
 import { overriddenAttributes } from "../sync/attributes.js";
@@ -84,8 +84,15 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
 }
 
 /** Problems repokeeper can't fix itself; printed, but not counted as drift. */
-export async function printWarnings(root: string, config: RepokeeperConfig, io: Io): Promise<void> {
-  if (!config.modules.editorconfig) return;
+export async function printWarnings(root: string, ctx: ModuleContext, io: Io): Promise<void> {
+  if (ctx.config.modules.ci) {
+    for (const { file, command } of await duplicateTestRuns(root, ctx.stacks)) {
+      io.out(
+        `note: ${file} also runs "${command}", which the repokeeper ci job now runs too; drop one of them to save CI time`,
+      );
+    }
+  }
+  if (!ctx.config.modules.editorconfig) return;
   const text = await readFile(join(root, ".gitattributes"), "utf8").catch(() => "");
   for (const { line, by } of overriddenAttributes(text, "editorconfig")) {
     io.out(

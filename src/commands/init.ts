@@ -79,7 +79,7 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   await writeFile(join(root, CONFIG_FILE), renderConfig(config));
   await applySync(root, result, null, STANDARD_VERSION);
   io.out(`applied standard ${STANDARD_VERSION}; wrote ${CONFIG_FILE}`);
-  await printWarnings(root, config, io);
+  await printWarnings(root, ctx, io);
   for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
   io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
   return 0;

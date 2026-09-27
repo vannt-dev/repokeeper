@@ -223,15 +223,18 @@ describe("repokeeper end to end", () => {
     const dir = await nodeRepo();
     const workflow = join(dir, ".github/workflows/ci.yml");
     const mine =
-      "name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n";
+      "name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n";
     await mkdir(join(dir, ".github/workflows"), { recursive: true });
     await writeFile(workflow, mine);
     commitAll(dir);
 
     const init = await repokeeper(dir, "init");
     expect(init.out).toContain('add ".github/workflows/ci.yml#on" to owned');
+    expect(init.out).toContain('note: .github/workflows/ci.yml also runs "npm test"');
     const text = await readFile(workflow, "utf8");
-    expect(text.startsWith("name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n\n")).toBe(true);
+    expect(text.startsWith("name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n\n")).toBe(
+      true,
+    );
     expect(text).toContain(
       "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n  commits:\n",
     );
