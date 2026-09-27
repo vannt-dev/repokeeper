@@ -106,6 +106,8 @@ export interface ResolvedStack {
 export interface RepoInfo {
   owner: string | null;
   name: string;
+  /** Version of the latest `vX.Y.Z` tag; seeds the release manifest when the stack has no version of its own. */
+  releasedVersion?: string | null;
 }
 
 export interface PlatformAdapter {
