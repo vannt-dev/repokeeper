@@ -5,18 +5,21 @@ import { checkKeys, filesMatching, readText, stringList } from "./support.js";
 import type { StackPack } from "./types.js";
 
 const OPTION_KEYS = ["versions", "os"];
-const QUOTED_VERSION = /version\s*=\s*["']([^"']+)["']/i;
+// only the gem's own version: not MINIMUM_RUBY_VERSION, required_ruby_version or a computed value
+const VERSION_CONSTANT = /^\s*VERSION\s*=\s*["']([^"']+)["']/m;
+const GEMSPEC_VERSION = /\.version\s*=\s*["']([^"']+)["']/;
 
-/** A `VERSION = "x.y.z"` in lib/<name>/version.rb, else the gemspec's `version = "x.y.z"`. */
+/** A `VERSION = "x.y.z"` in lib/<name>/version.rb, else the gemspec's `s.version = "x.y.z"`. */
 async function rubyRelease(root: string): Promise<ReleaseInfo> {
   for (const dir of filesMatching(root, "lib", /^[^.]+$/)) {
     const path = `lib/${dir}/version.rb`;
-    const version = QUOTED_VERSION.exec((await readText(root, path)) ?? "")?.[1];
+    const version = VERSION_CONSTANT.exec((await readText(root, path)) ?? "")?.[1];
     if (version) return { type: "ruby", version, versionFile: path };
   }
   for (const spec of filesMatching(root, ".", /\.gemspec$/)) {
-    const version = QUOTED_VERSION.exec((await readText(root, spec)) ?? "")?.[1];
-    if (version) return { type: "ruby", version };
+    const version = GEMSPEC_VERSION.exec((await readText(root, spec)) ?? "")?.[1];
+    // release-please's ruby strategy only bumps version.rb; the generic updater bumps the gemspec
+    if (version) return { type: "ruby", version, extraFiles: [spec] };
   }
   return { type: "ruby", version: null };
 }

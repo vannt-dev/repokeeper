@@ -31,7 +31,7 @@ it("validates composer.json, runs configured analysers and the test script", asy
       os: '["ubuntu-latest"]',
       "install-command": "composer install --no-interaction --no-progress",
       commands: JSON.stringify([
-        "composer validate --strict",
+        "composer validate --no-check-publish",
         "vendor/bin/php-cs-fixer fix --dry-run --diff",
         "vendor/bin/phpstan analyse --no-progress",
         "composer test",
@@ -54,6 +54,6 @@ it("falls back to PHPUnit's config, and has no test command without one", async 
   const bare = await phpStack.resolve(await repo({ "composer.json": composer() }));
   expect(bare.test).toBeNull();
   expect(bare.staged).toEqual([]);
-  expect(JSON.parse(bare.ci?.with.commands ?? "")).toEqual(["composer validate --strict"]);
+  expect(JSON.parse(bare.ci?.with.commands ?? "")).toEqual(["composer validate --no-check-publish"]);
   expect(bare.release).toEqual({ type: "php", version: null });
 });

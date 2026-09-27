@@ -6,13 +6,15 @@ import { checkKeys, stringList } from "./support.js";
 import type { StackPack } from "./types.js";
 
 const OPTION_KEYS = ["versions", "os"];
-const KOTLIN = /\bkotlin\(\s*"|org\.jetbrains\.kotlin/;
-const ANDROID = /com\.android\.(application|library)/;
+// plugin ids, the kotlin() shorthand and version-catalog aliases; org.jetbrains.kotlinx is a library, not the plugin
+const KOTLIN = /\bkotlin\(\s*"|org\.jetbrains\.kotlin[."']|libs\.plugins\.kotlin\b/;
+const ANDROID = /com\.android\.(application|library)|libs\.plugins\.android\b/;
 
+/** The root Gradle build files, with `//` comments removed. */
 function buildFiles(root: string): { file: string; text: string }[] {
   return GRADLE_FILES.flatMap((file) => {
     try {
-      return [{ file, text: readFileSync(join(root, file), "utf8") }];
+      return [{ file, text: readFileSync(join(root, file), "utf8").replace(/\/\/.*$/gm, "") }];
     } catch {
       return [];
     }

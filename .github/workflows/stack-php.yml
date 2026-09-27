@@ -18,7 +18,7 @@ on:
       commands:
         description: JSON list of shell commands run in order
         type: string
-        default: '["composer validate --strict"]'
+        default: '["composer validate --no-check-publish"]'
       working-directory:
         description: Directory holding composer.json
         type: string

@@ -46,7 +46,8 @@ export const phpStack: StackPack = {
           os: JSON.stringify(stringList("php", options, "os") ?? ["ubuntu-latest"]),
           "install-command": "composer install --no-interaction --no-progress",
           commands: JSON.stringify([
-            "composer validate --strict",
+            // --strict would fail on warnings such as a missing license or the version field release-please writes
+            "composer validate --no-check-publish",
             ...(csFixer ? ["vendor/bin/php-cs-fixer fix --dry-run --diff"] : []),
             ...(phpstan ? ["vendor/bin/phpstan analyse --no-progress"] : []),
             ...(test ? [test] : []),

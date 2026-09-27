@@ -173,9 +173,9 @@ export default defineStack({
 | java | `pom.xml`, `build.gradle`, `build.gradle.kts` | Spotless (google-java-format) through the build | `mvn -B verify` or `./gradlew check` | Temurin 17, 21 |
 | dotnet | `*.sln`, `*.csproj` | `dotnet format --verify-no-changes` | `dotnet test` | .NET 8.0, 9.0 |
 | go | `go.mod` | `gofmt`, `go vet` | `go test ./...` | Go stable |
-| rust | `Cargo.toml` | `cargo fmt --check`, `cargo clippy -D warnings` | `cargo test` | Rust stable |
+| rust | `Cargo.toml` | `cargo fmt --check`, `cargo clippy --workspace -D warnings` | `cargo test --workspace`, plus doctests for a library | Rust stable |
 | kotlin | a Gradle build applying a Kotlin plugin (takes precedence over java; Android is refused) | ktlint or Spotless through the build | `./gradlew check` | Temurin 17, 21 |
-| php | `composer.json` | `composer validate --strict`, php-cs-fixer and PHPStan when configured | `composer test`, else PHPUnit when configured | PHP 8.3, 8.4 |
+| php | `composer.json` | `composer validate --no-check-publish`, php-cs-fixer and PHPStan when configured | `composer test`, else PHPUnit when configured | PHP 8.3, 8.4 |
 | ruby | `Gemfile` | RuboCop when configured | RSpec, else `rake test` for minitest | Ruby 3.3, 3.4 |
 
 A repository may list several packs; each contributes its commands, CI job and ecosystems.
@@ -192,7 +192,7 @@ A repository may list several packs; each contributes its commands, CI job and e
 | rust | `rust`; `simple` for a workspace root without a package | `Rust` | `cargo` |
 | kotlin | `simple` with `gradle.properties` as an extra file | `Kotlin`, `Gradle` | `gradle` |
 | php | `php` | `Composer` | `composer` |
-| ruby | `ruby` with `lib/<gem>/version.rb` as `version-file` | `Ruby` | `bundler` |
+| ruby | `ruby` with `lib/<gem>/version.rb` as `version-file`, or the gemspec as an extra file when it holds the version | `Ruby` | `bundler` |
 
 release-please has no .NET release type, so the dotnet pack uses `simple` and updates the version
 through the generic XML updater.

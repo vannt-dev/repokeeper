@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { rustStack } from "../src/stacks/rust.js";
@@ -25,8 +25,8 @@ it("checks formatting, runs clippy as errors and tests, and releases the crate v
       os: '["ubuntu-latest"]',
       commands: JSON.stringify([
         "cargo fmt --all --check",
-        "cargo clippy --all-targets -- -D warnings",
-        "cargo test --all-targets",
+        "cargo clippy --workspace --all-targets -- -D warnings",
+        "cargo test --workspace --all-targets",
       ]),
     },
   });
@@ -41,5 +41,13 @@ it("checks formatting, runs clippy as errors and tests, and releases the crate v
 it("releases a workspace root without a package as simple", async () => {
   const stack = await rustStack.resolve(await repo({ "Cargo.toml": '[workspace]\nmembers = ["a", "b"]\n' }));
   expect(stack.release).toEqual({ type: "simple", version: null });
-  expect(JSON.parse(stack.ci?.with.commands ?? "")).toContain("cargo test --all-targets");
+  expect(JSON.parse(stack.ci?.with.commands ?? "")).toContain("cargo test --workspace --all-targets");
+});
+
+it("also runs doctests when the crate has a library, since --all-targets skips them", async () => {
+  const dir = await repo({ "Cargo.toml": CRATE });
+  await mkdir(join(dir, "src"));
+  await writeFile(join(dir, "src/lib.rs"), "");
+  const commands = JSON.parse((await rustStack.resolve(dir)).ci?.with.commands ?? "");
+  expect(commands.at(-1)).toBe("cargo test --workspace --doc");
 });

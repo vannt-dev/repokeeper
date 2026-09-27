@@ -30,8 +30,10 @@ export const rustStack: StackPack = {
           os: JSON.stringify(stringList("rust", options, "os") ?? ["ubuntu-latest"]),
           commands: JSON.stringify([
             "cargo fmt --all --check",
-            "cargo clippy --all-targets -- -D warnings",
-            "cargo test --all-targets",
+            "cargo clippy --workspace --all-targets -- -D warnings",
+            "cargo test --workspace --all-targets",
+            // --all-targets leaves doctests out, and --doc fails when there is no library to document
+            ...(existsSync(join(root, "src/lib.rs")) ? ["cargo test --workspace --doc"] : []),
           ]),
         },
       },

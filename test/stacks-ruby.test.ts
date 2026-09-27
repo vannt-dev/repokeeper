@@ -57,11 +57,29 @@ it("runs minitest through rake, and reads a version kept only in the gemspec", a
   );
   expect(stack.test).toBe("bundle exec rake test");
   expect(stack.staged).toEqual([]);
-  expect(stack.release).toEqual({ type: "ruby", version: "1.1.0" });
+  expect(stack.release).toEqual({ type: "ruby", version: "1.1.0", extraFiles: ["demo.gemspec"] });
 });
 
 it("has no test command without specs or a Rakefile", async () => {
   const stack = await rubyStack.resolve(await repo({ Gemfile: "" }));
   expect(stack.test).toBeNull();
   expect(JSON.parse(stack.ci?.with.commands ?? "")).toEqual([]);
+});
+
+it("reads only the gem's own version, not required_ruby_version or other constants", async () => {
+  const computed = await rubyStack.resolve(
+    await repo({
+      Gemfile: "",
+      "demo.gemspec":
+        'Gem::Specification.new do |s|\n  s.version = File.read("VERSION").strip\n  s.required_ruby_version = ">= 3.1"\nend\n',
+    }),
+  );
+  expect(computed.release).toEqual({ type: "ruby", version: null });
+  const constants = await rubyStack.resolve(
+    await repo({
+      Gemfile: "",
+      "lib/demo/version.rb": 'module Demo\n  MINIMUM_RUBY_VERSION = "3.0"\n  VERSION = "2.0.0"\nend\n',
+    }),
+  );
+  expect(constants.release).toEqual({ type: "ruby", version: "2.0.0", versionFile: "lib/demo/version.rb" });
 });

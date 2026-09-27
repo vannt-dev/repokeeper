@@ -44,3 +44,20 @@ it("refuses Android projects, naming the build file", async () => {
     "build.gradle.kts is an Android project",
   );
 });
+
+it("reads version-catalog plugin aliases, and ignores kotlinx dependencies and comments", async () => {
+  expect(
+    kotlinStack.detect(await repo({ "build.gradle.kts": "plugins {\n    alias(libs.plugins.kotlin.jvm)\n}\n" })),
+  ).toBe(true);
+  const coroutines =
+    'plugins { java }\ndependencies {\n    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")\n}\n';
+  expect(kotlinStack.detect(await repo({ "build.gradle.kts": coroutines }))).toBe(false);
+  expect(kotlinStack.detect(await repo({ "build.gradle.kts": 'plugins {\n    java\n    // kotlin("jvm")\n}\n' }))).toBe(
+    false,
+  );
+  const android =
+    "plugins {\n    alias(libs.plugins.android.application) apply false\n    alias(libs.plugins.kotlin.android) apply false\n}\n";
+  await expect(kotlinStack.resolve(await repo({ "build.gradle.kts": android }))).rejects.toThrow(
+    "build.gradle.kts is an Android project",
+  );
+});

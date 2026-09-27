@@ -92,7 +92,7 @@ jobs:
       working-directory: fixtures/rust
       os: '["ubuntu-latest","windows-latest"]'
       rust-versions: '["stable"]'
-      commands: '["cargo fmt --all --check","cargo clippy --all-targets -- -D warnings","cargo test --all-targets"]'
+      commands: '["cargo fmt --all --check","cargo clippy --workspace --all-targets -- -D warnings","cargo test --workspace --all-targets","cargo test --workspace --doc"]'
   kotlin:
     uses: ./.github/workflows/stack-java.yml
     with:
@@ -109,7 +109,7 @@ jobs:
       os: '["ubuntu-latest"]'
       php-versions: '["8.3","8.4"]'
       install-command: composer install --no-interaction --no-progress
-      commands: '["composer validate --strict","composer test"]'
+      commands: '["composer validate --no-check-publish","composer test"]'
   ruby:
     uses: ./.github/workflows/stack-ruby.yml
     with:
