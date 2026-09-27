@@ -93,3 +93,12 @@ jobs:
       os: '["ubuntu-latest","windows-latest"]'
       rust-versions: '["stable"]'
       commands: '["cargo fmt --all --check","cargo clippy --all-targets -- -D warnings","cargo test --all-targets"]'
+  kotlin:
+    uses: ./.github/workflows/stack-java.yml
+    with:
+      working-directory: fixtures/kotlin
+      os: '["ubuntu-latest"]'
+      java-versions: '["17"]'
+      build-tool: gradle
+      gradle-version: current
+      commands: '["gradle check"]'

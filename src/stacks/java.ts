@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ReleaseInfo } from "../model.js";
+import { gradleBuild } from "./gradle.js";
 import { checkKeys, readText, stringList } from "./support.js";
 import type { StackPack } from "./types.js";
 
@@ -26,11 +27,7 @@ export const javaStack: StackPack = {
       command = has("mvnw") ? "./mvnw -B verify" : "mvn -B verify";
       release = { type: "maven", version: mavenVersion((await readText(root, "pom.xml")) ?? "") };
     } else {
-      command = has("gradlew") ? "./gradlew check" : "gradle check";
-      const properties = await readText(root, "gradle.properties");
-      const version = properties ? (/^version\s*=\s*(\S+)/m.exec(properties)?.[1] ?? null) : null;
-      // release-please's generic updater changes gradle.properties once it carries x-release-please markers
-      release = { type: "simple", version, ...(properties !== null ? { extraFiles: ["gradle.properties"] } : {}) };
+      ({ command, release } = await gradleBuild(root));
     }
     return {
       id: "java",
