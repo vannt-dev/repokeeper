@@ -86,3 +86,10 @@ jobs:
       os: '["ubuntu-latest","windows-latest"]'
       go-versions: '["stable"]'
       commands: '["test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }","go vet ./...","go test ./..."]'
+  rust:
+    uses: ./.github/workflows/stack-rust.yml
+    with:
+      working-directory: fixtures/rust
+      os: '["ubuntu-latest","windows-latest"]'
+      rust-versions: '["stable"]'
+      commands: '["cargo fmt --all --check","cargo clippy --all-targets -- -D warnings","cargo test --all-targets"]'

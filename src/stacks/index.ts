@@ -5,6 +5,7 @@ import { goStack } from "./go.js";
 import { javaStack } from "./java.js";
 import { nodeStack } from "./node.js";
 import { pythonStack } from "./python.js";
+import { rustStack } from "./rust.js";
 import { scriptStack } from "./script.js";
 import type { StackPack } from "./types.js";
 
@@ -16,6 +17,7 @@ const PACKS: Record<StackId, StackPack> = {
   java: javaStack,
   dotnet: dotnetStack,
   go: goStack,
+  rust: rustStack,
 };
 
 export function getStackPack(id: StackId): StackPack {

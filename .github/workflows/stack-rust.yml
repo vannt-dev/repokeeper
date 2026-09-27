@@ -1,0 +1,60 @@
+name: stack-rust
+
+on:
+  workflow_call:
+    inputs:
+      rust-versions:
+        description: JSON list of rustup toolchains ("stable", "1.85.0")
+        type: string
+        default: '["stable"]'
+      os:
+        description: JSON list of runner labels
+        type: string
+        default: '["ubuntu-latest"]'
+      commands:
+        description: JSON list of shell commands run in order
+        type: string
+        default: '["cargo test --all-targets"]'
+      working-directory:
+        description: Directory holding Cargo.toml
+        type: string
+        default: .
+
+permissions:
+  contents: read
+
+jobs:
+  rust:
+    name: rust ${{ matrix.rust }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        rust: ${{ fromJSON(inputs.rust-versions) }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install the toolchain
+        env:
+          TOOLCHAIN: ${{ matrix.rust }}
+        # rustup ships on the hosted runners
+        run: |
+          rustup toolchain install "$TOOLCHAIN" --profile minimal --component rustfmt,clippy
+          rustup default "$TOOLCHAIN"
+      - name: Run checks
+        env:
+          COMMANDS: ${{ inputs.commands }}
+        run: |
+          node -e 'for (const c of JSON.parse(process.env.COMMANDS)) console.log(c)' | while IFS= read -r command; do
+            echo "::group::$command"
+            bash -c "$command" </dev/null
+            echo "::endgroup::"
+          done
