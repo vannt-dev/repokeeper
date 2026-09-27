@@ -172,6 +172,11 @@ export default defineStack({
 | script | `*.sh`, `*.ps1` at the root or in `scripts/`, no other stack | shfmt + ShellCheck, PSScriptAnalyzer (in CI; no local hook; a root `PSScriptAnalyzerSettings.psd1` relaxes rules). markdownlint is left out: it fails most existing READMEs on line length | repo-declared command, if any | ubuntu-latest, windows-latest |
 | java | `pom.xml`, `build.gradle`, `build.gradle.kts` | Spotless (google-java-format) through the build | `mvn -B verify` or `./gradlew check` | Temurin 17, 21 |
 | dotnet | `*.sln`, `*.csproj` | `dotnet format --verify-no-changes` | `dotnet test` | .NET 8.0, 9.0 |
+| go | `go.mod` | `gofmt`, `go vet` | `go test ./...` | Go stable |
+| rust | `Cargo.toml` | `cargo fmt --check`, `cargo clippy -D warnings` | `cargo test` | Rust stable |
+| kotlin | a Gradle build applying a Kotlin plugin (takes precedence over java; Android is refused) | ktlint or Spotless through the build | `./gradlew check` | Temurin 17, 21 |
+| php | `composer.json` | `composer validate --strict`, php-cs-fixer and PHPStan when configured | `composer test`, else PHPUnit when configured | PHP 8.3, 8.4 |
+| ruby | `Gemfile` | RuboCop when configured | RSpec, else `rake test` for minitest | Ruby 3.3, 3.4 |
 
 A repository may list several packs; each contributes its commands, CI job and ecosystems.
 
@@ -183,6 +188,11 @@ A repository may list several packs; each contributes its commands, CI job and e
 | script | `simple` | none | none |
 | java | `maven` for Maven; `simple` with `gradle.properties` `version` as an extra file for Gradle | `Java`, plus `Maven` or `Gradle` | `maven` or `gradle` |
 | dotnet | `simple` with the `<Version>` element of `Directory.Build.props` (or the single `*.csproj`) as an extra file | `VisualStudio` | `nuget` |
+| go | `go` (version from tags) | `Go` | `gomod` |
+| rust | `rust`; `simple` for a workspace root without a package | `Rust` | `cargo` |
+| kotlin | `simple` with `gradle.properties` as an extra file | `Kotlin`, `Gradle` | `gradle` |
+| php | `php` | `Composer` | `composer` |
+| ruby | `ruby` with `lib/<gem>/version.rb` as `version-file` | `Ruby` | `bundler` |
 
 release-please has no .NET release type, so the dotnet pack uses `simple` and updates the version
 through the generic XML updater.
@@ -296,5 +306,5 @@ provenance. The `v1` tag is moved to each 1.x release.
    `lint` and `test:e2e` scripts); pilot on governed-agent-sdlc, nimbleclip, ai-engineering-skills
    and a Java and a .NET repository.
 5. `repokeeper github apply`.
-6. Phase 2: GitLab adapter (GitLab CI components, Renovate, a GitLab-capable release tool,
-   protected branches and approvals); further stack packs (Go, Rust, Kotlin, PHP, Ruby).
+6. Phase 2: go, rust, kotlin, php and ruby packs (done in 0.4.0); a GitLab adapter (GitLab CI
+   components, Renovate, semantic-release, protected branches and approvals).

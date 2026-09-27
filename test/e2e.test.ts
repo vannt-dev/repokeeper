@@ -249,6 +249,40 @@ describe("repokeeper end to end", () => {
     expect(check.code).toBe(0);
   });
 
+  it.each([
+    ["go", { "go.mod": "module example.com/demo\n\ngo 1.22\n" }, "stack-go.yml", "## Go (github/gitignore)"],
+    [
+      "rust",
+      { "Cargo.toml": '[package]\nname = "demo"\nversion = "0.1.0"\n' },
+      "stack-rust.yml",
+      "## Rust (github/gitignore)",
+    ],
+    [
+      "kotlin",
+      { "build.gradle.kts": 'plugins {\n    kotlin("jvm") version "2.4.20"\n}\n' },
+      "stack-java.yml",
+      "## Kotlin (github/gitignore)",
+    ],
+    ["php", { "composer.json": '{ "name": "demo/app" }\n' }, "stack-php.yml", "## Composer (github/gitignore)"],
+    ["ruby", { Gemfile: 'source "https://rubygems.org"\n' }, "stack-ruby.yml", "## Ruby (github/gitignore)"],
+  ])("applies the standard to a %s repository", async (stack, files, workflow, gitignore) => {
+    const dir = await tempDir();
+    for (const [name, text] of Object.entries(files)) await writeFile(join(dir, name), text);
+    sh(dir, "init", "-q", "-b", "main");
+    sh(dir, "config", "user.name", "Demo User");
+    sh(dir, "config", "user.email", "demo@example.com");
+    sh(dir, "add", "-A");
+    sh(dir, "commit", "-qm", "chore: initial");
+
+    expect((await repokeeper(dir, "init")).code).toBe(0);
+    expect(parse(await readFile(join(dir, ".repokeeper.yml"), "utf8")).stacks).toEqual([stack]);
+    const ci = parse(await readFile(join(dir, ".github/workflows/ci.yml"), "utf8"));
+    expect(ci.jobs[stack].uses).toContain(`/${workflow}@v`);
+    expect(await readFile(join(dir, ".gitignore"), "utf8")).toContain(gitignore);
+    commitAll(dir);
+    expect((await repokeeper(dir, "check")).code).toBe(0);
+  });
+
   it("follows the remote's default branch and continues from the latest release tag", async () => {
     const dir = await tempDir();
     await writeFile(join(dir, "install.sh"), "#!/bin/sh\necho hi\n");
