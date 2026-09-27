@@ -1,3 +1,7 @@
+import { execFile } from "node:child_process";
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import type { BlockOutput, FileOutput, JsonOutput } from "../src/model.js";
@@ -5,7 +9,9 @@ import { commitsModule } from "../src/modules/commits.js";
 import { editorconfigModule } from "../src/modules/editorconfig.js";
 import { gitignoreModule } from "../src/modules/gitignore.js";
 import { hooksModule } from "../src/modules/hooks.js";
-import { makeContext, nodeResolved } from "./helpers.js";
+import { makeContext, nodeResolved, tempDir } from "./helpers.js";
+
+const execFileAsync = promisify(execFile);
 
 describe("editorconfig", () => {
   it("writes .editorconfig and a .gitattributes block that keeps CRLF for Windows scripts", () => {
@@ -15,7 +21,21 @@ describe("editorconfig", () => {
     expect(config.content).toContain("end_of_line = lf");
     expect(attributes).toMatchObject({ kind: "block", path: ".gitattributes", id: "editorconfig", comment: "hash" });
     expect(attributes.body).toContain("* text=auto eol=lf");
-    expect(attributes.body).toContain("*.{ps1,psm1,bat,cmd} text eol=crlf");
+    expect(attributes.body).toContain("*.ps1 text eol=crlf");
+  });
+
+  it("uses only patterns git understands, since gitattributes has no brace expansion", async () => {
+    const [, attributes] = editorconfigModule.outputs(makeContext()) as [FileOutput, BlockOutput];
+    expect(attributes.body).not.toMatch(/[{}]/);
+    const root = await tempDir();
+    await execFileAsync("git", ["init", "-q"], { cwd: root });
+    await writeFile(join(root, ".gitattributes"), `${attributes.body}\n`);
+    const { stdout } = await execFileAsync("git", ["check-attr", "eol", "binary", "--", "a.ps1", "a.png", "a.md"], {
+      cwd: root,
+    });
+    expect(stdout).toContain("a.ps1: eol: crlf");
+    expect(stdout).toContain("a.png: binary: set");
+    expect(stdout).toContain("a.md: eol: lf");
   });
 });
 

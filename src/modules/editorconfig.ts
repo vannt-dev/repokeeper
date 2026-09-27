@@ -24,10 +24,13 @@ trim_trailing_whitespace = false
 indent_style = tab
 `;
 
+// gitattributes patterns have no brace expansion, so every extension gets its own line
+const CRLF = ["ps1", "psm1", "bat", "cmd"];
+const BINARY = ["png", "jpg", "jpeg", "gif", "ico", "webp", "pdf", "zip", "gz", "woff", "woff2"];
 const GITATTRIBUTES = [
   "* text=auto eol=lf",
-  "*.{ps1,psm1,bat,cmd} text eol=crlf",
-  "*.{png,jpg,jpeg,gif,ico,webp,pdf,zip,gz,woff,woff2} binary",
+  ...CRLF.map((ext) => `*.${ext} text eol=crlf`),
+  ...BINARY.map((ext) => `*.${ext} binary`),
 ].join("\n");
 
 export const editorconfigModule: Module = {
