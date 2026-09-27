@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1](https://github.com/vannt-dev/repokeeper/compare/v0.2.0...v0.2.1) (2026-09-27)
+
+
+### Bug Fixes
+
+* **test:** read the expected version from package.json so release bumps don't break publish ([#7](https://github.com/vannt-dev/repokeeper/issues/7)) ([3c62cdf](https://github.com/vannt-dev/repokeeper/commit/3c62cdf1c354723cf538117dad14a2593487db39))
+
 ## [0.2.0](https://github.com/vannt-dev/repokeeper/compare/v0.1.0...v0.2.0) (2026-09-26)
 
 
