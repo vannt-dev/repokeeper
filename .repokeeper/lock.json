@@ -199,6 +199,18 @@
       }
     },
     {
+      "id": "yaml:.github/workflows/ci.yml#[\"concurrency\"]",
+      "module": "ci",
+      "hash": "1f382fb1b73ab99e2883b98aae10e56692a59ccaaa72d990ff8fdae435f46cd6",
+      "target": {
+        "kind": "yaml",
+        "path": ".github/workflows/ci.yml",
+        "keyPath": [
+          "concurrency"
+        ]
+      }
+    },
+    {
       "id": "yaml:.github/workflows/ci.yml#[\"jobs\",\"commits\"]",
       "module": "ci",
       "hash": "74a6886f91389737c48dc7f9ace6563204101cf5f0a322c647cd40e73917e210",

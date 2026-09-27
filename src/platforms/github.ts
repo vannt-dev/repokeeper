@@ -144,6 +144,13 @@ export const githubPlatform: PlatformAdapter = {
       workflowKey("ci", path, ["name"], "ci"),
       workflowKey("ci", path, ["on"], { pull_request: null, push: { branches: [defaultBranch(ctx.config)] } }),
       workflowKey("ci", path, ["permissions"], { contents: "read" }),
+      // a new push to a pull request makes its earlier run pointless; runs on the default branch always finish
+      workflowKey("ci", path, ["concurrency"], {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+        group: "${{ github.workflow }}-${{ github.ref }}",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+      }),
       ...jobs,
     ];
   },

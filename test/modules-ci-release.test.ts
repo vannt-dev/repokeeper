@@ -39,6 +39,15 @@ describe("ci module", () => {
     expect(out["jobs.commits"]).toBeUndefined();
   });
 
+  it("cancels superseded pull request runs, but never a run on the default branch", () => {
+    expect(keys(ciModule.outputs(makeContext())).concurrency).toEqual({
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+      group: "${{ github.workflow }}-${{ github.ref }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+      "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+    });
+  });
+
   it("adds a drift check pinned to this repokeeper version when the drift module is on", () => {
     expect(keys(ciModule.outputs(makeContext()))["jobs.repokeeper"]).toBeUndefined();
     const out = keys(ciModule.outputs(makeContext({ modules: { drift: true } })));
@@ -57,7 +66,7 @@ describe("ci module", () => {
     const root = await tempDir();
     await syncOnce(root, ciModule.outputs(makeContext()));
     const text = await readFile(join(root, ".github/workflows/ci.yml"), "utf8");
-    expect(Object.keys(parse(text))).toEqual(["name", "on", "permissions", "jobs"]);
+    expect(Object.keys(parse(text))).toEqual(["name", "on", "permissions", "concurrency", "jobs"]);
   });
 });
 
