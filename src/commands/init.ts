@@ -16,7 +16,7 @@ import { readCurrent } from "../sync/state.js";
 import { computeSync, pathsToWrite, type SyncResult } from "../sync/sync.js";
 import { STANDARD_VERSION } from "../version.js";
 import { buildContext } from "./context.js";
-import { type CommandOptions, nextSteps, printResult } from "./report.js";
+import { type CommandOptions, nextSteps, printResult, printWarnings } from "./report.js";
 
 /** A dirty path is still safe to write when every part repokeeper manages in it is exactly what it last wrote. */
 async function onlyRepokeeperChanges(root: string, path: string, lock: Lock | null): Promise<boolean> {
@@ -79,6 +79,7 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   await writeFile(join(root, CONFIG_FILE), renderConfig(config));
   await applySync(root, result, null, STANDARD_VERSION);
   io.out(`applied standard ${STANDARD_VERSION}; wrote ${CONFIG_FILE}`);
+  await printWarnings(root, config, io);
   for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
   io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
   return 0;

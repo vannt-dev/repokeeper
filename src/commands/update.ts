@@ -11,7 +11,7 @@ import { STANDARD_VERSION } from "../version.js";
 import { assertSupportedStandard } from "./check.js";
 import { buildContext } from "./context.js";
 import { guardUncommitted } from "./init.js";
-import { type CommandOptions, nextSteps, printResult } from "./report.js";
+import { type CommandOptions, nextSteps, printResult, printWarnings } from "./report.js";
 
 export async function updateCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
   const config = await loadConfig(root);
@@ -33,6 +33,7 @@ export async function updateCommand(root: string, options: CommandOptions, io: I
   }
   await applySync(root, result, lock, STANDARD_VERSION);
   const steps = await nextSteps(root, ctx, result);
+  await printWarnings(root, config, io);
   if (config.standard !== STANDARD_VERSION) {
     const path = join(root, CONFIG_FILE);
     await writeFile(path, setStandard(await readFile(path, "utf8"), STANDARD_VERSION));

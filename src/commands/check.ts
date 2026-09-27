@@ -7,7 +7,7 @@ import { readLock } from "../sync/lock.js";
 import { computeSync } from "../sync/sync.js";
 import { compareVersions, STANDARD_VERSION } from "../version.js";
 import { buildContext } from "./context.js";
-import { type CommandOptions, hasDrift, printResult } from "./report.js";
+import { type CommandOptions, hasDrift, printResult, printWarnings } from "./report.js";
 
 export function assertSupportedStandard(standard: string): void {
   if (compareVersions(standard, STANDARD_VERSION) > 0) {
@@ -49,6 +49,7 @@ export async function checkCommand(root: string, options: CommandOptions, io: Io
     return clean ? 0 : 1;
   }
   printResult(io, result);
+  await printWarnings(root, config, io);
   if (behind)
     io.out(`standard   ${config.standard} applied, ${STANDARD_VERSION} available (run \`repokeeper update\`)`);
   io.out(clean ? "repository matches the standard" : "repository has drifted from the standard");

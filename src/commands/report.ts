@@ -1,6 +1,10 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import type { Io } from "../cli.js";
+import type { RepokeeperConfig } from "../config/types.js";
 import { crlfTrackedFiles } from "../git.js";
 import { describeOutput, type ModuleContext, type Output } from "../model.js";
+import { overriddenAttributes } from "../sync/attributes.js";
 import type { RemovalAction } from "../sync/decide.js";
 import type { SyncResult } from "../sync/sync.js";
 import { TOOL_VERSIONS } from "../version.js";
@@ -77,6 +81,17 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
     }
   }
   return steps;
+}
+
+/** Problems repokeeper can't fix itself; printed, but not counted as drift. */
+export async function printWarnings(root: string, config: RepokeeperConfig, io: Io): Promise<void> {
+  if (!config.modules.editorconfig) return;
+  const text = await readFile(join(root, ".gitattributes"), "utf8").catch(() => "");
+  for (const { line, by } of overriddenAttributes(text, "editorconfig")) {
+    io.out(
+      `warning: .gitattributes: "${line}" has no effect because repokeeper's "${by}" comes later; move it below the repokeeper block to keep it`,
+    );
+  }
 }
 
 export function hasDrift(result: SyncResult): boolean {
