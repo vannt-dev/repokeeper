@@ -22,6 +22,13 @@ export class UsageError extends RepokeeperError {
   }
 }
 
+/** A GitHub API call failed; nothing on disk was touched. */
+export class ApiError extends RepokeeperError {
+  constructor(message: string) {
+    super(message, 3);
+  }
+}
+
 /** `.repokeeper/lock.json` is unreadable; the repository state is unknown, which counts as drift. */
 export class LockError extends RepokeeperError {
   constructor(message: string) {

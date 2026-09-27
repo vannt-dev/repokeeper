@@ -72,6 +72,7 @@ function withDefaults(
       release: modules.release ?? true,
       deps: modules.deps ?? true,
       gitignore: modules.gitignore ?? true,
+      drift: modules.drift ?? false,
       health: modules.health,
     },
     owned: data.owned ?? [],

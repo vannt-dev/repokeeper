@@ -22,6 +22,7 @@ export const configSchema = {
         release: flag,
         deps: flag,
         gitignore: flag,
+        drift: flag,
         health: {
           anyOf: [
             { const: false },
@@ -42,6 +43,39 @@ export const configSchema = {
     },
     owned: { type: "array", items: { type: "string", minLength: 1 } },
     stack_options: { type: "object" },
-    github: { type: "object" },
+    github: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        default_branch: { type: "string", minLength: 1 },
+        description: { type: "string" },
+        topics: { type: "array", uniqueItems: true, items: { type: "string", pattern: "^[a-z0-9][a-z0-9-]{0,49}$" } },
+        merge: {
+          type: "object",
+          additionalProperties: false,
+          properties: { squash: flag, merge_commit: flag, rebase: flag, delete_branch_on_merge: flag },
+        },
+        security: {
+          type: "object",
+          additionalProperties: false,
+          properties: { dependabot_alerts: flag, dependabot_security_updates: flag },
+        },
+        protect: {
+          anyOf: [
+            { const: false },
+            {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                require_pull_request: flag,
+                required_approvals: { type: "integer", minimum: 0, maximum: 10 },
+                required_checks: { type: "array", uniqueItems: true, items: { type: "string", minLength: 1 } },
+                allow_force_push: flag,
+              },
+            },
+          ],
+        },
+      },
+    },
   },
 } as const;
