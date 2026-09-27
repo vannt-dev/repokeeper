@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { expect, it } from "vitest";
 import { run } from "../src/cli.js";
 import { compareVersions } from "../src/version.js";
@@ -6,7 +7,8 @@ import { capture } from "./helpers.js";
 it("prints the package version", async () => {
   const c = capture();
   expect(await run(["--version"], c.io)).toBe(0);
-  expect(c.out).toEqual(["0.1.0"]);
+  const pkg = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")) as { version: string };
+  expect(c.out).toEqual([pkg.version]);
 });
 
 it("rejects an unknown command with exit code 2 and usage", async () => {
