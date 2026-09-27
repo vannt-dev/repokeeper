@@ -46,8 +46,8 @@ without a pull request. repokeeper owns the `name`, `on` and `permissions` keys 
 adds; jobs you add yourself are left alone, and so is the formatting of the rest of the file.
 
 The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
-and PSScriptAnalyzer on `*.ps1`, which fails on warnings too. To relax a rule, add a
-`PSScriptAnalyzerSettings.psd1` at the repository root; PSScriptAnalyzer picks it up on its own:
+and PSScriptAnalyzer on `*.ps1`, which fails on errors and warnings (not on information-level rules). To
+choose the rules yourself, add a `PSScriptAnalyzerSettings.psd1` at the repository root; the job then uses it:
 
 ```powershell
 @{

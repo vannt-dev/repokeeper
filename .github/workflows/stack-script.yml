@@ -59,7 +59,12 @@ jobs:
         shell: pwsh
         run: |
           Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Force -Scope CurrentUser
-          $issues = Invoke-ScriptAnalyzer -Path . -Recurse
+          # a repository settings file decides the rules; otherwise only errors and warnings fail the job
+          $issues = if (Test-Path PSScriptAnalyzerSettings.psd1) {
+            Invoke-ScriptAnalyzer -Path . -Recurse -Settings PSScriptAnalyzerSettings.psd1
+          } else {
+            Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error, Warning
+          }
           $issues | Format-Table -AutoSize
           if ($issues) { exit 1 }
   test:
