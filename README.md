@@ -56,10 +56,12 @@ adds; jobs you add yourself are left alone, and so is the formatting of the rest
 
 The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
 and PSScriptAnalyzer on `*.ps1`, which fails on errors and warnings (not on information-level rules). To
-choose the rules yourself, add a `PSScriptAnalyzerSettings.psd1` at the repository root; the job then uses it:
+choose the rules yourself, add a `PSScriptAnalyzerSettings.psd1` at the repository root; the job then
+uses it instead of its own filter, so keep `Severity` in it unless you want information-level rules too:
 
 ```powershell
 @{
+    Severity     = @('Error', 'Warning')
     # installers print for the person running them
     ExcludeRules = @('PSAvoidUsingWriteHost')
 }
