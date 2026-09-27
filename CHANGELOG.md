@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.3](https://github.com/vannt-dev/repokeeper/compare/v0.2.2...v0.2.3) (2026-09-27)
+
+
+### Bug Fixes
+
+* findings from the python, dart, powershell, java and .NET pilots ([#12](https://github.com/vannt-dev/repokeeper/issues/12)) ([14777a4](https://github.com/vannt-dev/repokeeper/commit/14777a4390a07a38f8ca07ce4b1cf0b71fd9b651))
+
 ## [0.2.2](https://github.com/vannt-dev/repokeeper/compare/v0.2.1...v0.2.2) (2026-09-27)
 
 
