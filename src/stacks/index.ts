@@ -1,6 +1,7 @@
 import { STACK_IDS, type StackId } from "../config/types.js";
 import { dartStack } from "./dart.js";
 import { dotnetStack } from "./dotnet.js";
+import { goStack } from "./go.js";
 import { javaStack } from "./java.js";
 import { nodeStack } from "./node.js";
 import { pythonStack } from "./python.js";
@@ -14,6 +15,7 @@ const PACKS: Record<StackId, StackPack> = {
   script: scriptStack,
   java: javaStack,
   dotnet: dotnetStack,
+  go: goStack,
 };
 
 export function getStackPack(id: StackId): StackPack {

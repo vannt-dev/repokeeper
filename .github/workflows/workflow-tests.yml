@@ -79,3 +79,10 @@ jobs:
       os: '["ubuntu-latest","windows-latest"]'
       dotnet-versions: '["8.0","9.0"]'
       commands: '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]'
+  go:
+    uses: ./.github/workflows/stack-go.yml
+    with:
+      working-directory: fixtures/go
+      os: '["ubuntu-latest","windows-latest"]'
+      go-versions: '["stable"]'
+      commands: '["test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }","go vet ./...","go test ./..."]'

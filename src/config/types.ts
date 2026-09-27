@@ -1,5 +1,5 @@
 import type { GithubSettings } from "../github/settings.js";
-export const STACK_IDS = ["node", "python", "dart", "script", "java", "dotnet"] as const;
+export const STACK_IDS = ["node", "python", "dart", "script", "java", "dotnet", "go"] as const;
 export type StackId = (typeof STACK_IDS)[number];
 
 export interface HealthConfig {
