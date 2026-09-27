@@ -5,8 +5,9 @@ files, editor and gitignore settings, Dependabot, CI and releases — applied on
 the standard evolves.
 
 > Status: early development. Supported stacks: Node.js (including NestJS), Python, Dart and
-> Flutter, shell and PowerShell scripts, Java (Maven and Gradle) and .NET, each with CI and releases.
-> GitHub settings are on the way. See the [design](docs/superpowers/specs/2026-09-25-repokeeper-design.md).
+> Flutter, shell and PowerShell scripts, Java (Maven and Gradle), Kotlin, .NET, Go, Rust, PHP and
+> Ruby, each with CI and releases, plus GitHub settings through `repokeeper github apply`. See the
+> [design](docs/superpowers/specs/2026-09-25-repokeeper-design.md).
 
 ## Usage
 

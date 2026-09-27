@@ -1,0 +1,66 @@
+name: stack-php
+
+on:
+  workflow_call:
+    inputs:
+      php-versions:
+        description: JSON list of PHP versions
+        type: string
+        default: '["8.3","8.4"]'
+      os:
+        description: JSON list of runner labels
+        type: string
+        default: '["ubuntu-latest"]'
+      install-command:
+        description: Command that installs dependencies
+        type: string
+        default: composer install --no-interaction --no-progress
+      commands:
+        description: JSON list of shell commands run in order
+        type: string
+        default: '["composer validate --no-check-publish"]'
+      working-directory:
+        description: Directory holding composer.json
+        type: string
+        default: .
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    name: php ${{ matrix.php }} (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.os) }}
+        php: ${{ fromJSON(inputs.php-versions) }}
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer
+          coverage: none
+      - name: Install dependencies
+        env:
+          INSTALL: ${{ inputs.install-command }}
+        run: bash -c "$INSTALL"
+      - name: Run checks
+        env:
+          COMMANDS: ${{ inputs.commands }}
+        run: |
+          node -e 'for (const c of JSON.parse(process.env.COMMANDS)) console.log(c)' | while IFS= read -r command; do
+            echo "::group::$command"
+            bash -c "$command" </dev/null
+            echo "::endgroup::"
+          done

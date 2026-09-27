@@ -3,9 +3,14 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { dartStack } from "../src/stacks/dart.js";
 import { dotnetStack } from "../src/stacks/dotnet.js";
+import { goStack } from "../src/stacks/go.js";
 import { javaStack } from "../src/stacks/java.js";
+import { kotlinStack } from "../src/stacks/kotlin.js";
 import { nodeStack } from "../src/stacks/node.js";
+import { phpStack } from "../src/stacks/php.js";
 import { pythonStack } from "../src/stacks/python.js";
+import { rubyStack } from "../src/stacks/ruby.js";
+import { rustStack } from "../src/stacks/rust.js";
 import { scriptStack } from "../src/stacks/script.js";
 import type { StackPack } from "../src/stacks/types.js";
 import { TOOL_VERSIONS } from "../src/version.js";
@@ -36,6 +41,10 @@ const REUSABLE = [
   "stack-java.yml",
   "stack-dotnet.yml",
   "repokeeper-check.yml",
+  "stack-go.yml",
+  "stack-rust.yml",
+  "stack-php.yml",
+  "stack-ruby.yml",
 ];
 
 /** Fixture jobs in workflow-tests.yml and the pack that resolves each fixture. Each stack task appends its rows. */
@@ -48,6 +57,11 @@ const FIXTURES: { job: string; dir: string; pack: StackPack }[] = [
   { job: "java-maven", dir: "fixtures/java-maven", pack: javaStack },
   { job: "java-gradle", dir: "fixtures/java-gradle", pack: javaStack },
   { job: "dotnet", dir: "fixtures/dotnet", pack: dotnetStack },
+  { job: "go", dir: "fixtures/go", pack: goStack },
+  { job: "rust", dir: "fixtures/rust", pack: rustStack },
+  { job: "kotlin", dir: "fixtures/kotlin", pack: kotlinStack },
+  { job: "php", dir: "fixtures/php", pack: phpStack },
+  { job: "ruby", dir: "fixtures/ruby", pack: rubyStack },
 ];
 
 const read = (name: string) => readFileSync(`.github/workflows/${name}`, "utf8");

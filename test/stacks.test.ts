@@ -70,6 +70,12 @@ describe("registry", () => {
     expect(await detectStacks(await repoWith({ "deploy.sh": "", "package.json": "{}" }))).toEqual(["node"]);
   });
 
+  it("detects kotlin instead of java for a Gradle build with a Kotlin plugin", async () => {
+    const dir = await repoWith({ "build.gradle.kts": 'plugins {\n    kotlin("jvm") version "2.4.20"\n}\n' });
+    expect(await detectStacks(dir)).toEqual(["kotlin"]);
+    expect(await detectStacks(await repoWith({ "build.gradle.kts": "plugins { java }\n" }))).toEqual(["java"]);
+  });
+
   it("has a pack for every stack id", () => {
     for (const id of STACK_IDS) expect(getStackPack(id).id).toBe(id);
   });

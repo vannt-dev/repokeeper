@@ -79,3 +79,42 @@ jobs:
       os: '["ubuntu-latest","windows-latest"]'
       dotnet-versions: '["8.0","9.0"]'
       commands: '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]'
+  go:
+    uses: ./.github/workflows/stack-go.yml
+    with:
+      working-directory: fixtures/go
+      os: '["ubuntu-latest","windows-latest"]'
+      go-versions: '["stable"]'
+      commands: '["test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }","go vet ./...","go test ./..."]'
+  rust:
+    uses: ./.github/workflows/stack-rust.yml
+    with:
+      working-directory: fixtures/rust
+      os: '["ubuntu-latest","windows-latest"]'
+      rust-versions: '["stable"]'
+      commands: '["cargo fmt --all --check","cargo clippy --workspace --all-targets -- -D warnings","cargo test --workspace --all-targets","cargo test --workspace --doc"]'
+  kotlin:
+    uses: ./.github/workflows/stack-java.yml
+    with:
+      working-directory: fixtures/kotlin
+      os: '["ubuntu-latest"]'
+      java-versions: '["17"]'
+      build-tool: gradle
+      gradle-version: current
+      commands: '["gradle check"]'
+  php:
+    uses: ./.github/workflows/stack-php.yml
+    with:
+      working-directory: fixtures/php
+      os: '["ubuntu-latest"]'
+      php-versions: '["8.3","8.4"]'
+      install-command: composer install --no-interaction --no-progress
+      commands: '["composer validate --no-check-publish","composer test"]'
+  ruby:
+    uses: ./.github/workflows/stack-ruby.yml
+    with:
+      working-directory: fixtures/ruby
+      os: '["ubuntu-latest"]'
+      ruby-versions: '["3.3","3.4"]'
+      install-command: bundle install
+      commands: '["bundle exec rake test"]'
