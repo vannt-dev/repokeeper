@@ -20,7 +20,11 @@ export async function updateCommand(root: string, options: CommandOptions, io: I
   if (!lock) throw new UsageError(".repokeeper/lock.json is missing; run `repokeeper init --relock` first");
   const ctx = await buildContext(root, { ...config, standard: STANDARD_VERSION });
   const adopt = options.adoptAll ? ("all" as const) : new Set(options.adopt);
-  const result = await computeSync(root, planOutputs(ctx), lock, { adopt, accept: new Set(options.accept) });
+  const result = await computeSync(root, planOutputs(ctx), lock, {
+    adopt,
+    accept: new Set(options.accept),
+    owned: config.owned,
+  });
   if (!options.dryRun) await guardUncommitted(root, result, options.force);
   printResult(io, result);
   if (options.dryRun) {

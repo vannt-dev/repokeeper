@@ -1,4 +1,5 @@
 import { type Output, outputId } from "../model.js";
+import { isOwned } from "../owned.js";
 import { type Action, decide, decideRemoval, type RemovalAction } from "./decide.js";
 import { type Lock, type LockEntry, targetOf } from "./lock.js";
 import { readCurrent } from "./state.js";
@@ -18,6 +19,8 @@ export interface SyncResult {
 export interface SyncOptions {
   adopt: Set<string> | "all";
   accept: Set<string>;
+  /** `owned` from the config; lock entries it covers are handed over instead of removed. */
+  owned?: readonly string[];
 }
 
 export async function computeSync(
@@ -37,8 +40,11 @@ export async function computeSync(
   const wanted = new Set(outputs.map(outputId));
   const removals: Removal[] = [];
   for (const entry of entries.values()) {
-    if (!wanted.has(entry.id))
-      removals.push({ entry, action: decideRemoval(entry, await readCurrent(root, entry.target)) });
+    if (wanted.has(entry.id)) continue;
+    const action = isOwned(options.owned ?? [], entry.target)
+      ? "release"
+      : decideRemoval(entry, await readCurrent(root, entry.target));
+    removals.push({ entry, action });
   }
   return { decisions, removals };
 }

@@ -26,7 +26,11 @@ export async function checkCommand(root: string, options: CommandOptions, io: Io
     return 1;
   }
   const ctx = await buildContext(root, config);
-  const result = await computeSync(root, planOutputs(ctx), lock, { adopt: new Set(), accept: new Set() });
+  const result = await computeSync(root, planOutputs(ctx), lock, {
+    adopt: new Set(),
+    accept: new Set(),
+    owned: config.owned,
+  });
   const behind = config.standard !== STANDARD_VERSION || lock.standard !== STANDARD_VERSION;
   const clean = !hasDrift(result) && !behind;
   if (options.json) {

@@ -2,9 +2,10 @@ import { existsSync } from "node:fs";
 import { readFile, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
+import { printResult } from "../src/commands/report.js";
 import type { Output } from "../src/model.js";
 import { readLock } from "../src/sync/lock.js";
-import { syncOnce, tempDir } from "./helpers.js";
+import { capture, syncOnce, tempDir } from "./helpers.js";
 
 const path = ".release-please-manifest.json";
 const manifest = (version: string): Output => ({
@@ -38,10 +39,23 @@ it("recreates a deleted seed", async () => {
   expect(await actions(root, [manifest("0.1.0")])).toEqual(["create"]);
 });
 
-it("leaves the file in place when the module stops producing it", async () => {
+it("leaves the file in place when the module stops producing it, and says so", async () => {
   const root = await tempDir();
   await actions(root, [manifest("0.1.0")]);
   const result = await syncOnce(root, []);
-  expect(result.removals.map((r) => r.action)).toEqual(["gone"]);
+  expect(result.removals.map((r) => r.action)).toEqual(["left"]);
   expect(existsSync(join(root, path))).toBe(true);
+  const c = capture();
+  printResult(c.io, result);
+  expect(c.out[0]).toBe(
+    `left       ${path} (no longer generated; left for the tools that use it, delete it if none do)`,
+  );
+  expect((await syncOnce(root, [])).removals).toEqual([]);
+});
+
+it("forgets a seed that was deleted after the module stopped producing it", async () => {
+  const root = await tempDir();
+  await actions(root, [manifest("0.1.0")]);
+  await rm(join(root, path));
+  expect((await syncOnce(root, [])).removals.map((r) => r.action)).toEqual(["gone"]);
 });
