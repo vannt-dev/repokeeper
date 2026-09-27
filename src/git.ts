@@ -42,6 +42,15 @@ export async function latestReleaseVersion(root: string): Promise<string | null>
   return tag ? tag.trim().slice(1) : null;
 }
 
+/** Tracked files git stores with CRLF line endings; `.gitattributes` only reaches them after a renormalize. */
+export async function crlfTrackedFiles(root: string): Promise<string[]> {
+  const out = (await git(root, ["ls-files", "--eol"])) ?? "";
+  return out
+    .split("\n")
+    .filter((line) => line.startsWith("i/crlf"))
+    .map((line) => line.split("\t").pop() as string);
+}
+
 export async function gitUserName(root: string): Promise<string | null> {
   return (await git(root, ["config", "user.name"]))?.trim() || null;
 }

@@ -107,6 +107,10 @@ export const githubPlatform: PlatformAdapter = {
       directory: "/",
       schedule: { interval: "weekly" },
       groups: { [`${ecosystem}-minor-and-patch`]: { "update-types": ["minor", "patch"] } },
+      // @types/node majors track the Node.js line a project runs on, which the project chooses
+      ...(ecosystem === "npm"
+        ? { ignore: [{ "dependency-name": "@types/node", "update-types": ["version-update:semver-major"] }] }
+        : {}),
     }));
     return [yamlFile("deps", ".github/dependabot.yml", { version: 2, updates })];
   },

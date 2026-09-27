@@ -128,6 +128,17 @@ describe("repokeeper end to end", () => {
     expect(existsSync(join(dir, ".repokeeper.yml"))).toBe(false);
   });
 
+  it("updates files it just wrote without --force", async () => {
+    const dir = await nodeRepo();
+    expect((await repokeeper(dir, "init")).code).toBe(0);
+    const config = join(dir, ".repokeeper.yml");
+    await appendFile(config, "github:\n  default_branch: trunk\n");
+    const update = await repokeeper(dir, "update");
+    expect(update.err).toBe("");
+    expect(update.code).toBe(0);
+    expect(await readFile(join(dir, ".github/workflows/ci.yml"), "utf8")).toContain("- trunk");
+  });
+
   it("names untracked files and says how to proceed in a repository without commits", async () => {
     const dir = await nodeRepo(false);
     sh(dir, "init", "-q", "-b", "main");
@@ -184,6 +195,7 @@ describe("repokeeper end to end", () => {
   it("applies the standard to a python repository without node", async () => {
     const dir = await tempDir();
     await writeFile(join(dir, "pyproject.toml"), '[project]\nname = "demo"\nversion = "0.2.0"\n');
+    await writeFile(join(dir, "app.py"), "print('hi')\r\n");
     sh(dir, "init", "-q", "-b", "main");
     sh(dir, "config", "user.name", "Demo User");
     sh(dir, "config", "user.email", "demo@example.com");
@@ -191,7 +203,11 @@ describe("repokeeper end to end", () => {
     sh(dir, "add", "-A");
     sh(dir, "commit", "-qm", "chore: initial");
 
-    expect((await repokeeper(dir, "init")).code).toBe(0);
+    const init = await repokeeper(dir, "init");
+    expect(init.code).toBe(0);
+    expect(init.out).toContain("run `npx --yes lefthook@");
+    expect(init.out).not.toContain("install dependencies");
+    expect(init.out).toContain("1 file is stored with CRLF line endings; run `git add --renormalize .`");
     expect(parse(await readFile(join(dir, ".repokeeper.yml"), "utf8")).stacks).toEqual(["python"]);
     expect(existsSync(join(dir, "package.json"))).toBe(false);
     expect(await readFile(join(dir, "lefthook.yml"), "utf8")).toContain("npx --yes --package @commitlint/cli@");
@@ -207,15 +223,18 @@ describe("repokeeper end to end", () => {
     const dir = await nodeRepo();
     const workflow = join(dir, ".github/workflows/ci.yml");
     const mine =
-      "name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n";
+      "name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n";
     await mkdir(join(dir, ".github/workflows"), { recursive: true });
     await writeFile(workflow, mine);
     commitAll(dir);
 
     const init = await repokeeper(dir, "init");
     expect(init.out).toContain('add ".github/workflows/ci.yml#on" to owned');
+    expect(init.out).toContain('note: .github/workflows/ci.yml also runs "npm test"');
     const text = await readFile(workflow, "utf8");
-    expect(text.startsWith("name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n\n")).toBe(true);
+    expect(text.startsWith("name: My CI\n\non:\n  push:\n    branches: [ main, develop ]\n  pull_request:\n\n")).toBe(
+      true,
+    );
     expect(text).toContain(
       "jobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n    - run: npm test\n  commits:\n",
     );

@@ -8,8 +8,12 @@ const OPTION_KEYS = ["versions", "os", "test"];
 
 /** The `version = "…"` of the `[project]` table, if any. */
 function projectVersion(pyproject: string): string | null {
-  const table = pyproject.split(/^\[/m).find((section) => section.startsWith("project]"));
-  return table ? (/^version\s*=\s*"([^"]+)"/m.exec(table)?.[1] ?? null) : null;
+  return /^version\s*=\s*"([^"]+)"/m.exec(section(pyproject, "project"))?.[1] ?? null;
+}
+
+/** The body of the `[name]` table of a TOML file, or "". */
+function section(toml: string, name: string): string {
+  return toml.split(/^\[/m).find((part) => part.startsWith(`${name}]`)) ?? "";
 }
 
 export const pythonStack: StackPack = {
@@ -20,7 +24,10 @@ export const pythonStack: StackPack = {
     const has = (path: string) => existsSync(join(root, path));
     const pyproject = (await readText(root, "pyproject.toml")) ?? "";
     const uv = has("uv.lock");
+    const mypyIni = (await readText(root, "mypy.ini")) ?? "";
     const mypy = has("mypy.ini") || pyproject.includes("[tool.mypy]");
+    // a config that names its files decides what mypy checks; otherwise check the whole tree
+    const mypyFiles = /^files\s*=/m.test(mypyIni) || /^files\s*=/m.test(section(pyproject, "tool.mypy"));
     const hasTests = has("tests") || has("test") || filesMatching(root, ".", /^test_.*\.py$/).length > 0;
     const customTest = optionalString("python", options, "test");
     const pytest = customTest === undefined && hasTests;
@@ -40,7 +47,7 @@ export const pythonStack: StackPack = {
     const commands = [
       `${run}ruff format --check .`,
       `${run}ruff check .`,
-      ...(mypy ? [`${run}mypy .`] : []),
+      ...(mypy ? [`${run}mypy${mypyFiles ? "" : " ."}`] : []),
       ...(test ? [test] : []),
     ];
     const ruff = uv ? "uvx ruff" : "ruff";

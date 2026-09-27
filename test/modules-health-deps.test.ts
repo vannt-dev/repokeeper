@@ -69,5 +69,10 @@ describe("deps", () => {
     ]);
     expect(config.updates[0].schedule).toEqual({ interval: "weekly" });
     expect(config.updates[0].groups["npm-minor-and-patch"]["update-types"]).toEqual(["minor", "patch"]);
+    // @types/node majors follow the Node.js line the project runs on, not the latest release
+    expect(config.updates[0].ignore).toEqual([
+      { "dependency-name": "@types/node", "update-types": ["version-update:semver-major"] },
+    ]);
+    expect(config.updates[1].ignore).toBeUndefined();
   });
 });

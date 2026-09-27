@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, it } from "vitest";
 import { dotnetStack } from "../src/stacks/dotnet.js";
@@ -58,4 +58,20 @@ it("reads the version of a single project file", async () => {
     version: "1.5.0",
     extraFiles: [{ type: "xml", path: "Lib.csproj", xpath: "//Project/PropertyGroup/Version" }],
   });
+});
+
+it("refuses .NET Framework projects the dotnet CLI can't build, naming them", async () => {
+  const dir = await repo({ "Shop.sln": "" });
+  await mkdir(join(dir, "Shop"));
+  await writeFile(
+    join(dir, "Shop.sln"),
+    'Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shop", "Shop\\Shop.csproj", "{1}"\nEndProject\n',
+  );
+  await writeFile(join(dir, "Shop/Shop.csproj"), '<Project ToolsVersion="14.0" DefaultTargets="Build">\n</Project>\n');
+  await expect(dotnetStack.resolve(dir)).rejects.toThrow("Shop/Shop.csproj");
+
+  const sdk = await repo({ "App.slnx": '<Solution>\n  <Project Path="src/App/App.csproj" />\n</Solution>\n' });
+  await mkdir(join(sdk, "src/App"), { recursive: true });
+  await writeFile(join(sdk, "src/App/App.csproj"), '<Project Sdk="Microsoft.NET.Sdk">\n</Project>\n');
+  expect((await dotnetStack.resolve(sdk)).ci?.workflow).toBe("stack-dotnet.yml");
 });

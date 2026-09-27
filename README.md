@@ -36,6 +36,15 @@ alone. Every write command accepts `--dry-run`.
 isn't `main`. The release manifest starts from the latest `vX.Y.Z` tag when the stack has no version
 of its own.
 
+After writing, repokeeper prints what is left to do (installing the git hooks, and
+`git add --renormalize .` when tracked files are stored with CRLF). `init`, `update` and `check` also
+point out what they can't fix: `.gitattributes` lines above the repokeeper block that the block
+overrides, and pull request workflows of your own that run the same tests as the repokeeper ci job.
+
+Stack notes: Python runs `mypy` on the files its config names (`files = …`), or on the whole tree
+otherwise. The dotnet stack needs SDK-style projects; `init` stops with the names of .NET Framework
+projects, which the dotnet CLI can't build.
+
 Requires Node.js 22.12 or newer.
 
 ## CI and releases
@@ -46,8 +55,8 @@ without a pull request. repokeeper owns the `name`, `on` and `permissions` keys 
 adds; jobs you add yourself are left alone, and so is the formatting of the rest of the file.
 
 The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
-and PSScriptAnalyzer on `*.ps1`, which fails on warnings too. To relax a rule, add a
-`PSScriptAnalyzerSettings.psd1` at the repository root; PSScriptAnalyzer picks it up on its own:
+and PSScriptAnalyzer on `*.ps1`, which fails on errors and warnings (not on information-level rules). To
+choose the rules yourself, add a `PSScriptAnalyzerSettings.psd1` at the repository root; the job then uses it:
 
 ```powershell
 @{
