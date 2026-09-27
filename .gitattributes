@@ -1,5 +1,18 @@
 # repokeeper:start editorconfig
 * text=auto eol=lf
-*.{ps1,psm1,bat,cmd} text eol=crlf
-*.{png,jpg,jpeg,gif,ico,webp,pdf,zip,gz,woff,woff2} binary
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.woff binary
+*.woff2 binary
 # repokeeper:end editorconfig
