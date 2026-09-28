@@ -106,15 +106,21 @@ describe("release module", () => {
   });
 
   it("starts a repository with no release yet at 0.1.0 instead of release-please's 1.0.0", () => {
-    const pkg = (version: string | null) => {
+    const pkg = (version: string | null, releasedVersion: string | null = null) => {
       const outputs = releaseModule.outputs(
-        makeContext({ stacks: [nodeResolved({ release: { type: "simple", version } })] }),
+        makeContext({
+          stacks: [nodeResolved({ release: { type: "simple", version } })],
+          repo: { owner: "vannt-dev", name: "example", releasedVersion },
+        }),
       );
       const config = outputs.find((o) => o.path === "release-please-config.json");
       return JSON.parse(config?.kind === "file" ? config.content : "").packages["."];
     };
     expect(pkg(null)["initial-version"]).toBe("0.1.0");
+    expect(pkg("0.0.0")["initial-version"]).toBe("0.1.0");
     expect(pkg("0.3.0")).not.toHaveProperty("initial-version");
+    // a version file release-please never bumps (gradle.properties without markers) still reads 0.0.0 after v1.0.0
+    expect(pkg("0.0.0", "1.0.0")).not.toHaveProperty("initial-version");
   });
 
   it("approves the held pull_request runs of release pull requests opened with GITHUB_TOKEN", () => {

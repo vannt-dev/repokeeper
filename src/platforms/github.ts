@@ -187,8 +187,9 @@ export const githubPlatform: PlatformAdapter = {
               ...(release.versionFile ? { "version-file": release.versionFile } : {}),
               // Without it a pom at a release version first gets a pull request that only bumps to -SNAPSHOT
               ...(release.type === "maven" ? { "skip-snapshot": true } : {}),
-              // release-please makes a repository's first release 1.0.0 unless told otherwise
-              ...(seed === "0.0.0" ? { "initial-version": "0.1.0" } : {}),
+              // release-please makes a repository's first release 1.0.0 unless told otherwise; a release tag means
+              // there was one, even when a version file release-please never bumps still reads 0.0.0
+              ...(seed === "0.0.0" && !ctx.repo.releasedVersion ? { "initial-version": "0.1.0" } : {}),
             },
           },
         }),
