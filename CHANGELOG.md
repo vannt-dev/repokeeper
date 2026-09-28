@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/vannt-dev/repokeeper/compare/v0.4.0...v0.4.1) (2026-09-28)
+
+
+### Bug Fixes
+
+* **deps:** give Dependabot commits a chore(deps) prefix ([#21](https://github.com/vannt-dev/repokeeper/issues/21)) ([cc8e973](https://github.com/vannt-dev/repokeeper/commit/cc8e973662b76e3793b3f684171ddc963c187829))
+
 ## [0.4.0](https://github.com/vannt-dev/repokeeper/compare/v0.3.0...v0.4.0) (2026-09-27)
 
 
