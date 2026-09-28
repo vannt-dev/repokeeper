@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.5](https://github.com/vannt-dev/repokeeper/compare/v0.4.4...v0.4.5) (2026-09-28)
+
+
+### Bug Fixes
+
+* **release:** set initial-version only before the first release tag ([#30](https://github.com/vannt-dev/repokeeper/issues/30)) ([3819874](https://github.com/vannt-dev/repokeeper/commit/38198746197e42bfb76d0ef125f5730d213a30e8))
+
 ## [0.4.4](https://github.com/vannt-dev/repokeeper/compare/v0.4.3...v0.4.4) (2026-09-28)
 
 
