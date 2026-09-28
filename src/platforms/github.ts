@@ -27,6 +27,16 @@ const workflowKey = (module: string, path: string, keyPath: string[], value: unk
   order: WORKFLOW_KEYS,
 });
 
+/** Waits briefly for the held runs to appear, since GitHub creates them just after the pull request event. */
+const APPROVE_RELEASE_PR_RUNS = `for attempt in 1 2 3 4 5 6; do
+  ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=$BRANCH&event=pull_request&status=action_required" --jq '.workflow_runs[].id')
+  [ -n "$ids" ] && break
+  sleep 10
+done
+if [ -z "$ids" ]; then echo "::notice::no held runs for $BRANCH"; fi
+for id in $ids; do gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve"; done
+`;
+
 const RELEASE_PLEASE_SCHEMA = "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json";
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
@@ -144,12 +154,7 @@ export const githubPlatform: PlatformAdapter = {
     if (jobs.length === 0) return [];
     return [
       workflowKey("ci", path, ["name"], "ci"),
-      // workflow_dispatch lets the release workflow run CI on release pull requests (see releaseAutomation)
-      workflowKey("ci", path, ["on"], {
-        pull_request: null,
-        push: { branches: [defaultBranch(ctx.config)] },
-        workflow_dispatch: null,
-      }),
+      workflowKey("ci", path, ["on"], { pull_request: null, push: { branches: [defaultBranch(ctx.config)] } }),
       workflowKey("ci", path, ["permissions"], { contents: "read" }),
       // a new push to a pull request makes its earlier run pointless; runs on the default branch always finish
       workflowKey("ci", path, ["concurrency"], {
@@ -165,7 +170,6 @@ export const githubPlatform: PlatformAdapter = {
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo): Output[] {
     const path = ".github/workflows/release.yml";
     const seed = release.version ?? ctx.repo.releasedVersion ?? "0.0.0";
-    const hasCi = ctx.config.modules.ci && githubPlatform.ciWorkflow(ctx).length > 0;
     return [
       {
         kind: "file",
@@ -204,29 +208,26 @@ export const githubPlatform: PlatformAdapter = {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
         secrets: { token: "${{ secrets.RELEASE_PLEASE_TOKEN }}" },
       }),
-      // Pull requests opened with GITHUB_TOKEN start no workflows, so required checks would never report
-      ...(hasCi
-        ? [
-            workflowKey("release", path, ["jobs", "release-pr-ci"], {
-              needs: "release",
+      // GitHub holds the pull_request runs of a pull request that GITHUB_TOKEN opened until someone
+      // approves them, so required checks never report; approve them for the release pull request
+      workflowKey("release", path, ["jobs", "release-pr-ci"], {
+        needs: "release",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+        if: "${{ needs.release.outputs.pr_branch != '' }}",
+        "runs-on": "ubuntu-latest",
+        permissions: { actions: "write" },
+        steps: [
+          {
+            env: {
               // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
-              if: "${{ needs.release.outputs.pr_branch != '' }}",
-              "runs-on": "ubuntu-latest",
-              permissions: { actions: "write" },
-              steps: [
-                {
-                  env: {
-                    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
-                    GH_TOKEN: "${{ github.token }}",
-                    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
-                    BRANCH: "${{ needs.release.outputs.pr_branch }}",
-                  },
-                  run: 'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"',
-                },
-              ],
-            }),
-          ]
-        : []),
+              GH_TOKEN: "${{ github.token }}",
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              BRANCH: "${{ needs.release.outputs.pr_branch }}",
+            },
+            run: APPROVE_RELEASE_PR_RUNS,
+          },
+        ],
+      }),
     ];
   },
 };
