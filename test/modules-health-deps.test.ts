@@ -75,4 +75,12 @@ describe("deps", () => {
     ]);
     expect(config.updates[1].ignore).toBeUndefined();
   });
+
+  it("gives Dependabot commits a Conventional Commits prefix so commitlint accepts them", () => {
+    const [output] = depsModule.outputs(makeContext());
+    const config = parse((output as FileOutput).content);
+    // Dependabot only infers the prefix from history, so a young repository gets "Bump x from 1 to 2"
+    for (const update of config.updates)
+      expect(update["commit-message"]).toEqual({ prefix: "chore", include: "scope" });
+  });
 });
