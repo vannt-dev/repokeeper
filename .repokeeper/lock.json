@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "standard": "1.3.2",
+  "standard": "1.4.0",
   "entries": [
     {
       "id": "block:.gitattributes#editorconfig",
@@ -251,7 +251,7 @@
     {
       "id": "yaml:.github/workflows/ci.yml#[\"on\"]",
       "module": "ci",
-      "hash": "8a324c0626f6d862860cca96e075031faea73ddbc51d230f2c6ea2d54088c164",
+      "hash": "6ba4774ab2129a605bb160c5ee6f48ebc51544881592ad60ad5268b910fcfbde",
       "target": {
         "kind": "yaml",
         "path": ".github/workflows/ci.yml",
@@ -269,6 +269,19 @@
         "path": ".github/workflows/ci.yml",
         "keyPath": [
           "permissions"
+        ]
+      }
+    },
+    {
+      "id": "yaml:.github/workflows/release.yml#[\"jobs\",\"release-pr-ci\"]",
+      "module": "release",
+      "hash": "5fe7f3717447417a686ad02836df7bf9bb3225fb37358364fd13a11251f997c2",
+      "target": {
+        "kind": "yaml",
+        "path": ".github/workflows/release.yml",
+        "keyPath": [
+          "jobs",
+          "release-pr-ci"
         ]
       }
     },
