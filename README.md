@@ -77,8 +77,12 @@ work:
 - In the repository settings, under Actions → General, allow GitHub Actions to create and approve
   pull requests.
 - Optionally add a `RELEASE_PLEASE_TOKEN` secret (a fine-grained token with contents, pull requests
-  and issues write access). Without it the release pull request is opened with `GITHUB_TOKEN`, and
-  GitHub does not run CI on pull requests opened that way.
+  and issues write access). Without it the release pull request is opened with `GITHUB_TOKEN`, which
+  starts no workflows, so the `release-pr-ci` job runs `ci.yml` on the release branch itself; its
+  checks then satisfy required checks in a ruleset.
+
+A repository with no release yet (manifest at `0.0.0`) gets `initial-version: 0.1.0`, so its first
+release is 0.1.0 rather than release-please's default 1.0.0.
 
 Set `modules.drift: true` to add a `repokeeper` job to `ci.yml` that runs `repokeeper check` with
 the version that wrote the standard, so a pull request that edits a managed file fails until the edit

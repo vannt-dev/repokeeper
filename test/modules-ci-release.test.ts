@@ -15,7 +15,7 @@ describe("ci module", () => {
   it("calls the reusable workflows at the moving major tag", () => {
     const out = keys(ciModule.outputs(makeContext()));
     expect(out.name).toBe("ci");
-    expect(out.on).toEqual({ pull_request: null, push: { branches: ["main"] } });
+    expect(out.on).toEqual({ pull_request: null, push: { branches: ["main"] }, workflow_dispatch: null });
     expect(out.permissions).toEqual({ contents: "read" });
     expect(out["jobs.node"]).toEqual({
       uses: `vannt-dev/repokeeper/.github/workflows/stack-node.yml@${WORKFLOW_REF}`,
@@ -35,7 +35,7 @@ describe("ci module", () => {
   it("follows the configured default branch and drops the commits job with the commits module", () => {
     const ctx = makeContext({ config: { github: { default_branch: "trunk" } }, modules: { commits: false } });
     const out = keys(ciModule.outputs(ctx));
-    expect(out.on).toEqual({ pull_request: null, push: { branches: ["trunk"] } });
+    expect(out.on).toEqual({ pull_request: null, push: { branches: ["trunk"] }, workflow_dispatch: null });
     expect(out["jobs.commits"]).toBeUndefined();
   });
 
@@ -103,6 +103,46 @@ describe("release module", () => {
       // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
       secrets: { token: "${{ secrets.RELEASE_PLEASE_TOKEN }}" },
     });
+  });
+
+  it("starts a repository with no release yet at 0.1.0 instead of release-please's 1.0.0", () => {
+    const pkg = (version: string | null) => {
+      const outputs = releaseModule.outputs(
+        makeContext({ stacks: [nodeResolved({ release: { type: "simple", version } })] }),
+      );
+      const config = outputs.find((o) => o.path === "release-please-config.json");
+      return JSON.parse(config?.kind === "file" ? config.content : "").packages["."];
+    };
+    expect(pkg(null)["initial-version"]).toBe("0.1.0");
+    expect(pkg("0.3.0")).not.toHaveProperty("initial-version");
+  });
+
+  it("runs CI on release pull requests opened with GITHUB_TOKEN, since those start no workflows", () => {
+    const out = keys(releaseModule.outputs(makeContext()));
+    expect(out["jobs.release-pr-ci"]).toEqual({
+      needs: "release",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+      if: "${{ needs.release.outputs.pr_branch != '' }}",
+      "runs-on": "ubuntu-latest",
+      permissions: { actions: "write" },
+      steps: [
+        {
+          env: {
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+            GH_TOKEN: "${{ github.token }}",
+            // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+            BRANCH: "${{ needs.release.outputs.pr_branch }}",
+          },
+          run: 'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"',
+        },
+      ],
+    });
+  });
+
+  it("leaves that job out when the repository has no ci workflow", () => {
+    expect(keys(releaseModule.outputs(makeContext({ modules: { ci: false } })))).not.toHaveProperty(
+      "jobs.release-pr-ci",
+    );
   });
 
   it("prefers a language release type and falls back to simple at 0.0.0", () => {

@@ -19,6 +19,9 @@ on:
       major:
         description: Major version of the release
         value: ${{ jobs.release-please.outputs.major }}
+      pr_branch:
+        description: Branch of the release pull request this run opened or updated with GITHUB_TOKEN, which starts no workflows; empty otherwise
+        value: ${{ jobs.release-please.outputs.pr_branch }}
 
 permissions:
   contents: read
@@ -35,6 +38,7 @@ jobs:
       tag_name: ${{ steps.release.outputs.tag_name }}
       version: ${{ steps.release.outputs.version }}
       major: ${{ steps.release.outputs.major }}
+      pr_branch: ${{ steps.pr.outputs.branch }}
     steps:
       - id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
@@ -42,3 +46,14 @@ jobs:
           token: ${{ secrets.token || github.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+      - name: Release pull request branch
+        id: pr
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          PR: ${{ steps.release.outputs.pr }}
+          OWN_TOKEN: ${{ secrets.token != '' }}
+        run: |
+          # a pull request opened with the caller's own token starts CI by itself
+          if [ "$OWN_TOKEN" = "false" ]; then
+            echo "branch=$(jq -r .headBranchName <<<"$PR")" >> "$GITHUB_OUTPUT"
+          fi
