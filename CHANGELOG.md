@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.4.4](https://github.com/vannt-dev/repokeeper/compare/v0.4.3...v0.4.4) (2026-09-28)
+
+
+### Bug Fixes
+
+* **release:** approve the held CI runs of release pull requests instead of dispatching CI ([#29](https://github.com/vannt-dev/repokeeper/issues/29)) ([1c87d86](https://github.com/vannt-dev/repokeeper/commit/1c87d86ced21f4d9d84a16839717a59f363eda71))
+* **release:** run CI on release pull requests and start new repositories at 0.1.0 ([#27](https://github.com/vannt-dev/repokeeper/issues/27)) ([09eb47e](https://github.com/vannt-dev/repokeeper/commit/09eb47e46d1de64d890399bf460642d74ef368f3))
+
 ## [0.4.3](https://github.com/vannt-dev/repokeeper/compare/v0.4.2...v0.4.3) (2026-09-28)
 
 
