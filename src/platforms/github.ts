@@ -107,6 +107,8 @@ export const githubPlatform: PlatformAdapter = {
       directory: "/",
       schedule: { interval: "weekly" },
       groups: { [`${ecosystem}-minor-and-patch`]: { "update-types": ["minor", "patch"] } },
+      // Dependabot infers a Conventional Commits prefix only from history; young repositories fail commitlint
+      "commit-message": { prefix: "chore", include: "scope" },
       // @types/node majors track the Node.js line a project runs on, which the project chooses
       ...(ecosystem === "npm"
         ? { ignore: [{ "dependency-name": "@types/node", "update-types": ["version-update:semver-major"] }] }
