@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.2](https://github.com/vannt-dev/repokeeper/compare/v0.4.1...v0.4.2) (2026-09-28)
+
+
+### Bug Fixes
+
+* **commitlint:** skip Dependabot commits in the reusable workflow ([#23](https://github.com/vannt-dev/repokeeper/issues/23)) ([272c067](https://github.com/vannt-dev/repokeeper/commit/272c067c7701ef9866f8e6f506b25b5e6f6b498e))
+
 ## [0.4.1](https://github.com/vannt-dev/repokeeper/compare/v0.4.0...v0.4.1) (2026-09-28)
 
 
