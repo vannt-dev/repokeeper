@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.3](https://github.com/vannt-dev/repokeeper/compare/v0.4.2...v0.4.3) (2026-09-28)
+
+
+### Bug Fixes
+
+* **release:** skip the SNAPSHOT pull request for maven ([#25](https://github.com/vannt-dev/repokeeper/issues/25)) ([2bc0075](https://github.com/vannt-dev/repokeeper/commit/2bc0075c5162c702db103a48a8c5ec05193b813a))
+
 ## [0.4.2](https://github.com/vannt-dev/repokeeper/compare/v0.4.1...v0.4.2) (2026-09-28)
 
 
