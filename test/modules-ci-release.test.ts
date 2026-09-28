@@ -15,7 +15,7 @@ describe("ci module", () => {
   it("calls the reusable workflows at the moving major tag", () => {
     const out = keys(ciModule.outputs(makeContext()));
     expect(out.name).toBe("ci");
-    expect(out.on).toEqual({ pull_request: null, push: { branches: ["main"] }, workflow_dispatch: null });
+    expect(out.on).toEqual({ pull_request: null, push: { branches: ["main"] } });
     expect(out.permissions).toEqual({ contents: "read" });
     expect(out["jobs.node"]).toEqual({
       uses: `vannt-dev/repokeeper/.github/workflows/stack-node.yml@${WORKFLOW_REF}`,
@@ -35,7 +35,7 @@ describe("ci module", () => {
   it("follows the configured default branch and drops the commits job with the commits module", () => {
     const ctx = makeContext({ config: { github: { default_branch: "trunk" } }, modules: { commits: false } });
     const out = keys(ciModule.outputs(ctx));
-    expect(out.on).toEqual({ pull_request: null, push: { branches: ["trunk"] }, workflow_dispatch: null });
+    expect(out.on).toEqual({ pull_request: null, push: { branches: ["trunk"] } });
     expect(out["jobs.commits"]).toBeUndefined();
   });
 
@@ -117,32 +117,26 @@ describe("release module", () => {
     expect(pkg("0.3.0")).not.toHaveProperty("initial-version");
   });
 
-  it("runs CI on release pull requests opened with GITHUB_TOKEN, since those start no workflows", () => {
-    const out = keys(releaseModule.outputs(makeContext()));
-    expect(out["jobs.release-pr-ci"]).toEqual({
+  it("approves the held pull_request runs of release pull requests opened with GITHUB_TOKEN", () => {
+    const job = keys(releaseModule.outputs(makeContext()))["jobs.release-pr-ci"] as {
+      steps: { env: Record<string, string>; run: string }[];
+    };
+    expect(job).toMatchObject({
       needs: "release",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
       if: "${{ needs.release.outputs.pr_branch != '' }}",
       "runs-on": "ubuntu-latest",
       permissions: { actions: "write" },
-      steps: [
-        {
-          env: {
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
-            GH_TOKEN: "${{ github.token }}",
-            // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
-            BRANCH: "${{ needs.release.outputs.pr_branch }}",
-          },
-          run: 'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"',
-        },
-      ],
     });
-  });
-
-  it("leaves that job out when the repository has no ci workflow", () => {
-    expect(keys(releaseModule.outputs(makeContext({ modules: { ci: false } })))).not.toHaveProperty(
-      "jobs.release-pr-ci",
-    );
+    expect(job.steps[0]?.env).toEqual({
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+      GH_TOKEN: "${{ github.token }}",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+      BRANCH: "${{ needs.release.outputs.pr_branch }}",
+    });
+    const run = job.steps[0]?.run ?? "";
+    expect(run).toContain("actions/runs?branch=$BRANCH&event=pull_request&status=action_required");
+    expect(run).toContain('gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve"');
   });
 
   it("prefers a language release type and falls back to simple at 0.0.0", () => {

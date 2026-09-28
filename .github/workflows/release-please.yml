@@ -20,7 +20,7 @@ on:
         description: Major version of the release
         value: ${{ jobs.release-please.outputs.major }}
       pr_branch:
-        description: Branch of the release pull request this run opened or updated with GITHUB_TOKEN, which starts no workflows; empty otherwise
+        description: Branch of the release pull request this run opened or updated with GITHUB_TOKEN, whose pull_request runs GitHub holds for approval; empty otherwise
         value: ${{ jobs.release-please.outputs.pr_branch }}
 
 permissions:

@@ -251,7 +251,7 @@
     {
       "id": "yaml:.github/workflows/ci.yml#[\"on\"]",
       "module": "ci",
-      "hash": "6ba4774ab2129a605bb160c5ee6f48ebc51544881592ad60ad5268b910fcfbde",
+      "hash": "8a324c0626f6d862860cca96e075031faea73ddbc51d230f2c6ea2d54088c164",
       "target": {
         "kind": "yaml",
         "path": ".github/workflows/ci.yml",
@@ -275,7 +275,7 @@
     {
       "id": "yaml:.github/workflows/release.yml#[\"jobs\",\"release-pr-ci\"]",
       "module": "release",
-      "hash": "5fe7f3717447417a686ad02836df7bf9bb3225fb37358364fd13a11251f997c2",
+      "hash": "6947fbe0732aa7cd806b68053d40c62cdc538fe529a119a0f52a7725a1f38d7a",
       "target": {
         "kind": "yaml",
         "path": ".github/workflows/release.yml",
