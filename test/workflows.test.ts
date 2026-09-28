@@ -1,4 +1,7 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { dartStack } from "../src/stacks/dart.js";
@@ -16,6 +19,7 @@ import type { StackPack } from "../src/stacks/types.js";
 import { TOOL_VERSIONS } from "../src/version.js";
 
 interface Step {
+  name?: string;
   uses?: string;
   run?: string;
 }
@@ -143,6 +147,37 @@ it("commitlint uses the standard's tool versions and header rule", () => {
   expect(text).toContain(`@commitlint/cli@${TOOL_VERSIONS.commitlintCli}`);
   expect(text).toContain(`@commitlint/config-conventional@${TOOL_VERSIONS.commitlintConventional}`);
   expect(text).toContain(`"header-max-length": [2, "always", 100]`);
+});
+
+describe("commitlint config in the reusable workflow", () => {
+  const lint = (message: string) => {
+    const step = workflow("commitlint.yml").jobs.commitlint?.steps?.find((s) => s.name === "Install commitlint");
+    const config = step?.run?.match(/<<'EOF'\n([\s\S]*?)\nEOF/)?.[1];
+    expect(config).toBeDefined();
+    const dir = mkdtempSync(join(tmpdir(), "commitlint-"));
+    writeFileSync(join(dir, "commitlint.config.mjs"), config as string);
+    // config-conventional resolves from the config file's directory
+    writeFileSync(join(dir, "package.json"), "{}");
+    symlinkSync(resolve("node_modules"), join(dir, "node_modules"), "junction");
+    return spawnSync(
+      process.execPath,
+      [resolve("node_modules/@commitlint/cli/cli.js"), "--config", join(dir, "commitlint.config.mjs")],
+      {
+        input: message,
+        encoding: "utf8",
+      },
+    ).status;
+  };
+
+  it("accepts Dependabot commits, which keep a capitalised Bump", () => {
+    const dependabot = `chore: Bump xunit.runner.visualstudio from 3.1.5 to 4.0.0\n\n---\nupdated-dependencies:\n- dependency-name: xunit.runner.visualstudio\n...\n\nSigned-off-by: dependabot[bot] <support@github.com>\n`;
+    expect(lint(dependabot)).toBe(0);
+  });
+
+  it("still rejects the same header from anyone else", () => {
+    expect(lint("chore: Bump xunit.runner.visualstudio from 3.1.5 to 4.0.0\n")).not.toBe(0);
+    expect(lint("chore: bump xunit.runner.visualstudio from 3.1.5 to 4.0.0\n")).toBe(0);
+  });
 });
 
 it("release-please exposes the outputs callers use", () => {

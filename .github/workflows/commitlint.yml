@@ -30,6 +30,8 @@ jobs:
           export default {
             extends: ["@commitlint/config-conventional"],
             rules: { "header-max-length": [2, "always", 100] },
+            // Dependabot writes "Bump x" whatever prefix it is given; its commits carry this sign-off
+            ignores: [(message) => message.includes("Signed-off-by: dependabot[bot] <support@github.com>")],
           };
           EOF
       - name: Check commit messages
