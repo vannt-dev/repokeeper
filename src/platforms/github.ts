@@ -174,6 +174,8 @@ export const githubPlatform: PlatformAdapter = {
               "include-component-in-tag": false,
               ...(release.extraFiles && release.extraFiles.length > 0 ? { "extra-files": release.extraFiles } : {}),
               ...(release.versionFile ? { "version-file": release.versionFile } : {}),
+              // Without it a pom at a release version first gets a pull request that only bumps to -SNAPSHOT
+              ...(release.type === "maven" ? { "skip-snapshot": true } : {}),
             },
           },
         }),
