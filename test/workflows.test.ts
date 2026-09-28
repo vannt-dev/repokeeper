@@ -19,6 +19,8 @@ import type { StackPack } from "../src/stacks/types.js";
 import { TOOL_VERSIONS } from "../src/version.js";
 
 interface Step {
+  if?: string;
+  env?: Record<string, string>;
   name?: string;
   uses?: string;
   run?: string;
@@ -182,6 +184,16 @@ describe("commitlint config in the reusable workflow", () => {
 
 it("release-please exposes the outputs callers use", () => {
   expect(Object.keys(workflow("release-please.yml").on.workflow_call?.outputs ?? {})).toEqual(
-    expect.arrayContaining(["release_created", "tag_name", "version", "major"]),
+    expect.arrayContaining(["release_created", "tag_name", "version", "major", "pr_branch"]),
   );
+});
+
+it("release-please names the release branch only when GITHUB_TOKEN opened the pull request", () => {
+  const steps = workflow("release-please.yml").jobs["release-please"]?.steps ?? [];
+  const pr = steps.find((s) => s.name === "Release pull request branch");
+  expect(pr?.if).toBe("steps.release.outputs.prs_created == 'true'");
+  // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+  expect(pr?.env).toMatchObject({ OWN_TOKEN: "${{ secrets.token != '' }}" });
+  expect(pr?.run).toContain(`if [ "$OWN_TOKEN" = "false" ]`);
+  expect(pr?.run).toContain("jq -r .headBranchName");
 });

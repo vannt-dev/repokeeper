@@ -144,7 +144,12 @@ export const githubPlatform: PlatformAdapter = {
     if (jobs.length === 0) return [];
     return [
       workflowKey("ci", path, ["name"], "ci"),
-      workflowKey("ci", path, ["on"], { pull_request: null, push: { branches: [defaultBranch(ctx.config)] } }),
+      // workflow_dispatch lets the release workflow run CI on release pull requests (see releaseAutomation)
+      workflowKey("ci", path, ["on"], {
+        pull_request: null,
+        push: { branches: [defaultBranch(ctx.config)] },
+        workflow_dispatch: null,
+      }),
       workflowKey("ci", path, ["permissions"], { contents: "read" }),
       // a new push to a pull request makes its earlier run pointless; runs on the default branch always finish
       workflowKey("ci", path, ["concurrency"], {
@@ -159,6 +164,8 @@ export const githubPlatform: PlatformAdapter = {
 
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo): Output[] {
     const path = ".github/workflows/release.yml";
+    const seed = release.version ?? ctx.repo.releasedVersion ?? "0.0.0";
+    const hasCi = ctx.config.modules.ci && githubPlatform.ciWorkflow(ctx).length > 0;
     return [
       {
         kind: "file",
@@ -176,6 +183,8 @@ export const githubPlatform: PlatformAdapter = {
               ...(release.versionFile ? { "version-file": release.versionFile } : {}),
               // Without it a pom at a release version first gets a pull request that only bumps to -SNAPSHOT
               ...(release.type === "maven" ? { "skip-snapshot": true } : {}),
+              // release-please makes a repository's first release 1.0.0 unless told otherwise
+              ...(seed === "0.0.0" ? { "initial-version": "0.1.0" } : {}),
             },
           },
         }),
@@ -184,7 +193,7 @@ export const githubPlatform: PlatformAdapter = {
         kind: "seed",
         module: "release",
         path: ".release-please-manifest.json",
-        content: json({ ".": release.version ?? ctx.repo.releasedVersion ?? "0.0.0" }),
+        content: json({ ".": seed }),
       },
       workflowKey("release", path, ["name"], "release"),
       workflowKey("release", path, ["on"], { push: { branches: [defaultBranch(ctx.config)] } }),
@@ -195,6 +204,29 @@ export const githubPlatform: PlatformAdapter = {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
         secrets: { token: "${{ secrets.RELEASE_PLEASE_TOKEN }}" },
       }),
+      // Pull requests opened with GITHUB_TOKEN start no workflows, so required checks would never report
+      ...(hasCi
+        ? [
+            workflowKey("release", path, ["jobs", "release-pr-ci"], {
+              needs: "release",
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              if: "${{ needs.release.outputs.pr_branch != '' }}",
+              "runs-on": "ubuntu-latest",
+              permissions: { actions: "write" },
+              steps: [
+                {
+                  env: {
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+                    GH_TOKEN: "${{ github.token }}",
+                    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+                    BRANCH: "${{ needs.release.outputs.pr_branch }}",
+                  },
+                  run: 'gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"',
+                },
+              ],
+            }),
+          ]
+        : []),
     ];
   },
 };
