@@ -88,3 +88,20 @@ describe("editorconfig", () => {
     expect(content).toContain("[*.{cs,csx,vb,fs,fsx,fsi,py}]\nindent_size = 4\n");
   });
 });
+
+describe("maven releases", () => {
+  const pkg = (type: "maven" | "simple") => {
+    const outputs = releaseModule.outputs(
+      makeContext({ stacks: [nodeResolved({ release: { type, version: "1.0.0" } })] }),
+    );
+    return JSON.parse(file(outputs, "release-please-config.json").content).packages["."];
+  };
+
+  it("skip the SNAPSHOT pull request, so a pom at 1.0.0 goes straight to its next release", () => {
+    expect(pkg("maven")["skip-snapshot"]).toBe(true);
+  });
+
+  it("leave skip-snapshot out for other release types", () => {
+    expect(pkg("simple")).not.toHaveProperty("skip-snapshot");
+  });
+});
