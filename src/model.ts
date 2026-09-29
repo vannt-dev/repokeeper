@@ -96,6 +96,8 @@ export interface ReleaseInfo {
   extraFiles?: ReleaseExtraFile[];
   /** Source file holding the version, for release types that need one named (ruby's version.rb). */
   versionFile?: string;
+  /** The line holding the version in a file release-please only updates between markers (gradle.properties). */
+  versionLine?: { path: string; line: string };
 }
 
 export interface ResolvedStack {
