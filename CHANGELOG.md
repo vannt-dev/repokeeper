@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.6](https://github.com/vannt-dev/repokeeper/compare/v0.4.5...v0.4.6) (2026-09-29)
+
+
+### Bug Fixes
+
+* **release:** hide chore commits for php releases ([#32](https://github.com/vannt-dev/repokeeper/issues/32)) ([637a601](https://github.com/vannt-dev/repokeeper/commit/637a60107cc680bbf010fa32a1d9e0a200237122))
+
 ## [0.4.5](https://github.com/vannt-dev/repokeeper/compare/v0.4.4...v0.4.5) (2026-09-28)
 
 
