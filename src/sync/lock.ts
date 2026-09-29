@@ -11,9 +11,11 @@ export type Target =
   | { kind: "seed"; path: string }
   | { kind: "block"; path: string; id: string; comment: CommentStyle }
   | { kind: "json"; path: string; keyPath: string[] }
-  | { kind: "yaml"; path: string; keyPath: string[] };
+  | { kind: "yaml"; path: string; keyPath: string[] }
+  | { kind: "marker"; path: string; line: string };
 
 export function targetOf(output: Output): Target {
+  if (output.kind === "marker") return { kind: "marker", path: output.path, line: output.line };
   if (output.kind === "file") return { kind: "file", path: output.path };
   if (output.kind === "seed") return { kind: "seed", path: output.path };
   if (output.kind === "block") return { kind: "block", path: output.path, id: output.id, comment: output.comment };
