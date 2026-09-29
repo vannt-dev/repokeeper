@@ -105,3 +105,23 @@ describe("maven releases", () => {
     expect(pkg("simple")).not.toHaveProperty("skip-snapshot");
   });
 });
+
+describe("php releases", () => {
+  const pkg = (type: "php" | "node") => {
+    const outputs = releaseModule.outputs(
+      makeContext({ stacks: [nodeResolved({ release: { type, version: "1.0.0" } })] }),
+    );
+    return JSON.parse(file(outputs, "release-please-config.json").content).packages["."];
+  };
+
+  it("hide chore commits, which release-please's php strategy otherwise releases on their own", () => {
+    const sections = pkg("php")["changelog-sections"] as { type: string; hidden?: boolean }[];
+
+    expect(sections.find((s) => s.type === "chore")).toMatchObject({ hidden: true });
+    expect(sections.filter((s) => !s.hidden).map((s) => s.type)).toEqual(["feat", "fix", "perf", "revert"]);
+  });
+
+  it("leave the changelog sections to release-please for other release types", () => {
+    expect(pkg("node")).not.toHaveProperty("changelog-sections");
+  });
+});
