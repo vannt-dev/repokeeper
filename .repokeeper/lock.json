@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "standard": "1.4.1",
+  "standard": "1.4.2",
   "entries": [
     {
       "id": "block:.gitattributes#editorconfig",
