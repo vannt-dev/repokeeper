@@ -38,6 +38,20 @@ for id in $ids; do gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/app
 `;
 
 const RELEASE_PLEASE_SCHEMA = "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json";
+// release-please's own php sections (src/strategies/php.ts) with chore hidden, as every other strategy has it
+const PHP_CHANGELOG_SECTIONS = [
+  { type: "feat", section: "Features" },
+  { type: "fix", section: "Bug Fixes" },
+  { type: "perf", section: "Performance Improvements" },
+  { type: "revert", section: "Reverts" },
+  { type: "chore", section: "Miscellaneous Chores", hidden: true },
+  { type: "docs", section: "Documentation", hidden: true },
+  { type: "style", section: "Styles", hidden: true },
+  { type: "refactor", section: "Code Refactoring", hidden: true },
+  { type: "test", section: "Tests", hidden: true },
+  { type: "build", section: "Build System", hidden: true },
+  { type: "ci", section: "Continuous Integration", hidden: true },
+];
 const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
 export const githubPlatform: PlatformAdapter = {
@@ -187,6 +201,8 @@ export const githubPlatform: PlatformAdapter = {
               ...(release.versionFile ? { "version-file": release.versionFile } : {}),
               // Without it a pom at a release version first gets a pull request that only bumps to -SNAPSHOT
               ...(release.type === "maven" ? { "skip-snapshot": true } : {}),
+              // release-please's php strategy shows chore commits, which makes each one releasable on its own
+              ...(release.type === "php" ? { "changelog-sections": PHP_CHANGELOG_SECTIONS } : {}),
               // release-please makes a repository's first release 1.0.0 unless told otherwise; a release tag means
               // there was one, even when a version file release-please never bumps still reads 0.0.0
               ...(seed === "0.0.0" && !ctx.repo.releasedVersion ? { "initial-version": "0.1.0" } : {}),
