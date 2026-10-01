@@ -246,7 +246,7 @@ describe("gitlab release", () => {
     });
     const script = release.script.join("\n");
     expect(script).toContain(
-      "semantic-release@25.0.9 @semantic-release/changelog@7.0.0 @semantic-release/git@11.0.1 @semantic-release/gitlab@13.3.3 conventional-changelog-conventionalcommits@10.4.0",
+      "semantic-release@25.0.9 @semantic-release/changelog@7.0.0 @semantic-release/git@11.0.1 @semantic-release/gitlab@13.3.3 conventional-changelog-conventionalcommits@9.3.1",
     );
     expect(script).toContain('"$dir/node_modules/.bin/semantic-release"');
   });
@@ -257,7 +257,7 @@ describe("gitlab dependency updates", () => {
     const config = JSON.parse(files(depsModule.outputs(gitlabContext()))["renovate.json"] as string);
     expect(config).toEqual({
       $schema: "https://docs.renovatebot.com/renovate-schema.json",
-      extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)", "schedule:weekly"],
+      extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)"],
       packageRules: [
         { matchUpdateTypes: ["minor", "patch"], groupName: "minor and patch updates" },
         { matchPackageNames: ["@types/node"], matchUpdateTypes: ["major"], enabled: false },
@@ -305,5 +305,23 @@ describe("gitlab plan", () => {
       "workflow",
     ]);
     expect(outputs.some((o) => o.path.startsWith(".github/") || o.path.startsWith("release-please"))).toBe(false);
+  });
+});
+
+describe("gitlab warnings", () => {
+  it("warns when the user's stages leave out the ones the managed jobs use", async () => {
+    const root = await tempDir();
+    await writeFile(join(root, ".gitlab-ci.yml"), "stages:\n  - build\n  - test\n");
+    const missing = capture(root);
+    await printWarnings(root, gitlabContext(), missing.io);
+    expect(missing.out).toContain(
+      "warning: .gitlab-ci.yml: stages lacks deploy, which repokeeper's jobs use; add it, or GitLab rejects the pipeline",
+    );
+
+    await writeFile(join(root, ".gitlab-ci.yml"), "stages: [build, test, deploy]\n");
+    const complete = capture(root);
+    await printWarnings(root, gitlabContext(), complete.io);
+    await printWarnings(await tempDir(), gitlabContext(), complete.io);
+    expect(complete.out.join("\n")).not.toContain("stages");
   });
 });

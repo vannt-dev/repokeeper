@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parse } from "yaml";
 import type { Io } from "../cli.js";
 import { duplicateTestRuns } from "../duplicates.js";
 import { crlfTrackedFiles } from "../git.js";
@@ -99,6 +100,20 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
     const os = ctx.stacks.find((stack) => stack.id === "node")?.ci?.with.os;
     if (os !== undefined && os !== '["ubuntu-latest"]') {
       io.out("note: node.os is ignored on gitlab (Linux runners only)");
+    }
+    // repokeeper's jobs use GitLab's default stages; a stages list of the user's own replaces those
+    let ci: { stages?: unknown } | null = null;
+    try {
+      ci = parse(await readFile(join(root, ".gitlab-ci.yml"), "utf8"));
+    } catch {}
+    if (Array.isArray(ci?.stages)) {
+      const stages = ci.stages as unknown[];
+      const missing = ["test", "deploy"].filter((stage) => !stages.includes(stage));
+      if (missing.length > 0) {
+        io.out(
+          `warning: .gitlab-ci.yml: stages lacks ${missing.join(" and ")}, which repokeeper's jobs use; add it, or GitLab rejects the pipeline`,
+        );
+      }
     }
   }
   if (!ctx.config.modules.editorconfig) return;

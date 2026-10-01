@@ -117,7 +117,8 @@ take it from the adapter (`securityReport(repo)`, `profileUrl(repo)` and
 `renovate.json`:
 
 - extends `config:recommended`;
-- weekly schedule;
+- no Renovate schedule: the pipeline schedule sets the cadence, and a
+  Renovate schedule would skip every run outside its own window;
 - minor and patch updates in one group;
 - semantic commits of type `chore` (Renovate's `deps` scope kept), so
   commits pass commitlint;

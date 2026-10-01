@@ -78,3 +78,9 @@ it("reads the repository from a GitLab remote only on the gitlab platform", asyn
   expect((await repoInfo(dir)).owner).toBeNull();
   expect(await remoteHost(await tempDir())).toBeNull();
 });
+
+it("keeps the port of an HTTPS remote, which the web address shares, and drops an SSH port", () => {
+  expect(parseRemote("https://gitlab.example.com:8443/acme/demo.git")?.host).toBe("gitlab.example.com:8443");
+  expect(parseRemote("http://gitlab.example.com:8080/acme/demo.git")?.host).toBe("gitlab.example.com:8080");
+  expect(parseRemote("ssh://git@gitlab.example.com:2222/acme/demo.git")?.host).toBe("gitlab.example.com");
+});

@@ -33,7 +33,9 @@ export interface Remote {
 /** Any hosted remote, HTTPS or SSH. The owner is the whole namespace path, because GitLab groups nest. */
 export function parseRemote(url: string): Remote | null {
   const text = url.trim();
+  // the web address shares the port of an http(s) remote; an SSH port says nothing about it
   const match =
+    /^https?:\/\/(?:[^@/]+@)?([^/:]+(?::\d+)?)\/(.+)$/i.exec(text) ??
     /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\/(.+)$/i.exec(text) ??
     /^(?:[^@/]+@)?([^/:]+):(.+)$/.exec(text);
   if (!match) return null;

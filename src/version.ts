@@ -15,7 +15,8 @@ export const TOOL_VERSIONS = {
   semanticReleaseChangelog: "7.0.0",
   semanticReleaseGit: "11.0.1",
   semanticReleaseGitlab: "13.3.3",
-  conventionalCommitsPreset: "10.4.0",
+  // 10.x needs conventional-changelog-writer 9, and semantic-release 25's notes generator bundles 8
+  conventionalCommitsPreset: "9.3.1",
   renovate: "44.128.1",
 } as const;
 

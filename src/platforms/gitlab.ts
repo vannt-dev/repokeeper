@@ -129,8 +129,9 @@ export const gitlabPlatform: PlatformAdapter = {
         path: "renovate.json",
         content: json({
           $schema: "https://docs.renovatebot.com/renovate-schema.json",
-          // chore commits pass commitlint, as the Dependabot prefix does on GitHub
-          extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)", "schedule:weekly"],
+          // chore commits pass commitlint, as the Dependabot prefix does on GitHub. No schedule preset: the
+          // pipeline schedule sets the cadence, and a Renovate schedule would skip runs outside its own window
+          extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)"],
           packageRules: [
             { matchUpdateTypes: ["minor", "patch"], groupName: "minor and patch updates" },
             // @types/node majors track the Node.js line a project runs on, which the project chooses
