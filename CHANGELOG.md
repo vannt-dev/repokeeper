@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.7](https://github.com/vannt-dev/repokeeper/compare/v0.4.6...v0.4.7) (2026-10-01)
+
+
+### Bug Fixes
+
+* **release:** add release-please markers around the gradle.properties version ([#34](https://github.com/vannt-dev/repokeeper/issues/34)) ([c862008](https://github.com/vannt-dev/repokeeper/commit/c862008446fa2f27e7755e5dc9f29e4ce785ec38))
+
 ## [0.4.6](https://github.com/vannt-dev/repokeeper/compare/v0.4.5...v0.4.6) (2026-09-29)
 
 
