@@ -5,6 +5,7 @@ import { removeBlock, upsertBlock } from "./block.js";
 import { hashText } from "./hash.js";
 import { deleteAtPath, formatJson, setAtPath } from "./json.js";
 import { type Lock, type LockEntry, type Target, targetOf, writeLock } from "./lock.js";
+import { addMarkers } from "./marker.js";
 import { desiredText } from "./state.js";
 import type { SyncResult } from "./sync.js";
 import { deleteYamlKey, setYamlKey } from "./yaml.js";
@@ -27,6 +28,7 @@ async function write(root: string, output: Output): Promise<void> {
   const path = join(root, output.path);
   if (output.kind === "file" || output.kind === "seed") return put(path, output.content);
   const existing = await readOrNull(path);
+  if (output.kind === "marker") return existing === null ? undefined : put(path, addMarkers(existing, output.line));
   if (output.kind === "block") return put(path, upsertBlock(existing, output.id, output.body, output.comment));
   if (output.kind === "yaml") {
     return put(
@@ -41,7 +43,7 @@ async function write(root: string, output: Output): Promise<void> {
 
 async function remove(root: string, target: Target): Promise<void> {
   const path = join(root, target.path);
-  if (target.kind === "seed") return;
+  if (target.kind === "seed" || target.kind === "marker") return;
   if (target.kind === "file") return rm(path, { force: true });
   const existing = await readOrNull(path);
   if (existing === null) return;

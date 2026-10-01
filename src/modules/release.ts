@@ -1,4 +1,4 @@
-import type { Module, ReleaseInfo, ResolvedStack } from "../model.js";
+import type { Module, Output, ReleaseInfo, ResolvedStack } from "../model.js";
 
 /** One release per repository: the first stack with a language release type wins, otherwise the first stack's `simple` release (which may name extra files). */
 export function pickRelease(stacks: ResolvedStack[]): ReleaseInfo {
@@ -9,5 +9,11 @@ export function pickRelease(stacks: ResolvedStack[]): ReleaseInfo {
 export const releaseModule: Module = {
   id: "release",
   enabled: (config) => config.modules.release,
-  outputs: (ctx) => ctx.platform.releaseAutomation(ctx, pickRelease(ctx.stacks)),
+  outputs: (ctx) => {
+    const release = pickRelease(ctx.stacks);
+    const markers: Output[] = release.versionLine
+      ? [{ kind: "marker", module: "release", path: release.versionLine.path, line: release.versionLine.line }]
+      : [];
+    return [...ctx.platform.releaseAutomation(ctx, release), ...markers];
+  },
 };

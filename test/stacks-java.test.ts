@@ -70,7 +70,12 @@ it("checks a Gradle project, installing Gradle when there is no wrapper", async 
   });
   expect(stack.gitignore).toEqual(["Java", "Gradle"]);
   expect(stack.dependabot).toEqual(["gradle"]);
-  expect(stack.release).toEqual({ type: "simple", version: "1.4.0", extraFiles: ["gradle.properties"] });
+  expect(stack.release).toEqual({
+    type: "simple",
+    version: "1.4.0",
+    extraFiles: ["gradle.properties"],
+    versionLine: { path: "gradle.properties", line: "^version\\s*=" },
+  });
 });
 
 it("uses the Gradle wrapper when present", async () => {

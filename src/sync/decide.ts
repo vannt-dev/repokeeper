@@ -17,6 +17,8 @@ export function decide(
   if (currentText === null) return "create";
   const current = hashText(currentText);
   if (current === hashText(desiredText(output))) return "unchanged";
+  // adding the two marker lines is always safe, so they are written without --adopt or --accept
+  if (output.kind === "marker") return "write";
   if (entry) return current === entry.hash ? "write" : "conflict";
   return adopt ? "adopt" : "unmanaged";
 }
@@ -24,6 +26,7 @@ export function decide(
 /** For a lock entry the standard no longer produces. */
 export function decideRemoval(entry: LockEntry, currentText: string | null): RemovalAction {
   if (currentText === null) return "gone";
-  if (entry.target.kind === "seed") return "left"; // other tools own a seed once it exists
+  // other tools own a seed once it exists, and release-please uses the markers
+  if (entry.target.kind === "seed" || entry.target.kind === "marker") return "left";
   return hashText(currentText) === entry.hash ? "delete" : "orphan-edited";
 }

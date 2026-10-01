@@ -13,7 +13,14 @@ export async function gradleBuild(root: string): Promise<{ command: string; rele
   return {
     command: wrapper ? "./gradlew check" : "gradle check",
     wrapper,
-    // release-please's generic updater changes gradle.properties once it carries x-release-please markers
-    release: { type: "simple", version, ...(properties !== null ? { extraFiles: ["gradle.properties"] } : {}) },
+    // release-please's generic updater only edits gradle.properties between x-release-please markers,
+    // which the release module adds around the version line
+    release: {
+      type: "simple",
+      version,
+      ...(version !== null
+        ? { extraFiles: ["gradle.properties"], versionLine: { path: "gradle.properties", line: "^version\\s*=" } }
+        : {}),
+    },
   };
 }

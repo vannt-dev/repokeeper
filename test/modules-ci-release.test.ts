@@ -92,6 +92,17 @@ describe("release module", () => {
     expect(manifest).toMatchObject({ kind: "seed", content: '{\n  ".": "0.3.0"\n}\n' });
   });
 
+  it("wraps the version line in markers when the release names one", () => {
+    const versionLine = { path: "gradle.properties", line: "^version\\s*=" };
+    const outputs = releaseModule.outputs(
+      makeContext({ stacks: [nodeResolved({ release: { type: "simple", version: "1.0.0", versionLine } })] }),
+    );
+    expect(outputs.filter((o) => o.kind === "marker")).toEqual([
+      { kind: "marker", module: "release", path: "gradle.properties", line: "^version\\s*=" },
+    ]);
+    expect(releaseModule.outputs(makeContext()).some((o) => o.kind === "marker")).toBe(false);
+  });
+
   it("adds a release workflow that calls the reusable one with write permissions", () => {
     const out = keys(releaseModule.outputs(makeContext()));
     expect(out.name).toBe("release");

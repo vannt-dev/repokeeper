@@ -45,9 +45,18 @@ export interface YamlOutput {
   order?: readonly string[];
   module: string;
 }
-export type Output = FileOutput | SeedOutput | BlockOutput | JsonOutput | YamlOutput;
+/** release-please version markers around one line of a file the user owns, such as gradle.properties' `version=`. */
+export interface MarkerOutput {
+  kind: "marker";
+  path: string;
+  /** Regular expression source of the line to wrap. */
+  line: string;
+  module: string;
+}
+export type Output = FileOutput | SeedOutput | BlockOutput | JsonOutput | YamlOutput | MarkerOutput;
 
 export function outputId(output: Output): string {
+  if (output.kind === "marker") return `marker:${output.path}`;
   if (output.kind === "file") return `file:${output.path}`;
   if (output.kind === "seed") return `seed:${output.path}`;
   if (output.kind === "block") return `block:${output.path}#${output.id}`;
@@ -56,6 +65,7 @@ export function outputId(output: Output): string {
 }
 
 export function describeOutput(output: Output): string {
+  if (output.kind === "marker") return `${output.path} (release-please version markers)`;
   if (output.kind === "file" || output.kind === "seed") return output.path;
   if (output.kind === "block") return `${output.path} (block ${output.id})`;
   return `${output.path} (${output.keyPath.join(".")})`;
@@ -86,6 +96,8 @@ export interface ReleaseInfo {
   extraFiles?: ReleaseExtraFile[];
   /** Source file holding the version, for release types that need one named (ruby's version.rb). */
   versionFile?: string;
+  /** The line holding the version in a file release-please only updates between markers (gradle.properties). */
+  versionLine?: { path: string; line: string };
 }
 
 export interface ResolvedStack {

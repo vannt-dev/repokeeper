@@ -283,6 +283,24 @@ describe("repokeeper end to end", () => {
     expect((await repokeeper(dir, "check")).code).toBe(0);
   });
 
+  it("wraps the gradle.properties version in release-please markers", async () => {
+    const dir = await tempDir();
+    await writeFile(join(dir, "build.gradle.kts"), 'plugins {\n    kotlin("jvm") version "2.4.20"\n}\n');
+    await writeFile(join(dir, "gradle.properties"), "group=com.example\nversion=0.3.0\n");
+    sh(dir, "init", "-q", "-b", "main");
+    sh(dir, "config", "user.name", "Demo User");
+    sh(dir, "config", "user.email", "demo@example.com");
+    sh(dir, "add", "-A");
+    sh(dir, "commit", "-qm", "chore: initial");
+
+    expect((await repokeeper(dir, "init")).code).toBe(0);
+    expect(await readFile(join(dir, "gradle.properties"), "utf8")).toBe(
+      "group=com.example\n# x-release-please-start-version\nversion=0.3.0\n# x-release-please-end\n",
+    );
+    commitAll(dir);
+    expect((await repokeeper(dir, "check")).code).toBe(0);
+  });
+
   it("follows the remote's default branch and continues from the latest release tag", async () => {
     const dir = await tempDir();
     await writeFile(join(dir, "install.sh"), "#!/bin/sh\necho hi\n");

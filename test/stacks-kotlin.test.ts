@@ -35,7 +35,12 @@ it("runs gradle check through the java workflow and releases gradle.properties",
   expect(stack.test).toBe("./gradlew check");
   expect(stack.gitignore).toEqual(["Kotlin", "Gradle"]);
   expect(stack.dependabot).toEqual(["gradle"]);
-  expect(stack.release).toEqual({ type: "simple", version: "1.4.0", extraFiles: ["gradle.properties"] });
+  expect(stack.release).toEqual({
+    type: "simple",
+    version: "1.4.0",
+    extraFiles: ["gradle.properties"],
+    versionLine: { path: "gradle.properties", line: "^version\\s*=" },
+  });
 });
 
 it("refuses Android projects, naming the build file", async () => {
@@ -60,4 +65,11 @@ it("reads version-catalog plugin aliases, and ignores kotlinx dependencies and c
   await expect(kotlinStack.resolve(await repo({ "build.gradle.kts": android }))).rejects.toThrow(
     "build.gradle.kts is an Android project",
   );
+});
+
+it("releases gradle.properties only when it has a version line", async () => {
+  const stack = await kotlinStack.resolve(
+    await repo({ "build.gradle.kts": KTS, "gradle.properties": "org.gradle.caching=true\n" }),
+  );
+  expect(stack.release).toEqual({ type: "simple", version: null });
 });
