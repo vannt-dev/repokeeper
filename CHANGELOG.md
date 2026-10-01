@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/vannt-dev/repokeeper/compare/v0.4.7...v0.5.0) (2026-10-01)
+
+
+### Features
+
+* add a GitLab platform adapter for the node stack ([#36](https://github.com/vannt-dev/repokeeper/issues/36)) ([4f389f0](https://github.com/vannt-dev/repokeeper/commit/4f389f017630a7034838b598ee899040687995c9))
+
 ## [0.4.7](https://github.com/vannt-dev/repokeeper/compare/v0.4.6...v0.4.7) (2026-10-01)
 
 
