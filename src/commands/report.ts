@@ -19,6 +19,8 @@ export interface CommandOptions {
   relock: boolean;
   json: boolean;
   yes: boolean;
+  /** Platform to use instead of detection from the origin remote (init). */
+  platform?: import("../config/types.js").PlatformId;
 }
 
 /** How to name the output under `owned`: the path, or `path#key` for one key of a shared file. */

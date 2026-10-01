@@ -9,6 +9,7 @@ import type { CommandOptions } from "./report.js";
 /** `repokeeper github apply`: diff the repository's GitHub settings against `github:` and apply on confirmation. */
 export async function githubApplyCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
   const config = await loadConfig(root);
+  if (config.platform !== "github") throw new UsageError(`this repository uses the ${config.platform} platform`);
   const repo = await repoInfo(root);
   if (!repo.owner) throw new UsageError("the origin remote is not a GitHub repository");
   const slug = `${repo.owner}/${repo.name}`;
