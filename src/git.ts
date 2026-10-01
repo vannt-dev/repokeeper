@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
 import { basename } from "node:path";
 import { promisify } from "node:util";
+import type { PlatformId } from "./config/types.js";
 import type { RepoInfo } from "./model.js";
 
 const execFileAsync = promisify(execFile);
@@ -23,10 +24,47 @@ export function parseRemoteUrl(url: string): { owner: string; name: string } | n
   return match ? { owner: match[1] as string, name: match[2] as string } : null;
 }
 
-export async function repoInfo(root: string): Promise<RepoInfo> {
-  const url = await git(root, ["remote", "get-url", "origin"]);
-  const remote = (url ? parseRemoteUrl(url) : null) ?? { owner: null, name: basename(root) };
-  return { ...remote, releasedVersion: await latestReleaseVersion(root) };
+export interface Remote {
+  host: string;
+  owner: string;
+  name: string;
+}
+
+/** Any hosted remote, HTTPS or SSH. The owner is the whole namespace path, because GitLab groups nest. */
+export function parseRemote(url: string): Remote | null {
+  const text = url.trim();
+  // the web address shares the port of an http(s) remote; an SSH port says nothing about it
+  const match =
+    /^https?:\/\/(?:[^@/]+@)?([^/:]+(?::\d+)?)\/(.+)$/i.exec(text) ??
+    /^[a-z][a-z0-9+.-]*:\/\/(?:[^@/]+@)?([^/:]+)(?::\d+)?\/(.+)$/i.exec(text) ??
+    /^(?:[^@/]+@)?([^/:]+):(.+)$/.exec(text);
+  if (!match) return null;
+  const host = (match[1] as string).toLowerCase();
+  const segments = (match[2] as string)
+    .replace(/\/+$/, "")
+    .replace(/\.git$/, "")
+    .split("/")
+    .filter(Boolean);
+  const name = segments.pop();
+  // a host has a dot, which rules out drive letters and file: URLs
+  if (!host.includes(".") || name === undefined || segments.length === 0) return null;
+  return { host, owner: segments.join("/"), name };
+}
+
+async function originUrl(root: string): Promise<string | null> {
+  return git(root, ["remote", "get-url", "origin"]);
+}
+
+/** Host of the origin remote, or null without one. */
+export async function remoteHost(root: string): Promise<string | null> {
+  const url = await originUrl(root);
+  return url ? (parseRemote(url)?.host ?? null) : null;
+}
+
+export async function repoInfo(root: string, platform: PlatformId = "github"): Promise<RepoInfo> {
+  const url = await originUrl(root);
+  const remote = url ? (platform === "gitlab" ? parseRemote(url) : parseRemoteUrl(url)) : null;
+  return { ...(remote ?? { owner: null, name: basename(root) }), releasedVersion: await latestReleaseVersion(root) };
 }
 
 /** The branch `origin/HEAD` points at, or null when the remote's default branch isn't known locally. */

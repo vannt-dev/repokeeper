@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { parse } from "yaml";
 import type { Io } from "../cli.js";
 import { duplicateTestRuns } from "../duplicates.js";
 import { crlfTrackedFiles } from "../git.js";
@@ -19,6 +20,8 @@ export interface CommandOptions {
   relock: boolean;
   json: boolean;
   yes: boolean;
+  /** Platform to use instead of detection from the origin remote (init). */
+  platform?: import("../config/types.js").PlatformId;
 }
 
 /** How to name the output under `owned`: the path, or `path#key` for one key of a shared file. */
@@ -86,11 +89,31 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
 
 /** Problems repokeeper can't fix itself; printed, but not counted as drift. */
 export async function printWarnings(root: string, ctx: ModuleContext, io: Io): Promise<void> {
-  if (ctx.config.modules.ci) {
+  if (ctx.config.modules.ci && ctx.platform.id === "github") {
     for (const { file, command } of await duplicateTestRuns(root, ctx.stacks)) {
       io.out(
         `note: ${file} also runs "${command}", which the repokeeper ci job now runs too; drop one of them to save CI time`,
       );
+    }
+  }
+  if (ctx.platform.id === "gitlab") {
+    const os = ctx.stacks.find((stack) => stack.id === "node")?.ci?.with.os;
+    if (os !== undefined && os !== '["ubuntu-latest"]') {
+      io.out("note: node.os is ignored on gitlab (Linux runners only)");
+    }
+    // repokeeper's jobs use GitLab's default stages; a stages list of the user's own replaces those
+    let ci: { stages?: unknown } | null = null;
+    try {
+      ci = parse(await readFile(join(root, ".gitlab-ci.yml"), "utf8"));
+    } catch {}
+    if (Array.isArray(ci?.stages)) {
+      const stages = ci.stages as unknown[];
+      const missing = ["test", "deploy"].filter((stage) => !stages.includes(stage));
+      if (missing.length > 0) {
+        io.out(
+          `warning: .gitlab-ci.yml: stages lacks ${missing.join(" and ")}, which repokeeper's jobs use; add it, or GitLab rejects the pipeline`,
+        );
+      }
     }
   }
   if (!ctx.config.modules.editorconfig) return;

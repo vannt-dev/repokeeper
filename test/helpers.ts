@@ -5,6 +5,7 @@ import type { Io } from "../src/cli.js";
 import { defaultConfig, type ModulesConfig, type RepokeeperConfig } from "../src/config/types.js";
 import type { ModuleContext, Output, RepoInfo, ResolvedStack } from "../src/model.js";
 import { githubPlatform } from "../src/platforms/github.js";
+import { gitlabPlatform } from "../src/platforms/gitlab.js";
 import { applySync } from "../src/sync/apply.js";
 import { readLock } from "../src/sync/lock.js";
 import { computeSync, type SyncResult } from "../src/sync/sync.js";
@@ -65,6 +66,16 @@ export function makeContext(
     platform: githubPlatform,
     repo: overrides.repo ?? { owner: "vannt-dev", name: "example" },
   };
+}
+
+/** `makeContext` for a repository on GitLab. */
+export function gitlabContext(overrides: Parameters<typeof makeContext>[0] = {}): ModuleContext {
+  const ctx = makeContext({
+    ...overrides,
+    config: { platform: "gitlab", ...overrides.config },
+    repo: overrides.repo ?? { host: "gitlab.com", owner: "acme/tools", name: "example" },
+  });
+  return { ...ctx, platform: gitlabPlatform };
 }
 
 /** Plans nothing: computes and applies one sync of `outputs`, as `update` would. */

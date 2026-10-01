@@ -13,6 +13,7 @@ export const STACK_IDS = [
   "ruby",
 ] as const;
 export type StackId = (typeof STACK_IDS)[number];
+export type PlatformId = "github" | "gitlab";
 
 export interface HealthConfig {
   /** SPDX id, or false to leave licensing alone. v1 bundles MIT only. */
@@ -37,20 +38,25 @@ export interface ModulesConfig {
   health: HealthConfig | false;
 }
 
+export interface GitlabSettings {
+  default_branch?: string;
+}
+
 export interface RepokeeperConfig {
   schema: 1;
   standard: string;
-  platform: "github";
+  platform: PlatformId;
   stacks: StackId[];
   modules: ModulesConfig;
   owned: string[];
   stack_options: Record<string, Record<string, unknown>>;
   github?: GithubSettings;
+  gitlab?: GitlabSettings;
 }
 
-/** The branch workflows run on and contributors branch from: `github.default_branch`, or `main`. */
+/** The branch CI runs on and contributors branch from: `default_branch` of the configured platform, or `main`. */
 export function defaultBranch(config: RepokeeperConfig): string {
-  const branch = config.github?.default_branch;
+  const branch = (config.platform === "gitlab" ? config.gitlab : config.github)?.default_branch;
   return typeof branch === "string" && branch.length > 0 ? branch : "main";
 }
 
@@ -60,11 +66,12 @@ export function defaultConfig(input: {
   copyright: string;
   contact: string;
   codeowners: string[];
+  platform?: PlatformId;
 }): RepokeeperConfig {
   return {
     schema: 1,
     standard: input.standard,
-    platform: "github",
+    platform: input.platform ?? "github",
     stacks: input.stacks,
     modules: {
       editorconfig: true,

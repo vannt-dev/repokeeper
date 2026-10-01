@@ -5,9 +5,10 @@ import type { Io } from "../cli.js";
 import { CONFIG_FILE, loadConfig, renderConfig } from "../config/load.js";
 import { defaultConfig } from "../config/types.js";
 import { UsageError } from "../errors.js";
-import { dirtyPaths, gitUserName, remoteDefaultBranch, repoInfo } from "../git.js";
+import { dirtyPaths, gitUserName, remoteDefaultBranch, remoteHost, repoInfo } from "../git.js";
 import { outputId } from "../model.js";
 import { planOutputs } from "../plan.js";
+import { platformFor } from "../platforms/index.js";
 import { detectStacks } from "../stacks/index.js";
 import { applySync } from "../sync/apply.js";
 import { hashText } from "../sync/hash.js";
@@ -56,17 +57,19 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   const stacks = options.stacks.length > 0 ? options.stacks : await detectStacks(root);
   if (stacks.length === 0) throw new UsageError("no supported stack detected; pass --stack node");
 
-  const repo = await repoInfo(root);
+  const platform = options.platform ?? ((await remoteHost(root))?.includes("gitlab") ? "gitlab" : "github");
+  const repo = await repoInfo(root, platform);
   const holder = (await gitUserName(root)) ?? repo.owner ?? "the project authors";
   const config = defaultConfig({
     stacks,
     standard: STANDARD_VERSION,
     copyright: `${new Date().getFullYear()} ${holder}`,
-    contact: repo.owner ? `https://github.com/${repo.owner}` : "the repository maintainers",
+    contact: platformFor(platform).profileUrl(repo) ?? "the repository maintainers",
     codeowners: repo.owner ? [`@${repo.owner}`] : [],
+    platform,
   });
   const branch = await remoteDefaultBranch(root);
-  if (branch && branch !== "main") config.github = { default_branch: branch };
+  if (branch && branch !== "main") config[platform] = { default_branch: branch };
   const ctx = await buildContext(root, config, repo);
   const adopt = options.adoptAll ? ("all" as const) : new Set(options.adopt);
   const result = await computeSync(root, planOutputs(ctx), null, { adopt, accept: new Set() });

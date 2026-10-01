@@ -1,4 +1,4 @@
-import type { RepokeeperConfig, StackId } from "./config/types.js";
+import type { PlatformId, RepokeeperConfig, StackId } from "./config/types.js";
 import type { CommentStyle } from "./sync/block.js";
 
 export const MANAGED_HEADER =
@@ -120,12 +120,22 @@ export interface ResolvedStack {
 export interface RepoInfo {
   owner: string | null;
   name: string;
+  /** Host of the origin remote; absent on GitHub, where it is always github.com. */
+  host?: string | null;
   /** Version of the latest `vX.Y.Z` tag; seeds the release manifest when the stack has no version of its own. */
   releasedVersion?: string | null;
 }
 
 export interface PlatformAdapter {
-  id: "github";
+  id: PlatformId;
+  /** Stacks whose CI and release this platform can render. */
+  stacks: readonly StackId[];
+  /** What the platform calls a proposed change. */
+  changeRequest: "pull request" | "merge request";
+  /** Page of the repository's owner, or null when the remote is unknown. */
+  profileUrl(repo: RepoInfo): string | null;
+  /** How to report a vulnerability privately: the words after "Report the vulnerability privately ". */
+  securityReport(repo: RepoInfo): string;
   communityFiles(ctx: ModuleContext): Output[];
   dependencyUpdates(ecosystems: string[]): Output[];
   /** The caller CI workflow; empty when no job would run. */

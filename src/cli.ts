@@ -38,6 +38,7 @@ export const USAGE = [
   "  --adopt <path>   let repokeeper manage an existing file (repeatable); --adopt-all for every file",
   "  --accept <path>  take repokeeper's version of a locally edited file (update, repeatable)",
   "  --stack <id>     stack to use instead of detection (init, repeatable)",
+  "  --platform <id>  github or gitlab, instead of detection from the origin remote (init)",
   "  --relock         rebuild .repokeeper/lock.json from the current files (init)",
   "  --json           machine-readable output (check)",
   "  -y, --yes        apply without asking (github apply)",
@@ -59,6 +60,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
         "adopt-all": { type: "boolean", default: false },
         accept: { type: "string", multiple: true, default: [] },
         stack: { type: "string", multiple: true, default: [] },
+        platform: { type: "string" },
         relock: { type: "boolean", default: false },
         json: { type: "boolean", default: false },
         yes: { type: "boolean", short: "y", default: false },
@@ -81,6 +83,11 @@ export async function run(argv: string[], io: Io): Promise<number> {
         throw new UsageError(`unknown stack ${stack}; expected one of ${STACK_IDS.join(", ")}`);
       }
     }
+    const platform = values.platform as string | undefined;
+    if (platform !== undefined && platform !== "github" && platform !== "gitlab") {
+      throw new UsageError(`unknown platform ${platform}; expected github or gitlab`);
+    }
+    if (platform !== undefined && command !== "init") throw new UsageError("--platform is only for init");
     const options: CommandOptions = {
       dryRun: values["dry-run"] as boolean,
       force: values.force as boolean,
@@ -91,6 +98,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
       relock: values.relock as boolean,
       json: values.json as boolean,
       yes: values.yes as boolean,
+      ...(platform !== undefined ? { platform } : {}),
     };
     if (command === "init") return await initCommand(io.cwd, options, io);
     if (command === "check") return await checkCommand(io.cwd, options, io);

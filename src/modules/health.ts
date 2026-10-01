@@ -35,7 +35,6 @@ export const healthModule: Module = {
   outputs(ctx) {
     const health = ctx.config.modules.health;
     if (!health) return [];
-    const { owner, name } = ctx.repo;
     const outputs: Output[] = [];
 
     if (health.license !== false) {
@@ -47,9 +46,7 @@ export const healthModule: Module = {
       outputs.push(md("LICENSE", MIT(health.copyright)));
     }
 
-    const report = owner
-      ? `through [GitHub security advisories](https://github.com/${owner}/${name}/security/advisories/new)`
-      : "through the repository's Security tab (Report a vulnerability)";
+    const report = ctx.platform.securityReport(ctx.repo);
     outputs.push(
       md(
         "SECURITY.md",
@@ -66,7 +63,7 @@ export const healthModule: Module = {
     outputs.push(
       md(
         "CONTRIBUTING.md",
-        `# Contributing\n\n<!-- ${MANAGED_HEADER} -->\n\nThanks for helping improve this project.\n\n## Local setup\n\n${setup}\n\n## Workflow\n\n1. Create a branch from \`${defaultBranch(ctx.config)}\`.\n2. Write commit messages in [Conventional Commits](https://www.conventionalcommits.org/) form, for example \`feat: add export button\` or \`fix(api): handle empty input\`. The \`commit-msg\` hook checks them.\n3. Open a pull request. It is merged once the checks pass and it has been reviewed.\n\nPlease follow the [Code of Conduct](CODE_OF_CONDUCT.md).\n`,
+        `# Contributing\n\n<!-- ${MANAGED_HEADER} -->\n\nThanks for helping improve this project.\n\n## Local setup\n\n${setup}\n\n## Workflow\n\n1. Create a branch from \`${defaultBranch(ctx.config)}\`.\n2. Write commit messages in [Conventional Commits](https://www.conventionalcommits.org/) form, for example \`feat: add export button\` or \`fix(api): handle empty input\`. The \`commit-msg\` hook checks them.\n3. Open a ${ctx.platform.changeRequest}. It is merged once the checks pass and it has been reviewed.\n\nPlease follow the [Code of Conduct](CODE_OF_CONDUCT.md).\n`,
       ),
     );
 
