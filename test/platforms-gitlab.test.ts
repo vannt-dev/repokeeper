@@ -20,7 +20,7 @@ const files = (outputs: Output[]) =>
   Object.fromEntries(outputs.flatMap((o) => (o.kind === "file" ? [[o.path, o.content]] : [])));
 const keys = (outputs: Output[]) =>
   Object.fromEntries(outputs.flatMap((o) => (o.kind === "yaml" ? [[o.keyPath.join("."), o.value]] : [])));
-const NOT_SCHEDULED = [{ if: '$CI_PIPELINE_SOURCE != "schedule"' }];
+const NOT_SCHEDULED = [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null' }];
 
 describe("gitlab community files", () => {
   it("writes issue and merge request templates and CODEOWNERS under .gitlab", () => {
@@ -94,7 +94,7 @@ describe("platform selection", () => {
 });
 
 describe("gitlab ci", () => {
-  it("runs for merge requests, schedules and the default branch only", () => {
+  it("runs for merge requests, schedules, the default branch and tags", () => {
     const outputs = ciModule.outputs(gitlabContext());
     expect(outputs.every((o) => o.kind === "yaml" && o.path === ".gitlab-ci.yml" && o.module === "ci")).toBe(true);
     expect(keys(outputs).workflow).toEqual({
@@ -102,6 +102,7 @@ describe("gitlab ci", () => {
         { if: '$CI_PIPELINE_SOURCE == "merge_request_event"' },
         { if: '$CI_PIPELINE_SOURCE == "schedule"' },
         { if: '$CI_COMMIT_BRANCH == "main"' },
+        { if: "$CI_COMMIT_TAG" },
       ],
     });
     expect(keys(outputs).stages).toBeUndefined();

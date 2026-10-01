@@ -133,7 +133,9 @@ Written as managed YAML keys (the existing `yaml` output kind), so jobs and
 keys the user adds to the file are kept.
 
 - `workflow.rules`: run for merge request pipelines, for the default
-  branch, and for scheduled pipelines; nothing else. This also prevents the
+  branch, for scheduled pipelines and for tags; nothing else. Tags are let
+  through for jobs of the user's own (publishing on the release tag); the
+  managed jobs skip them, so a tag without such a job starts no pipeline. This also prevents the
   duplicate branch + merge request pipeline.
 - No `stages` key: jobs use GitLab's default stages `test` and `deploy`, so
   the jobs of each module stand on their own when another module is off.

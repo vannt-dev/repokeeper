@@ -26,6 +26,8 @@ const ciKey = (module: string, key: string, value: unknown): Output => ({
 });
 
 const NOT_SCHEDULED = '$CI_PIPELINE_SOURCE != "schedule"';
+/** The checks of a change: merge requests and the default branch, not schedules and not tag pipelines. */
+const FOR_CHANGES = `${NOT_SCHEDULED} && $CI_COMMIT_TAG == null`;
 /** Image of the jobs that only run tools, whatever Node.js versions the project tests on. */
 const TOOL_IMAGE = "node:24";
 
@@ -39,7 +41,7 @@ function nodeJob(input: Record<string, string>): Record<string, unknown> {
     // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitLab CI variable
     image: "node:${NODE_VERSION}",
     parallel: { matrix: [{ NODE_VERSION: JSON.parse(input["node-versions"] ?? '["22","24"]') as string[] }] },
-    rules: [{ if: NOT_SCHEDULED }],
+    rules: [{ if: FOR_CHANGES }],
     variables: {
       COREPACK_ENABLE_DOWNLOAD_PROMPT: "0",
       ...(cached ? { npm_config_cache: "$CI_PROJECT_DIR/.npm" } : {}),
@@ -163,7 +165,7 @@ export const gitlabPlatform: PlatformAdapter = {
         ciKey("ci", "commits", {
           stage: "test",
           image: TOOL_IMAGE,
-          rules: [{ if: NOT_SCHEDULED }],
+          rules: [{ if: FOR_CHANGES }],
           variables: { GIT_DEPTH: "0" },
           script: [COMMITLINT],
         }),
@@ -174,19 +176,21 @@ export const gitlabPlatform: PlatformAdapter = {
         ciKey("ci", "repokeeper", {
           stage: "test",
           image: TOOL_IMAGE,
-          rules: [{ if: NOT_SCHEDULED }],
+          rules: [{ if: FOR_CHANGES }],
           script: [`npx --yes repokeeper@${PACKAGE_VERSION} check`],
         }),
       );
     }
     if (jobs.length === 0) return [];
     return [
-      // one pipeline per merge request, per push to the default branch and per schedule; none for other branches or tags
+      // one pipeline per merge request, per push to the default branch and per schedule; none for other branches.
+      // Tags are let through for jobs of the user's own, such as publishing: no managed job runs on one
       ciKey("ci", "workflow", {
         rules: [
           { if: '$CI_PIPELINE_SOURCE == "merge_request_event"' },
           { if: '$CI_PIPELINE_SOURCE == "schedule"' },
           { if: `$CI_COMMIT_BRANCH == "${defaultBranch(ctx.config)}"` },
+          { if: "$CI_COMMIT_TAG" },
         ],
       }),
       ...jobs,

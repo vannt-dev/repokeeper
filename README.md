@@ -133,8 +133,9 @@ no effect: GitLab jobs run on Linux.
 
 Two things to know when you add jobs of your own:
 
-- The managed `workflow` runs pipelines only for merge requests, the default branch and schedules.
-  A job meant for tags or other branches never starts. To write the `workflow` rules yourself,
+- The managed `workflow` runs pipelines for merge requests, the default branch, schedules and
+  tags. repokeeper's own jobs skip tags, so a tag pipeline holds only your jobs (publishing, for
+  example). A job meant for other branches never starts. To write the `workflow` rules yourself,
   list the key under `owned` in `.repokeeper.yml`: `owned: [".gitlab-ci.yml#workflow"]`.
 - repokeeper's jobs use GitLab's default stages `test` and `deploy`. If you declare `stages`,
   include both; repokeeper warns when one is missing.
