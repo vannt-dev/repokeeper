@@ -9,7 +9,7 @@ export const configSchema = {
   properties: {
     schema: { const: 1 },
     standard: { type: "string", pattern: "^\\d+\\.\\d+\\.\\d+$" },
-    platform: { enum: ["github"] },
+    platform: { enum: ["github", "gitlab"] },
     stacks: { type: "array", minItems: 1, uniqueItems: true, items: { enum: [...STACK_IDS] } },
     modules: {
       type: "object",
@@ -76,6 +76,11 @@ export const configSchema = {
           ],
         },
       },
+    },
+    gitlab: {
+      type: "object",
+      additionalProperties: false,
+      properties: { default_branch: { type: "string", minLength: 1 } },
     },
   },
 } as const;

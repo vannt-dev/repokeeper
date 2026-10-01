@@ -34,9 +34,15 @@ export function parseConfig(text: string): RepokeeperConfig {
     const path = pathOf(error);
     throw new ConfigError(`${CONFIG_FILE}:${lineOf(doc, lineCounter, path)}: ${describe(error, path)}`);
   }
-  return withDefaults(
-    data as Partial<RepokeeperConfig> & Pick<RepokeeperConfig, "schema" | "standard" | "platform" | "stacks">,
-  );
+  const typed = data as Partial<RepokeeperConfig> &
+    Pick<RepokeeperConfig, "schema" | "standard" | "platform" | "stacks">;
+  const other = typed.platform === "gitlab" ? "github" : "gitlab";
+  if (typed[other] !== undefined) {
+    throw new ConfigError(
+      `${CONFIG_FILE}:${lineOf(doc, lineCounter, [other])}: ${other} is not used on the ${typed.platform} platform`,
+    );
+  }
+  return withDefaults(typed);
 }
 
 export function renderConfig(config: RepokeeperConfig): string {
@@ -79,6 +85,7 @@ function withDefaults(
     stack_options: data.stack_options ?? {},
   };
   if (data.github !== undefined) config.github = data.github;
+  if (data.gitlab !== undefined) config.gitlab = data.gitlab;
   return config;
 }
 
