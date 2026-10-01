@@ -1,5 +1,5 @@
 import { stringify } from "yaml";
-import { defaultBranch } from "../config/types.js";
+import { defaultBranch, STACK_IDS } from "../config/types.js";
 import { MANAGED_HEADER, type ModuleContext, type Output, type PlatformAdapter, type ReleaseInfo } from "../model.js";
 import { PACKAGE_VERSION, REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
 
@@ -56,6 +56,13 @@ const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 
 export const githubPlatform: PlatformAdapter = {
   id: "github",
+  stacks: STACK_IDS,
+  changeRequest: "pull request",
+  profileUrl: (repo) => (repo.owner ? `https://github.com/${repo.owner}` : null),
+  securityReport: (repo) =>
+    repo.owner
+      ? `through [GitHub security advisories](https://github.com/${repo.owner}/${repo.name}/security/advisories/new)`
+      : "through the repository's Security tab (Report a vulnerability)",
 
   communityFiles(ctx: ModuleContext): Output[] {
     const { owner, name } = ctx.repo;

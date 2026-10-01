@@ -1,4 +1,4 @@
-import type { RepokeeperConfig, StackId } from "./config/types.js";
+import type { PlatformId, RepokeeperConfig, StackId } from "./config/types.js";
 import type { CommentStyle } from "./sync/block.js";
 
 export const MANAGED_HEADER =
@@ -127,7 +127,15 @@ export interface RepoInfo {
 }
 
 export interface PlatformAdapter {
-  id: "github";
+  id: PlatformId;
+  /** Stacks whose CI and release this platform can render. */
+  stacks: readonly StackId[];
+  /** What the platform calls a proposed change. */
+  changeRequest: "pull request" | "merge request";
+  /** Page of the repository's owner, or null when the remote is unknown. */
+  profileUrl(repo: RepoInfo): string | null;
+  /** How to report a vulnerability privately: the words after "Report the vulnerability privately ". */
+  securityReport(repo: RepoInfo): string;
   communityFiles(ctx: ModuleContext): Output[];
   dependencyUpdates(ecosystems: string[]): Output[];
   /** The caller CI workflow; empty when no job would run. */
