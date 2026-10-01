@@ -1,16 +1,23 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 import { buildContext } from "../src/commands/context.js";
+import { printWarnings } from "../src/commands/report.js";
 import { parseConfig } from "../src/config/load.js";
 import type { Output } from "../src/model.js";
+import { ciModule } from "../src/modules/ci.js";
 import { healthModule } from "../src/modules/health.js";
 import { githubPlatform } from "../src/platforms/github.js";
 import { platformFor } from "../src/platforms/index.js";
-import { gitlabContext, makeContext, tempDir } from "./helpers.js";
+import { PACKAGE_VERSION } from "../src/version.js";
+import { capture, gitlabContext, makeContext, nodeResolved, syncOnce, tempDir } from "./helpers.js";
 
 const files = (outputs: Output[]) =>
   Object.fromEntries(outputs.flatMap((o) => (o.kind === "file" ? [[o.path, o.content]] : [])));
+const keys = (outputs: Output[]) =>
+  Object.fromEntries(outputs.flatMap((o) => (o.kind === "yaml" ? [[o.keyPath.join("."), o.value]] : [])));
+const NOT_SCHEDULED = [{ if: '$CI_PIPELINE_SOURCE != "schedule"' }];
 
 describe("gitlab community files", () => {
   it("writes issue and merge request templates and CODEOWNERS under .gitlab", () => {
@@ -80,5 +87,122 @@ describe("platform selection", () => {
     await expect(buildContext(await tempDir(), config("gitlab", "python"))).rejects.toThrow(
       'stack "python" is not supported on gitlab yet (supported: node)',
     );
+  });
+});
+
+describe("gitlab ci", () => {
+  it("runs for merge requests, schedules and the default branch only", () => {
+    const outputs = ciModule.outputs(gitlabContext());
+    expect(outputs.every((o) => o.kind === "yaml" && o.path === ".gitlab-ci.yml" && o.module === "ci")).toBe(true);
+    expect(keys(outputs).workflow).toEqual({
+      rules: [
+        { if: '$CI_PIPELINE_SOURCE == "merge_request_event"' },
+        { if: '$CI_PIPELINE_SOURCE == "schedule"' },
+        { if: '$CI_COMMIT_BRANCH == "main"' },
+      ],
+    });
+    expect(keys(outputs).stages).toBeUndefined();
+    const trunk = keys(ciModule.outputs(gitlabContext({ config: { gitlab: { default_branch: "trunk" } } })));
+    expect(trunk.workflow).toMatchObject({ rules: expect.arrayContaining([{ if: '$CI_COMMIT_BRANCH == "trunk"' }]) });
+  });
+
+  it("runs the node scripts on every configured version with the npm cache", () => {
+    expect(keys(ciModule.outputs(gitlabContext())).node).toEqual({
+      stage: "test",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitLab CI variable
+      image: "node:${NODE_VERSION}",
+      parallel: { matrix: [{ NODE_VERSION: ["22", "24"] }] },
+      rules: NOT_SCHEDULED,
+      variables: { COREPACK_ENABLE_DOWNLOAD_PROMPT: "0", npm_config_cache: "$CI_PROJECT_DIR/.npm" },
+      cache: { key: { files: ["package-lock.json"] }, paths: [".npm/"] },
+      script: ["npm ci", "npm run test"],
+    });
+  });
+
+  it("enables corepack for pnpm and yarn and skips the npm cache", () => {
+    const stack = nodeResolved({
+      ci: {
+        workflow: "stack-node.yml",
+        with: {
+          "node-versions": '["20"]',
+          os: '["ubuntu-latest"]',
+          "package-manager": "pnpm",
+          "install-command": "pnpm install --frozen-lockfile",
+          cache: "",
+          scripts: '["lint","test:e2e"]',
+        },
+      },
+    });
+    const node = keys(ciModule.outputs(gitlabContext({ stacks: [stack] }))).node as Record<string, unknown>;
+    expect(node.parallel).toEqual({ matrix: [{ NODE_VERSION: ["20"] }] });
+    expect(node.script).toEqual([
+      "corepack enable",
+      "pnpm install --frozen-lockfile",
+      "pnpm run lint",
+      "pnpm run test:e2e",
+    ]);
+    expect(node.cache).toBeUndefined();
+    expect(node.variables).toEqual({ COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" });
+  });
+
+  it("lints up to the source branch head, also in a merged results pipeline", () => {
+    const commits = keys(ciModule.outputs(gitlabContext())).commits as { script: string[]; variables: unknown };
+    expect(commits).toMatchObject({ stage: "test", image: "node:24", rules: NOT_SCHEDULED });
+    expect(commits.variables).toEqual({ GIT_DEPTH: "0" });
+    const script = commits.script.join("\n");
+    expect(script).toContain("@commitlint/cli@21.2.3 @commitlint/config-conventional@21.2.3");
+    expect(script).toContain('head="$CI_MERGE_REQUEST_SOURCE_BRANCH_SHA"');
+    expect(script).toContain('[ -n "$head" ] || head="$CI_COMMIT_SHA"');
+    expect(script).toContain('lint --from "$CI_MERGE_REQUEST_DIFF_BASE_SHA" --to "$head"');
+    expect(script).toContain("lint --last");
+  });
+
+  it("adds the drift job only when asked, and drops the commits job with its module", () => {
+    expect(keys(ciModule.outputs(gitlabContext())).repokeeper).toBeUndefined();
+    const out = keys(ciModule.outputs(gitlabContext({ modules: { drift: true, commits: false } })));
+    expect(out.repokeeper).toEqual({
+      stage: "test",
+      image: "node:24",
+      rules: NOT_SCHEDULED,
+      script: [`npx --yes repokeeper@${PACKAGE_VERSION} check`],
+    });
+    expect(out.commits).toBeUndefined();
+  });
+
+  it("writes nothing when no job would run", () => {
+    const ctx = gitlabContext({ stacks: [nodeResolved({ ci: null })], modules: { commits: false } });
+    expect(ciModule.outputs(ctx)).toEqual([]);
+  });
+
+  it("keeps the user's own jobs and stays unchanged on the next sync", async () => {
+    const root = await tempDir();
+    await writeFile(join(root, ".gitlab-ci.yml"), "docs:\n  script:\n    - make docs\n");
+    const outputs = ciModule.outputs(gitlabContext());
+
+    await syncOnce(root, outputs);
+    const written = parse(await readFile(join(root, ".gitlab-ci.yml"), "utf8"));
+    expect(written.docs).toEqual({ script: ["make docs"] });
+    expect(Object.keys(written)).toEqual(["workflow", "node", "commits", "docs"]);
+    expect(written.node.script).toEqual(["npm ci", "npm run test"]);
+    expect((await syncOnce(root, outputs)).decisions.map((d) => d.action)).toEqual([
+      "unchanged",
+      "unchanged",
+      "unchanged",
+    ]);
+  });
+
+  it("notes that node.os has no effect on gitlab", async () => {
+    const root = await tempDir();
+    const windows = nodeResolved();
+    (windows.ci as { with: Record<string, string> }).with.os = '["ubuntu-latest","windows-latest"]';
+
+    const noted = capture(root);
+    await printWarnings(root, gitlabContext({ stacks: [windows] }), noted.io);
+    expect(noted.out).toContain("note: node.os is ignored on gitlab (Linux runners only)");
+
+    const quiet = capture(root);
+    await printWarnings(root, gitlabContext(), quiet.io);
+    await printWarnings(root, makeContext({ stacks: [windows] }), quiet.io);
+    expect(quiet.out.join("\n")).not.toContain("node.os");
   });
 });
