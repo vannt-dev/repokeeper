@@ -7,7 +7,10 @@ import { printWarnings } from "../src/commands/report.js";
 import { parseConfig } from "../src/config/load.js";
 import type { Output } from "../src/model.js";
 import { ciModule } from "../src/modules/ci.js";
+import { depsModule } from "../src/modules/deps.js";
 import { healthModule } from "../src/modules/health.js";
+import { releaseModule } from "../src/modules/release.js";
+import { planOutputs } from "../src/plan.js";
 import { githubPlatform } from "../src/platforms/github.js";
 import { platformFor } from "../src/platforms/index.js";
 import { PACKAGE_VERSION } from "../src/version.js";
@@ -204,5 +207,103 @@ describe("gitlab ci", () => {
     await printWarnings(root, gitlabContext(), quiet.io);
     await printWarnings(root, makeContext({ stacks: [windows] }), quiet.io);
     expect(quiet.out.join("\n")).not.toContain("node.os");
+  });
+});
+
+describe("gitlab release", () => {
+  it("configures semantic-release for the default branch without publishing", () => {
+    const outputs = releaseModule.outputs(gitlabContext({ config: { gitlab: { default_branch: "trunk" } } }));
+    const config = JSON.parse(files(outputs)[".releaserc.json"] as string);
+    expect(config.branches).toEqual(["trunk"]);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
+    expect(config.tagFormat).toBe("v${version}");
+    expect(config.plugins).toEqual([
+      ["@semantic-release/commit-analyzer", { preset: "conventionalcommits" }],
+      ["@semantic-release/release-notes-generator", { preset: "conventionalcommits" }],
+      ["@semantic-release/changelog", { changelogFile: "CHANGELOG.md" }],
+      ["@semantic-release/npm", { npmPublish: false }],
+      [
+        "@semantic-release/git",
+        {
+          assets: ["CHANGELOG.md", "package.json", "package-lock.json", "npm-shrinkwrap.json"],
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
+          message: "chore(release): ${nextRelease.version} [skip ci]",
+        },
+      ],
+      "@semantic-release/gitlab",
+    ]);
+    expect(files(outputs)["release-please-config.json"]).toBeUndefined();
+    expect(outputs.some((o) => o.kind === "seed" || o.kind === "marker")).toBe(false);
+  });
+
+  it("releases from the default branch only when GITLAB_TOKEN is set", () => {
+    const release = keys(releaseModule.outputs(gitlabContext())).release as { script: string[] };
+    expect(release).toMatchObject({
+      stage: "deploy",
+      image: "node:24",
+      rules: [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main" && $GITLAB_TOKEN' }],
+      variables: { GIT_DEPTH: "0" },
+    });
+    const script = release.script.join("\n");
+    expect(script).toContain(
+      "semantic-release@25.0.9 @semantic-release/changelog@7.0.0 @semantic-release/git@11.0.1 @semantic-release/gitlab@13.3.3 conventional-changelog-conventionalcommits@10.4.0",
+    );
+    expect(script).toContain('"$dir/node_modules/.bin/semantic-release"');
+  });
+});
+
+describe("gitlab dependency updates", () => {
+  it("configures Renovate with chore commits, one minor and patch group and no @types/node majors", () => {
+    const config = JSON.parse(files(depsModule.outputs(gitlabContext()))["renovate.json"] as string);
+    expect(config).toEqual({
+      $schema: "https://docs.renovatebot.com/renovate-schema.json",
+      extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)", "schedule:weekly"],
+      packageRules: [
+        { matchUpdateTypes: ["minor", "patch"], groupName: "minor and patch updates" },
+        { matchPackageNames: ["@types/node"], matchUpdateTypes: ["major"], enabled: false },
+      ],
+    });
+    expect(files(depsModule.outputs(gitlabContext()))[".github/dependabot.yml"]).toBeUndefined();
+  });
+
+  it("runs Renovate only in scheduled pipelines with RENOVATE_TOKEN", () => {
+    expect(keys(depsModule.outputs(gitlabContext())).renovate).toEqual({
+      stage: "test",
+      image: "renovate/renovate:44.128.1",
+      rules: [{ if: '$CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN' }],
+      variables: {
+        RENOVATE_PLATFORM: "gitlab",
+        RENOVATE_ENDPOINT: "$CI_API_V4_URL",
+        RENOVATE_AUTODISCOVER: "false",
+        RENOVATE_ONBOARDING: "false",
+      },
+      script: ['renovate "$CI_PROJECT_PATH"'],
+    });
+  });
+});
+
+describe("gitlab plan", () => {
+  it("release and renovate jobs stand alone when the ci module is off", () => {
+    const outputs = planOutputs(gitlabContext({ modules: { ci: false } }));
+    const out = keys(outputs);
+    expect(Object.keys(out).sort()).toEqual(["release", "renovate"]);
+    for (const job of [out.release, out.renovate] as { stage: string; rules: unknown[]; script: string[] }[]) {
+      expect(["test", "deploy"]).toContain(job.stage);
+      expect(job.rules.length).toBe(1);
+      expect(job.script.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("plans every module together without two outputs for one key", () => {
+    const outputs = planOutputs(gitlabContext({ modules: { drift: true } }));
+    expect(Object.keys(keys(outputs)).sort()).toEqual([
+      "commits",
+      "node",
+      "release",
+      "renovate",
+      "repokeeper",
+      "workflow",
+    ]);
+    expect(outputs.some((o) => o.path.startsWith(".github/") || o.path.startsWith("release-please"))).toBe(false);
   });
 });

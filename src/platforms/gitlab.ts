@@ -70,6 +70,17 @@ else
 fi
 `;
 
+const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
+
+/**
+ * semantic-release and the plugins it does not bundle, from a scratch directory. It resolves plugins next to
+ * itself before it looks in the project, so the project needs none of them installed.
+ */
+const SEMANTIC_RELEASE = `dir="$(mktemp -d)"
+(cd "$dir" && echo '{ "private": true }' > package.json && npm install --no-audit --no-fund semantic-release@${TOOL_VERSIONS.semanticRelease} @semantic-release/changelog@${TOOL_VERSIONS.semanticReleaseChangelog} @semantic-release/git@${TOOL_VERSIONS.semanticReleaseGit} @semantic-release/gitlab@${TOOL_VERSIONS.semanticReleaseGitlab} conventional-changelog-conventionalcommits@${TOOL_VERSIONS.conventionalCommitsPreset})
+"$dir/node_modules/.bin/semantic-release"
+`;
+
 export const gitlabPlatform: PlatformAdapter = {
   id: "gitlab",
   stacks: ["node"],
@@ -109,7 +120,39 @@ export const gitlabPlatform: PlatformAdapter = {
     return outputs;
   },
 
-  dependencyUpdates: () => [],
+  // Renovate finds the package managers itself, so the Dependabot ecosystem names are not needed
+  dependencyUpdates(): Output[] {
+    return [
+      {
+        kind: "file",
+        module: "deps",
+        path: "renovate.json",
+        content: json({
+          $schema: "https://docs.renovatebot.com/renovate-schema.json",
+          // chore commits pass commitlint, as the Dependabot prefix does on GitHub
+          extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)", "schedule:weekly"],
+          packageRules: [
+            { matchUpdateTypes: ["minor", "patch"], groupName: "minor and patch updates" },
+            // @types/node majors track the Node.js line a project runs on, which the project chooses
+            { matchPackageNames: ["@types/node"], matchUpdateTypes: ["major"], enabled: false },
+          ],
+        }),
+      },
+      // runs from a pipeline schedule of the repository; without the token or a schedule it never starts
+      ciKey("deps", "renovate", {
+        stage: "test",
+        image: `renovate/renovate:${TOOL_VERSIONS.renovate}`,
+        rules: [{ if: '$CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN' }],
+        variables: {
+          RENOVATE_PLATFORM: "gitlab",
+          RENOVATE_ENDPOINT: "$CI_API_V4_URL",
+          RENOVATE_AUTODISCOVER: "false",
+          RENOVATE_ONBOARDING: "false",
+        },
+        script: ['renovate "$CI_PROJECT_PATH"'],
+      }),
+    ];
+  },
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;
@@ -148,5 +191,43 @@ export const gitlabPlatform: PlatformAdapter = {
       ...jobs,
     ];
   },
-  releaseAutomation: () => [],
+  releaseAutomation(ctx: ModuleContext): Output[] {
+    const branch = defaultBranch(ctx.config);
+    return [
+      {
+        kind: "file",
+        module: "release",
+        path: ".releaserc.json",
+        content: json({
+          branches: [branch],
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
+          tagFormat: "v${version}",
+          plugins: [
+            ["@semantic-release/commit-analyzer", { preset: "conventionalcommits" }],
+            ["@semantic-release/release-notes-generator", { preset: "conventionalcommits" }],
+            ["@semantic-release/changelog", { changelogFile: "CHANGELOG.md" }],
+            // bumps package.json and the npm lock file; publishing stays the project's own business
+            ["@semantic-release/npm", { npmPublish: false }],
+            [
+              "@semantic-release/git",
+              {
+                assets: ["CHANGELOG.md", "package.json", "package-lock.json", "npm-shrinkwrap.json"],
+                // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
+                message: "chore(release): ${nextRelease.version} [skip ci]",
+              },
+            ],
+            "@semantic-release/gitlab",
+          ],
+        }),
+      },
+      // semantic-release pushes a commit and a tag, which the job token cannot do; without GITLAB_TOKEN the job is absent
+      ciKey("release", "release", {
+        stage: "deploy",
+        image: TOOL_IMAGE,
+        rules: [{ if: `${NOT_SCHEDULED} && $CI_COMMIT_BRANCH == "${branch}" && $GITLAB_TOKEN` }],
+        variables: { GIT_DEPTH: "0" },
+        script: [SEMANTIC_RELEASE],
+      }),
+    ];
+  },
 };

@@ -11,6 +11,12 @@ export const TOOL_VERSIONS = {
   lefthook: "2.1.14",
   commitlintCli: "21.2.3",
   commitlintConventional: "21.2.3",
+  semanticRelease: "25.0.9",
+  semanticReleaseChangelog: "7.0.0",
+  semanticReleaseGit: "11.0.1",
+  semanticReleaseGitlab: "13.3.3",
+  conventionalCommitsPreset: "10.4.0",
+  renovate: "44.128.1",
 } as const;
 
 /** Repository hosting the reusable workflows that generated CI files call. */
