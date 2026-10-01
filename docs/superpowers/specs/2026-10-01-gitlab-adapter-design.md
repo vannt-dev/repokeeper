@@ -87,7 +87,8 @@ detection reports the same error when it detects such a stack.
 ## Outputs on GitLab
 
 Modules that do not go through the adapter (editorconfig, commits, hooks,
-gitignore, LICENSE, CONTRIBUTING, CODE_OF_CONDUCT) are unchanged.
+gitignore, LICENSE, CODE_OF_CONDUCT) are unchanged. `CONTRIBUTING.md` says
+"merge request" where it says "pull request" on GitHub.
 
 ### Community files (`communityFiles`)
 
@@ -104,12 +105,12 @@ gitignore, LICENSE, CONTRIBUTING, CODE_OF_CONDUCT) are unchanged.
 - `SECURITY.md` on GitLab asks reporters to open a **confidential issue**
   at `https://<host>/<owner>/<name>/-/issues/new?issue[confidential]=true`
   instead of pointing at GitHub security advisories. Without a known remote
-  it keeps the existing fallback wording.
+  it says "by opening a confidential issue in the repository".
 - `init` writes the health `contact` as `https://<host>/<owner>` on GitLab.
 
-These two are the only places outside the adapter that build a GitHub URL;
-they take the URL from the adapter (a new `securityContact(repo)` /
-`profileUrl(repo)` pair) so no module tests the platform id itself.
+These are the only places outside the adapter with platform wording; they
+take it from the adapter (`securityReport(repo)`, `profileUrl(repo)` and
+`changeRequest`) so no module tests the platform id itself.
 
 ### Dependency updates (`dependencyUpdates`)
 
@@ -117,9 +118,9 @@ they take the URL from the adapter (a new `securityContact(repo)` /
 
 - extends `config:recommended`;
 - weekly schedule;
-- minor and patch updates grouped per manager;
-- `semanticCommitType: "chore"`, with the scope kept, so commits pass
-  commitlint;
+- minor and patch updates in one group;
+- semantic commits of type `chore` (Renovate's `deps` scope kept), so
+  commits pass commitlint;
 - major updates of `@types/node` disabled, as in the Dependabot config.
 
 The ecosystems argument (Dependabot names) is not needed: Renovate detects
@@ -133,7 +134,9 @@ keys the user adds to the file are kept.
 - `workflow.rules`: run for merge request pipelines, for the default
   branch, and for scheduled pipelines; nothing else. This also prevents the
   duplicate branch + merge request pipeline.
-- `stages`: `test`, `release`.
+- No `stages` key: jobs use GitLab's default stages `test` and `deploy`, so
+  the jobs of each module stand on their own when another module is off.
+  Each job also carries its own `rules`.
 - `node` (stage `test`): `parallel: matrix` over `NODE_VERSION` (the stack's
   versions, default 22 and 24), image `node:${NODE_VERSION}`. It runs the
   stack's install command, then each configured script that exists, the
@@ -141,9 +144,10 @@ keys the user adds to the file are kept.
   through corepack before the install. The npm cache directory is cached,
   keyed on the lock file. Not run in scheduled pipelines.
 - `commits` (stage `test`, when the commits module is on): installs the same
-  pinned commitlint as the GitHub workflow and checks
-  `$CI_MERGE_REQUEST_DIFF_BASE_SHA..$CI_COMMIT_SHA` in a merge request
-  pipeline, the last commit otherwise. `GIT_DEPTH: 0`. Commits authored by
+  pinned commitlint as the GitHub workflow and checks the commits from
+  `$CI_MERGE_REQUEST_DIFF_BASE_SHA` to the head of the source branch in a
+  merge request pipeline (also in a merged results pipeline), the last
+  commit otherwise. `GIT_DEPTH: 0`. Commits authored by
   the Renovate bot follow the semantic prefix, so no ignore rule is needed.
 - `repokeeper` (stage `test`, when the drift module is on):
   `npx repokeeper@<PACKAGE_VERSION> check`.
@@ -169,7 +173,7 @@ to hold.
     (commits `CHANGELOG.md`, `package.json` and the lock file present, with
     the message `chore(release): ${nextRelease.version} [skip ci]`); gitlab
     (creates the GitLab release).
-- `release` job (stage `release`): only on the default branch, not in
+- `release` job (stage `deploy`): only on the default branch, not in
   scheduled pipelines, and only when the CI variable `GITLAB_TOKEN` is set.
   It installs pinned versions of semantic-release and its plugins into a
   temporary directory, as the commitlint job does, and runs it. `GIT_DEPTH: 0`.
