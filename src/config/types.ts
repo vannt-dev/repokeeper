@@ -13,6 +13,7 @@ export const STACK_IDS = [
   "ruby",
 ] as const;
 export type StackId = (typeof STACK_IDS)[number];
+export type PlatformId = "github" | "gitlab";
 
 export interface HealthConfig {
   /** SPDX id, or false to leave licensing alone. v1 bundles MIT only. */

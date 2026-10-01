@@ -120,6 +120,8 @@ export interface ResolvedStack {
 export interface RepoInfo {
   owner: string | null;
   name: string;
+  /** Host of the origin remote; absent on GitHub, where it is always github.com. */
+  host?: string | null;
   /** Version of the latest `vX.Y.Z` tag; seeds the release manifest when the stack has no version of its own. */
   releasedVersion?: string | null;
 }
