@@ -12,7 +12,14 @@ the standard evolves.
 
 ## Usage
 
-repokeeper is not on npm yet. Until the first release, build it from source and link the command:
+repokeeper is [on npm](https://www.npmjs.com/package/repokeeper). Install it once, or run it without
+installing by putting `npx` in front of each command below:
+
+```bash
+npm install --global repokeeper
+```
+
+To work on repokeeper itself, build it from source and link the command instead:
 
 ```bash
 git clone https://github.com/vannt-dev/repokeeper.git
