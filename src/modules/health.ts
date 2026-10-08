@@ -1,6 +1,6 @@
 import { defaultBranch } from "../config/types.js";
 import { UsageError } from "../errors.js";
-import { MANAGED_HEADER, type Module, type Output } from "../model.js";
+import { inDirectory, MANAGED_HEADER, type Module, nodeAtRoot, type Output } from "../model.js";
 import { readTemplate } from "../templates.js";
 import { TOOL_VERSIONS } from "../version.js";
 
@@ -54,9 +54,9 @@ export const healthModule: Module = {
       ),
     );
 
-    const install = ctx.stacks.map((s) => s.install).filter((c): c is string => c !== null);
+    const install = ctx.stacks.flatMap((s) => (s.install === null ? [] : [inDirectory(s, s.install)]));
     const run = install.length ? `Run ${install.map((c) => `\`${c}\``).join(" and ")}.` : "";
-    const hooks = ctx.stacks.some((s) => s.id === "node")
+    const hooks = nodeAtRoot(ctx.stacks)
       ? "Installing the dependencies also installs the git hooks (lefthook)."
       : `${run ? "Then run" : "Run"} \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\` once to enable the git hooks (they need Node.js 22 or newer).`;
     const setup = [run, hooks].filter(Boolean).join(" ");

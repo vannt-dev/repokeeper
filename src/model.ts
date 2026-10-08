@@ -102,6 +102,8 @@ export interface ReleaseInfo {
 
 export interface ResolvedStack {
   id: StackId;
+  /** Folder the stack lives in, relative to the repository root with forward slashes; absent at the root. */
+  directory?: string;
   /** lefthook pre-commit jobs; `{staged_files}` is filled in by lefthook. */
   staged: StagedJob[];
   /** Command for the pre-push test hook, or null when the repository has no tests. */
@@ -115,6 +117,22 @@ export interface ResolvedStack {
   /** CI job for this stack, or null when the stack has no reusable workflow. */
   ci: CiJob | null;
   release: ReleaseInfo;
+}
+
+/** A package ecosystem to keep up to date and the folder its manifest is in ("/" for the root). */
+export interface DependencyUpdate {
+  ecosystem: string;
+  directory: string;
+}
+
+/** `command`, run from the stack's folder when it has one. */
+export function inDirectory(stack: Pick<ResolvedStack, "directory">, command: string): string {
+  return stack.directory ? `cd ${stack.directory} && ${command}` : command;
+}
+
+/** Whether the Node.js project is the repository itself, so its package.json can carry repokeeper's tools. */
+export function nodeAtRoot(stacks: ResolvedStack[]): boolean {
+  return stacks.some((stack) => stack.id === "node" && !stack.directory);
 }
 
 export interface RepoInfo {
@@ -137,11 +155,11 @@ export interface PlatformAdapter {
   /** How to report a vulnerability privately: the words after "Report the vulnerability privately ". */
   securityReport(repo: RepoInfo): string;
   communityFiles(ctx: ModuleContext): Output[];
-  dependencyUpdates(ecosystems: string[]): Output[];
+  dependencyUpdates(updates: DependencyUpdate[]): Output[];
   /** The caller CI workflow; empty when no job would run. */
   ciWorkflow(ctx: ModuleContext): Output[];
-  /** release-please configuration, its manifest and the caller release workflow. */
-  releaseAutomation(ctx: ModuleContext, release: ReleaseInfo): Output[];
+  /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */
+  releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[];
 }
 
 export interface ModuleContext {

@@ -1,4 +1,4 @@
-import { MANAGED_HEADER, type Module, type Output } from "../model.js";
+import { MANAGED_HEADER, type Module, nodeAtRoot, type Output } from "../model.js";
 import { TOOL_VERSIONS } from "../version.js";
 
 const COMMITLINT_CONFIG = `// ${MANAGED_HEADER}
@@ -17,7 +17,8 @@ export const commitsModule: Module = {
     const outputs: Output[] = [
       { kind: "file", module: "commits", path: "commitlint.config.mjs", content: COMMITLINT_CONFIG },
     ];
-    if (ctx.stacks.some((s) => s.id === "node")) {
+    // a package.json in a folder of its own is the project's, not the place for the repository's tools
+    if (nodeAtRoot(ctx.stacks)) {
       outputs.push(
         {
           kind: "json",

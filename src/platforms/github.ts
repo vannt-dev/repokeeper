@@ -1,6 +1,13 @@
 import { stringify } from "yaml";
 import { defaultBranch, STACK_IDS } from "../config/types.js";
-import { MANAGED_HEADER, type ModuleContext, type Output, type PlatformAdapter, type ReleaseInfo } from "../model.js";
+import {
+  type DependencyUpdate,
+  MANAGED_HEADER,
+  type ModuleContext,
+  type Output,
+  type PlatformAdapter,
+  type ReleaseInfo,
+} from "../model.js";
 import { PACKAGE_VERSION, REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
 
 const yamlFile = (module: string, path: string, data: unknown): Output => ({
@@ -132,10 +139,17 @@ export const githubPlatform: PlatformAdapter = {
     return outputs;
   },
 
-  dependencyUpdates(ecosystems: string[]): Output[] {
-    const updates = [...new Set([...ecosystems, "github-actions"])].map((ecosystem) => ({
+  dependencyUpdates(requested: DependencyUpdate[]): Output[] {
+    // workflows always live at the root, whatever folders the stacks are in
+    const all = [...requested, { ecosystem: "github-actions", directory: "/" }];
+    const unique = all.filter(
+      (update, index) =>
+        all.findIndex((other) => other.ecosystem === update.ecosystem && other.directory === update.directory) ===
+        index,
+    );
+    const updates = unique.map(({ ecosystem, directory }) => ({
       "package-ecosystem": ecosystem,
-      directory: "/",
+      directory,
       schedule: { interval: "weekly" },
       groups: { [`${ecosystem}-minor-and-patch`]: { "update-types": ["minor", "patch"] } },
       // Dependabot infers a Conventional Commits prefix only from history; young repositories fail commitlint
@@ -156,7 +170,7 @@ export const githubPlatform: PlatformAdapter = {
         jobs.push(
           workflowKey("ci", path, ["jobs", stack.id], {
             uses: workflowRef(ctx, stack.ci.workflow),
-            with: stack.ci.with,
+            with: stack.directory ? { ...stack.ci.with, "working-directory": stack.directory } : stack.ci.with,
           }),
         );
       }
@@ -188,9 +202,11 @@ export const githubPlatform: PlatformAdapter = {
     ];
   },
 
-  releaseAutomation(ctx: ModuleContext, release: ReleaseInfo): Output[] {
+  releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[] {
     const path = ".github/workflows/release.yml";
     const seed = release.version ?? ctx.repo.releasedVersion ?? "0.0.0";
+    // release-please names a package by its folder; its changelog and extra files are relative to it
+    const packagePath = directory ?? ".";
     return [
       {
         kind: "file",
@@ -199,7 +215,7 @@ export const githubPlatform: PlatformAdapter = {
         content: json({
           $schema: RELEASE_PLEASE_SCHEMA,
           packages: {
-            ".": {
+            [packagePath]: {
               "release-type": release.type,
               "changelog-path": "CHANGELOG.md",
               "bump-minor-pre-major": true,
@@ -221,7 +237,7 @@ export const githubPlatform: PlatformAdapter = {
         kind: "seed",
         module: "release",
         path: ".release-please-manifest.json",
-        content: json({ ".": seed }),
+        content: json({ [packagePath]: seed }),
       },
       workflowKey("release", path, ["name"], "release"),
       workflowKey("release", path, ["on"], { push: { branches: [defaultBranch(ctx.config)] } }),
