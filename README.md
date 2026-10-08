@@ -10,6 +10,26 @@ the standard evolves.
 > supported for Node.js projects. See the
 > [design](docs/superpowers/specs/2026-09-25-repokeeper-design.md).
 
+## How it works
+
+```mermaid
+flowchart LR
+  config[".repokeeper.yml<br/>stacks, modules, owned"]
+  tool(["repokeeper<br/>init, update, check"])
+  files["Managed files<br/>.editorconfig, .gitignore, lefthook.yml,<br/>commitlint, CONTRIBUTING, LICENSE,<br/>dependabot.yml, ci.yml, release.yml"]
+  lock[".repokeeper/lock.json<br/>what repokeeper wrote"]
+  workflows["Reusable workflows<br/>vannt-dev/repokeeper at v0,<br/>or pinned, mirrored, local"]
+  config --> tool
+  tool -->|"init, update: write,<br/>keep your edits"| files
+  tool -.->|"check: compare,<br/>exit 1 on drift"| files
+  tool --> lock
+  files -->|"ci.yml, release.yml call"| workflows
+```
+
+One file describes the repository (`.repokeeper.yml`); repokeeper turns it into the managed files and
+remembers what it wrote, so it can tell your edits from its own. `check` only compares; `update`
+moves the files to a newer standard and leaves alone what you changed or listed under `owned`.
+
 ## Usage
 
 repokeeper is [on npm](https://www.npmjs.com/package/repokeeper). Install it once, or run it without
@@ -70,166 +90,14 @@ projects, which the dotnet CLI can't build.
 
 Requires Node.js 22.12 or newer.
 
-## Monorepos
+## Guides
 
-A stack does not have to sit at the root. When the root holds no project, `init` looks one level
-down and records where each stack lives:
-
-```yaml
-stacks: [node, go]
-stack_options:
-  node: { directory: frontend }
-  go: { directory: backend }
-```
-
-Each CI job then runs in its folder, each git hook runs there and only sees that folder's staged
-files, Dependabot watches each folder, and `CONTRIBUTING.md` says where to run each install command.
-Name the folder yourself with `repokeeper init --stack go:backend --stack node:frontend`, or add
-`directory` to a stack's options later and run `repokeeper update`.
-
-What to know:
-
-- One folder per stack. A second folder of the same stack (`admin/` beside `web/`, both Node.js) is
-  reported by `init` and left out.
-- One release per repository, as before: the first stack with a version of its own is the one
-  release-please releases, from its folder, and only commits that touch that folder count towards it.
-- With the Node.js project in a folder, repokeeper adds nothing to its `package.json`: commitlint and
-  lefthook run through `npx`, so contributors run `npx lefthook install` once.
-- GitHub only for now; on GitLab a stack has to be at the root.
-
-## CI and releases
-
-`ci.yml` and `release.yml` call reusable workflows from this repository (`stack-node.yml`,
-`commitlint.yml`, `release-please.yml`) at the moving major tag, so fixes reach every repository
-without a pull request. repokeeper owns the `name`, `on`, `permissions` and `concurrency` keys and
-the jobs it adds; jobs you add yourself are left alone, and so is the formatting of the rest of the
-file. A new push to a pull request cancels that pull request's earlier `ci` run; runs on the default
-branch always finish.
-
-### Pinning, mirroring and local copies
-
-Following the moving major tag means a change to a reusable workflow reaches your CI the day it is
-released. If you would rather decide when, set where the workflows are called from in
-`.repokeeper.yml` and run `repokeeper update`:
-
-```yaml
-github:
-  workflows:
-    ref: exact                         # the release of the repokeeper that wrote the file
-    # ref: 0123456789abcdef…           # or a commit SHA, or a tag such as v0.5.0
-    # source: your-org/ci-workflows    # a copy in a repository of your organisation
-    # source: local                    # copies in this repository
-```
-
-- **`ref: exact`** calls `…@v0.5.0` instead of `…@v0`. Updating repokeeper and running
-  `repokeeper update` moves it, in a commit you review. A tag can still be moved by whoever controls
-  the repository it is in; a commit SHA cannot, so write one as `ref` when that matters, and change
-  it yourself when you want a newer version.
-- With a `ref`, the generated `dependabot.yml` tells Dependabot to leave these workflow references
-  alone: one owner moves them, not two.
-- **`source: your-org/ci-workflows`** calls a copy you host. `repokeeper eject --to <folder>` writes
-  every reusable workflow into `<folder>/.github/workflows/` of a clone of that repository; commit
-  them there and allow the organisation's repositories to use its workflows. `ref` defaults to `main`.
-- **`source: local`**, or simply `repokeeper eject`, gives the repository its own copies of the
-  workflows it calls and points `ci.yml` and `release.yml` at them. From then on nothing in your CI
-  refers to this repository. The copies are yours: repokeeper writes them once and never changes
-  them, so updates are yours to take, by comparing with a newer `repokeeper eject --to`.
-
-The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
-and PSScriptAnalyzer on `*.ps1`, which fails on errors and warnings (not on information-level rules). To
-choose the rules yourself, add a `PSScriptAnalyzerSettings.psd1` at the repository root; the job then
-uses it instead of its own filter, so keep `Severity` in it unless you want information-level rules too:
-
-```powershell
-@{
-    Severity     = @('Error', 'Warning')
-    # installers print for the person running them
-    ExcludeRules = @('PSAvoidUsingWriteHost')
-}
-```
-
-`release.yml` runs [release-please](https://github.com/googleapis/release-please): it keeps a release
-pull request open, and merging it tags the release and updates `CHANGELOG.md`. Two settings make this
-work:
-
-- In the repository settings, under Actions → General, allow GitHub Actions to create and approve
-  pull requests.
-- Optionally add a `RELEASE_PLEASE_TOKEN` secret (a fine-grained token with contents, pull requests
-  and issues write access). Without it the release pull request is opened with `GITHUB_TOKEN`, and
-  GitHub holds its `pull_request` runs until someone approves them; the `release-pr-ci` job approves
-  them, so the pull request gets its checks and required checks in a ruleset can pass.
-
-A repository with no release yet (manifest at `0.0.0`) gets `initial-version: 0.1.0`, so its first
-release is 0.1.0 rather than release-please's default 1.0.0.
-
-Set `modules.drift: true` to add a `repokeeper` job to `ci.yml` that runs `repokeeper check` with
-the version that wrote the standard, so a pull request that edits a managed file fails until the edit
-is resolved.
-
-## GitHub settings
-
-`repokeeper github apply` brings the repository's settings in line with the `github:` section of
-`.repokeeper.yml`. Only the keys you write are managed; anything left out stays as it is.
-
-```yaml
-github:
-  description: Keeps repositories on one standard
-  topics: [cli, conventional-commits]
-  merge: { squash: true, merge_commit: false, rebase: false, delete_branch_on_merge: true }
-  security: { dependabot_alerts: true, dependabot_security_updates: true }
-  protect:                  # a ruleset named "repokeeper" on the default branch; false removes it
-    require_pull_request: true
-    required_approvals: 0
-    required_checks: ["commits / commitlint"]   # check names exactly as pull requests show them
-    allow_force_push: false
-```
-
-It prints every change first and applies them with `--yes`, or after you confirm in a terminal;
-`--dry-run` only prints. The token comes from `GITHUB_TOKEN` or `gh auth token` and needs admin
-access to the repository. Legacy branch protection, visibility, secrets and collaborators are never
-touched.
-
-## GitLab
-
-`repokeeper init` selects GitLab when the `origin` remote's host contains `gitlab`; pass
-`--platform gitlab` otherwise (a self-hosted instance under another name, or no remote yet). Only
-the node stack is supported on GitLab for now.
-
-What differs from GitHub:
-
-| | GitHub | GitLab |
-| --- | --- | --- |
-| Templates, CODEOWNERS | `.github/` | `.gitlab/` |
-| CI | caller workflows of reusable workflows | every job generated into `.gitlab-ci.yml` |
-| Dependency updates | Dependabot | Renovate (`renovate.json`) |
-| Releases | release-please, through a release pull request | semantic-release, on every push to the default branch |
-
-Jobs you add to `.gitlab-ci.yml` are kept; repokeeper manages only its own top-level keys
-(`workflow`, `node`, `commits`, `repokeeper`, `renovate`, `release`). `stack_options.node.os` has
-no effect: GitLab jobs run on Linux.
-
-Two things to know when you add jobs of your own:
-
-- The managed `workflow` runs pipelines for merge requests, the default branch, schedules and
-  tags. repokeeper's own jobs skip tags, so a tag pipeline holds only your jobs (publishing, for
-  example). A job meant for other branches never starts. To write the `workflow` rules yourself,
-  list the key under `owned` in `.repokeeper.yml`: `owned: [".gitlab-ci.yml#workflow"]`.
-- repokeeper's jobs use GitLab's default stages `test` and `deploy`. If you declare `stages`,
-  include both; repokeeper warns when one is missing.
-
-Two jobs stay inactive until you set them up in the project's CI/CD settings:
-
-- **`release`** needs a CI/CD variable `GITLAB_TOKEN`: a project access token with the `api` and
-  `write_repository` scopes and a role that may push to the default branch. Every push to the
-  default branch with a `feat`, `fix` or breaking change then releases at once: version bump,
-  `CHANGELOG.md`, tag and GitLab release. There is no release merge request. A repository without
-  a `vX.Y.Z` tag starts at `1.0.0`; tag the current version first to continue from it. A variable
-  marked Protected is only visible on protected branches, so protect the default branch or leave
-  the variable unprotected; otherwise the job silently stays away.
-- **`renovate`** needs a CI/CD variable `RENOVATE_TOKEN` (same scopes) and a pipeline schedule,
-  for example weekly. The schedule alone decides how often Renovate runs.
-
-`repokeeper github apply` has no GitLab counterpart yet.
+| Guide | What it covers |
+| --- | --- |
+| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script linting, release-please, the drift check |
+| [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
+| [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings, security, branch protection |
+| [GitLab](docs/gitlab.md) | What differs on GitLab, and the two jobs that need a token |
 
 ## Pilots
 
