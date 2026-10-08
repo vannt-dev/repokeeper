@@ -20,6 +20,10 @@ export interface CommandOptions {
   relock: boolean;
   json: boolean;
   yes: boolean;
+  /** Which parts of the standard a new repository starts with (init). */
+  preset?: import("./presets.js").Preset;
+  /** Ask which modules to apply and confirm before writing (init). */
+  interactive?: boolean;
   /** Folder to write the reusable workflows to instead of this repository (eject). */
   to?: string;
   /** Folder of each stack given as `--stack id:folder` (init). */
