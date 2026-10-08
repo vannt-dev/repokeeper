@@ -7,6 +7,7 @@ import { checkCommand } from "./commands/check.js";
 import { ejectCommand } from "./commands/eject.js";
 import { githubApplyCommand } from "./commands/github.js";
 import { initCommand } from "./commands/init.js";
+import { PRESET_SUMMARY, PRESETS, type Preset } from "./commands/presets.js";
 import type { CommandOptions } from "./commands/report.js";
 import { updateCommand } from "./commands/update.js";
 import { STACK_IDS, type StackId } from "./config/types.js";
@@ -18,8 +19,8 @@ export interface Io {
   cwd: string;
   out(line: string): void;
   err(line: string): void;
-  /** Asks a yes/no question; absent when nobody can answer (not a terminal). */
-  confirm?(question: string): Promise<boolean>;
+  /** Asks a yes/no question; absent when nobody can answer (not a terminal). `fallback` is what Enter means. */
+  confirm?(question: string, fallback?: boolean): Promise<boolean>;
   /** GitHub API to use instead of the REST API; tests pass a fake. */
   githubApi?: GitHubApi;
 }
@@ -41,6 +42,8 @@ export const USAGE = [
   "  --accept <path>  take repokeeper's version of a locally edited file (update, repeatable)",
   "  --stack <id>     stack to use instead of detection (init, repeatable); id:folder for a stack in a folder",
   "  --platform <id>  github or gitlab, instead of detection from the origin remote (init)",
+  `  --preset <name>  ${PRESETS.map((name) => `${name}: ${PRESET_SUMMARY[name]}`).join("; ")} (init)`,
+  "  -i, --interactive  ask which parts to apply, naming the files of each, and confirm before writing (init)",
   "  --relock         rebuild .repokeeper/lock.json from the current files (init)",
   "  --to <folder>    write every reusable workflow into another repository's folder instead (eject)",
   "  --json           machine-readable output (check)",
@@ -64,6 +67,8 @@ export async function run(argv: string[], io: Io): Promise<number> {
         accept: { type: "string", multiple: true, default: [] },
         stack: { type: "string", multiple: true, default: [] },
         platform: { type: "string" },
+        preset: { type: "string" },
+        interactive: { type: "boolean", short: "i", default: false },
         relock: { type: "boolean", default: false },
         to: { type: "string" },
         json: { type: "boolean", default: false },
@@ -97,6 +102,13 @@ export async function run(argv: string[], io: Io): Promise<number> {
       throw new UsageError(`unknown platform ${platform}; expected github or gitlab`);
     }
     if (platform !== undefined && command !== "init") throw new UsageError("--platform is only for init");
+    const preset = values.preset as string | undefined;
+    if (preset !== undefined && !(PRESETS as readonly string[]).includes(preset)) {
+      throw new UsageError(`unknown preset ${preset}; expected one of ${PRESETS.join(", ")}`);
+    }
+    if ((preset !== undefined || values.interactive) && command !== "init") {
+      throw new UsageError("--preset and --interactive are only for init");
+    }
     const to = values.to as string | undefined;
     if (to !== undefined && command !== "eject") throw new UsageError("--to is only for eject");
     const options: CommandOptions = {
@@ -112,6 +124,8 @@ export async function run(argv: string[], io: Io): Promise<number> {
       yes: values.yes as boolean,
       ...(platform !== undefined ? { platform } : {}),
       ...(to !== undefined ? { to } : {}),
+      ...(preset !== undefined ? { preset: preset as Preset } : {}),
+      interactive: values.interactive as boolean,
     };
     if (command === "init") return await initCommand(io.cwd, options, io);
     if (command === "check") return await checkCommand(io.cwd, options, io);
@@ -137,10 +151,11 @@ export async function run(argv: string[], io: Io): Promise<number> {
   }
 }
 
-async function askYesNo(question: string): Promise<boolean> {
+async function askYesNo(question: string, fallback = false): Promise<boolean> {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   try {
-    return /^y(es)?$/i.test((await rl.question(`${question} [y/N] `)).trim());
+    const answer = (await rl.question(`${question} ${fallback ? "[Y/n]" : "[y/N]"} `)).trim();
+    return answer === "" ? fallback : /^y(es)?$/i.test(answer);
   } finally {
     rl.close();
   }

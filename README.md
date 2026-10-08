@@ -41,6 +41,20 @@ yours. `owned` also takes a single key of a shared file, such as `.github/workfl
 `package.json#devDependencies.lefthook`; repokeeper then leaves that key, and everything under it,
 alone. Every write command accepts `--dry-run`.
 
+`init` applies the whole standard unless you say otherwise:
+
+- `repokeeper init --preset essential` writes only the editor settings, `.gitignore` and the CI
+  workflow. `standard` is the default. `strict` adds the drift check to CI and, on GitHub, writes
+  branch protection (pull requests with one approval, no force push, the commit check required) and
+  Dependabot security updates into `.repokeeper.yml`; `repokeeper github apply` then puts them in
+  place. There is no preset that promises code or secret scanning: repokeeper does not set those up.
+- `repokeeper init --interactive` (or `-i`) asks about each part in turn, naming the files it would
+  write, shows the result, and asks once more before writing anything. Enter keeps the preset's
+  answer. Add `--dry-run` to go through the questions without the possibility of writing.
+
+Either way the choice ends up as plain `modules:` switches in `.repokeeper.yml`, which you can change
+later and apply with `repokeeper update`.
+
 `init` reads the default branch from `origin/HEAD` and records it as `github.default_branch` when it
 isn't `main`. The release manifest starts from the latest `vX.Y.Z` tag when the stack has no version
 of its own.

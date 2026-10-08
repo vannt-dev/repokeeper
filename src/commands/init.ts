@@ -3,7 +3,7 @@ import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Io } from "../cli.js";
 import { CONFIG_FILE, loadConfig, renderConfig } from "../config/load.js";
-import { defaultConfig } from "../config/types.js";
+import { defaultConfig, type RepokeeperConfig } from "../config/types.js";
 import { UsageError } from "../errors.js";
 import { dirtyPaths, gitUserName, remoteDefaultBranch, remoteHost, repoInfo } from "../git.js";
 import { outputId } from "../model.js";
@@ -17,6 +17,7 @@ import { readCurrent } from "../sync/state.js";
 import { computeSync, pathsToWrite, type SyncResult } from "../sync/sync.js";
 import { STANDARD_VERSION } from "../version.js";
 import { buildContext } from "./context.js";
+import { applyPreset, chooseModules } from "./presets.js";
 import { type CommandOptions, nextSteps, printResult, printWarnings } from "./report.js";
 
 /** A dirty path is still safe to write when every part repokeeper manages in it is exactly what it last wrote. */
@@ -70,7 +71,11 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   const platform = options.platform ?? ((await remoteHost(root))?.includes("gitlab") ? "gitlab" : "github");
   const repo = await repoInfo(root, platform);
   const holder = (await gitUserName(root)) ?? repo.owner ?? "the project authors";
-  const config = defaultConfig({
+  const { confirm } = io;
+  if (options.interactive && confirm === undefined) {
+    throw new UsageError("--interactive needs a terminal to ask its questions in");
+  }
+  const defaults = defaultConfig({
     stacks,
     standard: STANDARD_VERSION,
     copyright: `${new Date().getFullYear()} ${holder}`,
@@ -80,17 +85,32 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   });
   for (const id of stacks) {
     const directory = layout.directories[id];
-    if (directory !== undefined) config.stack_options[id] = { directory };
+    if (directory !== undefined) defaults.stack_options[id] = { directory };
   }
   const branch = await remoteDefaultBranch(root);
-  if (branch && branch !== "main") config[platform] = { default_branch: branch };
-  const ctx = await buildContext(root, config, repo);
+  if (branch && branch !== "main") defaults[platform] = { default_branch: branch };
+  const preset = options.preset ?? "standard";
+  let config = applyPreset(defaults, preset);
+  const plan = async (candidate: RepokeeperConfig) => {
+    const ctx = await buildContext(root, candidate, repo);
+    return { ctx, outputs: planOutputs(ctx) };
+  };
+  if (options.interactive && confirm !== undefined) {
+    // the default health settings stay at hand for a preset that left the module out
+    const health = defaults.modules.health;
+    if (health) config = await chooseModules(config, health, plan, { ...io, confirm });
+  }
+  const { ctx, outputs } = await plan(config);
   const adopt = options.adoptAll ? ("all" as const) : new Set(options.adopt);
-  const result = await computeSync(root, planOutputs(ctx), null, { adopt, accept: new Set() });
+  const result = await computeSync(root, outputs, null, { adopt, accept: new Set() });
   if (!options.dryRun) await guardUncommitted(root, result, options.force);
   printResult(io, result);
   if (options.dryRun) {
     io.out("dry run: nothing written");
+    return 0;
+  }
+  if (options.interactive && confirm !== undefined && !(await confirm("Write these files?", true))) {
+    io.out("nothing written");
     return 0;
   }
   await writeFile(join(root, CONFIG_FILE), renderConfig(config));
@@ -98,6 +118,9 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   io.out(`applied standard ${STANDARD_VERSION}; wrote ${CONFIG_FILE}`);
   await printWarnings(root, ctx, io);
   for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
+  if (config.github?.protect || config.github?.security) {
+    io.out("next: run `repokeeper github apply` to put the branch protection and security settings in place");
+  }
   io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
   return 0;
 }
