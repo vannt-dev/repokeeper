@@ -8,5 +8,6 @@ export const depsModule: Module = {
       ctx.stacks.flatMap((stack) =>
         stack.dependabot.map((ecosystem) => ({ ecosystem, directory: stack.directory ? `/${stack.directory}` : "/" })),
       ),
+      ctx,
     ),
 };

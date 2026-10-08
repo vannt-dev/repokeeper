@@ -20,6 +20,8 @@ export interface CommandOptions {
   relock: boolean;
   json: boolean;
   yes: boolean;
+  /** Folder to write the reusable workflows to instead of this repository (eject). */
+  to?: string;
   /** Folder of each stack given as `--stack id:folder` (init). */
   stackDirectories?: Partial<Record<import("../config/types.js").StackId, string>>;
   /** Platform to use instead of detection from the origin remote (init). */

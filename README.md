@@ -92,6 +92,35 @@ the jobs it adds; jobs you add yourself are left alone, and so is the formatting
 file. A new push to a pull request cancels that pull request's earlier `ci` run; runs on the default
 branch always finish.
 
+### Pinning, mirroring and local copies
+
+Following the moving major tag means a change to a reusable workflow reaches your CI the day it is
+released. If you would rather decide when, set where the workflows are called from in
+`.repokeeper.yml` and run `repokeeper update`:
+
+```yaml
+github:
+  workflows:
+    ref: exact                         # the release of the repokeeper that wrote the file
+    # ref: 0123456789abcdef…           # or a commit SHA, or a tag such as v0.5.0
+    # source: your-org/ci-workflows    # a copy in a repository of your organisation
+    # source: local                    # copies in this repository
+```
+
+- **`ref: exact`** calls `…@v0.5.0` instead of `…@v0`. Updating repokeeper and running
+  `repokeeper update` moves it, in a commit you review. A tag can still be moved by whoever controls
+  the repository it is in; a commit SHA cannot, so write one as `ref` when that matters, and change
+  it yourself when you want a newer version.
+- With a `ref`, the generated `dependabot.yml` tells Dependabot to leave these workflow references
+  alone: one owner moves them, not two.
+- **`source: your-org/ci-workflows`** calls a copy you host. `repokeeper eject --to <folder>` writes
+  every reusable workflow into `<folder>/.github/workflows/` of a clone of that repository; commit
+  them there and allow the organisation's repositories to use its workflows. `ref` defaults to `main`.
+- **`source: local`**, or simply `repokeeper eject`, gives the repository its own copies of the
+  workflows it calls and points `ci.yml` and `release.yml` at them. From then on nothing in your CI
+  refers to this repository. The copies are yours: repokeeper writes them once and never changes
+  them, so updates are yours to take, by comparing with a newer `repokeeper eject --to`.
+
 The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
 and PSScriptAnalyzer on `*.ps1`, which fails on errors and warnings (not on information-level rules). To
 choose the rules yourself, add a `PSScriptAnalyzerSettings.psd1` at the repository root; the job then

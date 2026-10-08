@@ -155,7 +155,7 @@ export interface PlatformAdapter {
   /** How to report a vulnerability privately: the words after "Report the vulnerability privately ". */
   securityReport(repo: RepoInfo): string;
   communityFiles(ctx: ModuleContext): Output[];
-  dependencyUpdates(updates: DependencyUpdate[]): Output[];
+  dependencyUpdates(updates: DependencyUpdate[], ctx: ModuleContext): Output[];
   /** The caller CI workflow; empty when no job would run. */
   ciWorkflow(ctx: ModuleContext): Output[];
   /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */

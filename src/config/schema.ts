@@ -48,6 +48,16 @@ export const configSchema = {
       additionalProperties: false,
       properties: {
         default_branch: { type: "string", minLength: 1 },
+        workflows: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            // "local", or the owner/name of a repository holding a copy of the reusable workflows
+            source: { type: "string", pattern: "^(local|[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)$" },
+            // "exact", or a tag, branch or commit SHA
+            ref: { type: "string", pattern: "^[A-Za-z0-9_./-]+$" },
+          },
+        },
         description: { type: "string" },
         topics: { type: "array", uniqueItems: true, items: { type: "string", pattern: "^[a-z0-9][a-z0-9-]{0,49}$" } },
         merge: {

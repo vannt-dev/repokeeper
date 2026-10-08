@@ -26,6 +26,9 @@ export const REUSABLE_REPO = "vannt-dev/repokeeper";
 /** Moving tag callers pin to: the major version of this repokeeper (v0 during 0.x). */
 export const WORKFLOW_REF = `v${PACKAGE_VERSION.split(".")[0]}`;
 
+/** The tag of this release, for callers that pin to it instead of following the major tag. */
+export const EXACT_WORKFLOW_REF = `v${PACKAGE_VERSION}`;
+
 export function compareVersions(a: string, b: string): number {
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
