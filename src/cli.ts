@@ -37,7 +37,7 @@ export const USAGE = [
   "  --force          write even when target files have uncommitted changes",
   "  --adopt <path>   let repokeeper manage an existing file (repeatable); --adopt-all for every file",
   "  --accept <path>  take repokeeper's version of a locally edited file (update, repeatable)",
-  "  --stack <id>     stack to use instead of detection (init, repeatable)",
+  "  --stack <id>     stack to use instead of detection (init, repeatable); id:folder for a stack in a folder",
   "  --platform <id>  github or gitlab, instead of detection from the origin remote (init)",
   "  --relock         rebuild .repokeeper/lock.json from the current files (init)",
   "  --json           machine-readable output (check)",
@@ -77,12 +77,17 @@ export async function run(argv: string[], io: Io): Promise<number> {
       io.out(USAGE);
       return command === undefined && !values.help ? 2 : 0;
     }
-    const stacks = values.stack as string[];
-    for (const stack of stacks) {
-      if (!(STACK_IDS as readonly string[]).includes(stack)) {
+    // `go:backend` names the folder of a monorepo the stack lives in
+    const stackDirectories: Partial<Record<StackId, string>> = {};
+    const stacks = (values.stack as string[]).map((value) => {
+      const [stack, ...rest] = value.split(":");
+      if (stack === undefined || !(STACK_IDS as readonly string[]).includes(stack)) {
         throw new UsageError(`unknown stack ${stack}; expected one of ${STACK_IDS.join(", ")}`);
       }
-    }
+      const directory = toPosix(rest.join(":")).replace(/\/+$/, "");
+      if (directory !== "" && directory !== ".") stackDirectories[stack as StackId] = directory;
+      return stack;
+    });
     const platform = values.platform as string | undefined;
     if (platform !== undefined && platform !== "github" && platform !== "gitlab") {
       throw new UsageError(`unknown platform ${platform}; expected github or gitlab`);
@@ -95,6 +100,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
       adoptAll: values["adopt-all"] as boolean,
       accept: (values.accept as string[]).map(toPosix),
       stacks: stacks as StackId[],
+      stackDirectories,
       relock: values.relock as boolean,
       json: values.json as boolean,
       yes: values.yes as boolean,

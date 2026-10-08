@@ -14,6 +14,23 @@ export function checkKeys(stack: StackId, options: StackOptions, keys: readonly 
   }
 }
 
+/**
+ * The `directory` option every stack takes: the folder of a monorepo the stack lives in.
+ * Returns it with forward slashes and no trailing slash, or undefined for the repository root.
+ */
+export function stackDirectory(stack: StackId, options: StackOptions): string | undefined {
+  const value = options.directory;
+  if (value === undefined) return undefined;
+  const key = `${CONFIG_FILE}: stack_options.${stack}.directory`;
+  if (typeof value !== "string" || value.trim() === "") throw new ConfigError(`${key} must be a folder name`);
+  const directory = value.trim().replace(/\\/g, "/").replace(/^\.\//, "").replace(/\/+$/, "");
+  if (directory === "" || directory === ".") return undefined;
+  if (directory.startsWith("/") || /^[A-Za-z]:/.test(directory) || directory.split("/").includes("..")) {
+    throw new ConfigError(`${key} must be a folder inside the repository, such as backend or apps/api`);
+  }
+  return directory;
+}
+
 /** A list option; YAML numbers such as `[22, 24]` count as strings. */
 export function stringList(stack: StackId, options: StackOptions, key: string): string[] | undefined {
   const value = options[key];

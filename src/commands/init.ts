@@ -9,7 +9,7 @@ import { dirtyPaths, gitUserName, remoteDefaultBranch, remoteHost, repoInfo } fr
 import { outputId } from "../model.js";
 import { planOutputs } from "../plan.js";
 import { platformFor } from "../platforms/index.js";
-import { detectStacks } from "../stacks/index.js";
+import { detectStackLayout } from "../stacks/index.js";
 import { applySync } from "../sync/apply.js";
 import { hashText } from "../sync/hash.js";
 import { type Lock, targetOf, writeLock } from "../sync/lock.js";
@@ -54,8 +54,18 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   if (existsSync(join(root, CONFIG_FILE))) {
     throw new UsageError(`${CONFIG_FILE} already exists; run \`repokeeper update\` or \`repokeeper check\``);
   }
-  const stacks = options.stacks.length > 0 ? options.stacks : await detectStacks(root);
+  const layout =
+    options.stacks.length > 0
+      ? { stacks: options.stacks, directories: options.stackDirectories ?? {}, skipped: [] }
+      : await detectStackLayout(root);
+  const { stacks } = layout;
   if (stacks.length === 0) throw new UsageError("no supported stack detected; pass --stack node");
+  for (const id of stacks) {
+    if (layout.directories[id] !== undefined) io.out(`found ${id} in ${layout.directories[id]}/`);
+  }
+  for (const { stack, directory } of layout.skipped) {
+    io.out(`note: ${directory}/ also holds a ${stack} project; one folder per stack is managed, so it is left out`);
+  }
 
   const platform = options.platform ?? ((await remoteHost(root))?.includes("gitlab") ? "gitlab" : "github");
   const repo = await repoInfo(root, platform);
@@ -68,6 +78,10 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
     codeowners: repo.owner ? [`@${repo.owner}`] : [],
     platform,
   });
+  for (const id of stacks) {
+    const directory = layout.directories[id];
+    if (directory !== undefined) config.stack_options[id] = { directory };
+  }
   const branch = await remoteDefaultBranch(root);
   if (branch && branch !== "main") config[platform] = { default_branch: branch };
   const ctx = await buildContext(root, config, repo);

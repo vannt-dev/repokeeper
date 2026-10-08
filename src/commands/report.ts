@@ -4,7 +4,7 @@ import { parse } from "yaml";
 import type { Io } from "../cli.js";
 import { duplicateTestRuns } from "../duplicates.js";
 import { crlfTrackedFiles } from "../git.js";
-import { describeOutput, type ModuleContext, type Output } from "../model.js";
+import { describeOutput, type ModuleContext, nodeAtRoot, type Output } from "../model.js";
 import { overriddenAttributes } from "../sync/attributes.js";
 import type { RemovalAction } from "../sync/decide.js";
 import type { SyncResult } from "../sync/sync.js";
@@ -20,6 +20,8 @@ export interface CommandOptions {
   relock: boolean;
   json: boolean;
   yes: boolean;
+  /** Folder of each stack given as `--stack id:folder` (init). */
+  stackDirectories?: Partial<Record<import("../config/types.js").StackId, string>>;
   /** Platform to use instead of detection from the origin remote (init). */
   platform?: import("../config/types.js").PlatformId;
 }
@@ -70,7 +72,7 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
   const wrote = (path: string) => result.decisions.some((d) => d.output.path === path && WROTE.includes(d.action));
   if (ctx.config.modules.hooks && wrote("lefthook.yml")) {
     steps.push(
-      ctx.stacks.some((s) => s.id === "node")
+      nodeAtRoot(ctx.stacks)
         ? "install dependencies; this installs the git hooks"
         : `run \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\` to enable the git hooks`,
     );
