@@ -2,6 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Io } from "../cli.js";
 import { CONFIG_FILE, loadConfig, setStandard } from "../config/load.js";
+import type { RepokeeperConfig } from "../config/types.js";
 import { UsageError } from "../errors.js";
 import { planOutputs } from "../plan.js";
 import { applySync } from "../sync/apply.js";
@@ -13,8 +14,21 @@ import { buildContext } from "./context.js";
 import { guardUncommitted } from "./init.js";
 import { type CommandOptions, nextSteps, printResult, printWarnings } from "./report.js";
 
-export async function updateCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
-  const config = await loadConfig(root);
+/** For a command that changes .repokeeper.yml and resyncs in one step, such as `eject`. */
+export interface ConfigChange {
+  /** The configuration to sync to, in place of the one on disk. */
+  config: RepokeeperConfig;
+  /** Writes that configuration to disk; called once the sync is known to be safe to apply. */
+  beforeWrite(): Promise<void>;
+}
+
+export async function updateCommand(
+  root: string,
+  options: CommandOptions,
+  io: Io,
+  change?: ConfigChange,
+): Promise<number> {
+  const config = change?.config ?? (await loadConfig(root));
   assertSupportedStandard(config.standard);
   const lock = await readLock(root);
   if (!lock) throw new UsageError(".repokeeper/lock.json is missing; run `repokeeper init --relock` first");
@@ -31,6 +45,7 @@ export async function updateCommand(root: string, options: CommandOptions, io: I
     io.out("dry run: nothing written");
     return 0;
   }
+  await change?.beforeWrite();
   await applySync(root, result, lock, STANDARD_VERSION);
   const steps = await nextSteps(root, ctx, result);
   await printWarnings(root, ctx, io);

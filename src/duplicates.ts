@@ -2,7 +2,6 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
 import type { ResolvedStack } from "./model.js";
-import { REUSABLE_REPO } from "./version.js";
 
 export interface DuplicateTestRun {
   file: string;
@@ -12,9 +11,8 @@ export interface DuplicateTestRun {
 const WORKFLOWS = ".github/workflows";
 const calls = (job: unknown) => {
   const uses = (job as { uses?: unknown } | null)?.uses;
-  return (
-    typeof uses === "string" && (uses.startsWith(`${REUSABLE_REPO}/`) || uses.startsWith("./.github/workflows/stack-"))
-  );
+  // a stack workflow, wherever it is called from: repokeeper's repository, a copy of it, or this repository
+  return typeof uses === "string" && /(^\.|^[^/]+\/[^/]+)\/\.github\/workflows\/stack-[a-z]+\.yml(@|$)/.test(uses);
 };
 
 /** Workflows of the user's own that run a stack's test command, which repokeeper's ci job now runs as well. */

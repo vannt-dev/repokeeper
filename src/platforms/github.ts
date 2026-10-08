@@ -1,5 +1,7 @@
 import { stringify } from "yaml";
+import { CONFIG_FILE } from "../config/load.js";
 import { defaultBranch, STACK_IDS } from "../config/types.js";
+import { ConfigError } from "../errors.js";
 import {
   type DependencyUpdate,
   MANAGED_HEADER,
@@ -8,7 +10,8 @@ import {
   type PlatformAdapter,
   type ReleaseInfo,
 } from "../model.js";
-import { PACKAGE_VERSION, REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
+import { readWorkflow } from "../templates.js";
+import { EXACT_WORKFLOW_REF, PACKAGE_VERSION, REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
 
 const yamlFile = (module: string, path: string, data: unknown): Output => ({
   kind: "file",
@@ -19,10 +22,52 @@ const yamlFile = (module: string, path: string, data: unknown): Output => ({
 
 const WORKFLOW_KEYS = ["name", "on", "permissions", "concurrency", "env", "defaults", "jobs"] as const;
 
-/** Reference to a reusable workflow; local inside the repository that hosts them. */
+/** Where the reusable workflows are called from: this repository, or a repository at a ref. */
+type WorkflowOrigin = { local: true; self: boolean } | { local: false; repo: string; ref: string; pinned: boolean };
+
+function workflowOrigin(ctx: ModuleContext): WorkflowOrigin {
+  // the repository that hosts the workflows calls its own files
+  if (ctx.repo.owner !== null && `${ctx.repo.owner}/${ctx.repo.name}` === REUSABLE_REPO)
+    return { local: true, self: true };
+  const { source, ref } = ctx.config.github?.workflows ?? {};
+  if (source === "local") return { local: true, self: false };
+  const repo = source ?? REUSABLE_REPO;
+  if (ref === "exact") {
+    if (repo !== REUSABLE_REPO) {
+      throw new ConfigError(
+        `${CONFIG_FILE}: github.workflows.ref: exact follows repokeeper's own releases; for ${repo}, name a tag, a branch or a commit`,
+      );
+    }
+    return { local: false, repo, ref: EXACT_WORKFLOW_REF, pinned: true };
+  }
+  // a copy in a repository of your own has no release tags of repokeeper's to follow
+  return {
+    local: false,
+    repo,
+    ref: ref ?? (repo === REUSABLE_REPO ? WORKFLOW_REF : "main"),
+    pinned: ref !== undefined,
+  };
+}
+
+/** Reference to a reusable workflow, as the `uses` of a caller job. */
 function workflowRef(ctx: ModuleContext, file: string): string {
-  const self = ctx.repo.owner !== null && `${ctx.repo.owner}/${ctx.repo.name}` === REUSABLE_REPO;
-  return self ? `./.github/workflows/${file}` : `${REUSABLE_REPO}/.github/workflows/${file}@${WORKFLOW_REF}`;
+  const origin = workflowOrigin(ctx);
+  return origin.local ? `./.github/workflows/${file}` : `${origin.repo}/.github/workflows/${file}@${origin.ref}`;
+}
+
+/**
+ * The reusable workflows themselves, for a repository that keeps its own copies. Seeds: written
+ * once and from then on the repository's, so its owners decide when a copy changes.
+ */
+function localWorkflows(ctx: ModuleContext, module: string, files: string[]): Output[] {
+  const origin = workflowOrigin(ctx);
+  if (!origin.local || origin.self) return [];
+  return [...new Set(files)].map((file) => ({
+    kind: "seed" as const,
+    module,
+    path: `.github/workflows/${file}`,
+    content: `# Copied from repokeeper ${PACKAGE_VERSION} (https://github.com/${REUSABLE_REPO}). This copy is yours: repokeeper does not update it.\n${readWorkflow(file)}`,
+  }));
 }
 
 const workflowKey = (module: string, path: string, keyPath: string[], value: unknown): Output => ({
@@ -139,7 +184,11 @@ export const githubPlatform: PlatformAdapter = {
     return outputs;
   },
 
-  dependencyUpdates(requested: DependencyUpdate[]): Output[] {
+  dependencyUpdates(requested: DependencyUpdate[], ctx: ModuleContext): Output[] {
+    // a pinned reference is moved by `repokeeper update` or by its owner in .repokeeper.yml; a
+    // Dependabot bump of it would edit a key repokeeper manages and show up as drift every time
+    const origin = workflowOrigin(ctx);
+    const pinnedWorkflows = !origin.local && origin.pinned ? [{ "dependency-name": `${origin.repo}*` }] : [];
     // workflows always live at the root, whatever folders the stacks are in
     const all = [...requested, { ecosystem: "github-actions", directory: "/" }];
     const unique = all.filter(
@@ -158,6 +207,7 @@ export const githubPlatform: PlatformAdapter = {
       ...(ecosystem === "npm"
         ? { ignore: [{ "dependency-name": "@types/node", "update-types": ["version-update:semver-major"] }] }
         : {}),
+      ...(ecosystem === "github-actions" && pinnedWorkflows.length > 0 ? { ignore: pinnedWorkflows } : {}),
     }));
     return [yamlFile("deps", ".github/dependabot.yml", { version: 2, updates })];
   },
@@ -187,7 +237,13 @@ export const githubPlatform: PlatformAdapter = {
       );
     }
     if (jobs.length === 0) return [];
+    const called = [
+      ...ctx.stacks.flatMap((stack) => (stack.ci ? [stack.ci.workflow] : [])),
+      ...(ctx.config.modules.commits ? ["commitlint.yml"] : []),
+      ...(ctx.config.modules.drift ? ["repokeeper-check.yml"] : []),
+    ];
     return [
+      ...localWorkflows(ctx, "ci", called),
       workflowKey("ci", path, ["name"], "ci"),
       workflowKey("ci", path, ["on"], { pull_request: null, push: { branches: [defaultBranch(ctx.config)] } }),
       workflowKey("ci", path, ["permissions"], { contents: "read" }),
@@ -239,6 +295,7 @@ export const githubPlatform: PlatformAdapter = {
         path: ".release-please-manifest.json",
         content: json({ [packagePath]: seed }),
       },
+      ...localWorkflows(ctx, "release", ["release-please.yml"]),
       workflowKey("release", path, ["name"], "release"),
       workflowKey("release", path, ["on"], { push: { branches: [defaultBranch(ctx.config)] } }),
       workflowKey("release", path, ["permissions"], { contents: "read" }),

@@ -4,6 +4,7 @@ import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { checkCommand } from "./commands/check.js";
+import { ejectCommand } from "./commands/eject.js";
 import { githubApplyCommand } from "./commands/github.js";
 import { initCommand } from "./commands/init.js";
 import type { CommandOptions } from "./commands/report.js";
@@ -31,6 +32,7 @@ export const USAGE = [
   "  check   report drift from the standard without writing (exit 1 on drift)",
   "  update  move to the standard of this repokeeper version and resync",
   "  github apply  diff the GitHub settings against .repokeeper.yml and apply them",
+  "  eject   copy the reusable CI workflows into this repository and call them from there",
   "",
   "options:",
   "  --dry-run        show what would change without writing",
@@ -40,6 +42,7 @@ export const USAGE = [
   "  --stack <id>     stack to use instead of detection (init, repeatable); id:folder for a stack in a folder",
   "  --platform <id>  github or gitlab, instead of detection from the origin remote (init)",
   "  --relock         rebuild .repokeeper/lock.json from the current files (init)",
+  "  --to <folder>    write every reusable workflow into another repository's folder instead (eject)",
   "  --json           machine-readable output (check)",
   "  -y, --yes        apply without asking (github apply)",
   "  -v, --version    print the version",
@@ -62,6 +65,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
         stack: { type: "string", multiple: true, default: [] },
         platform: { type: "string" },
         relock: { type: "boolean", default: false },
+        to: { type: "string" },
         json: { type: "boolean", default: false },
         yes: { type: "boolean", short: "y", default: false },
         version: { type: "boolean", short: "v", default: false },
@@ -93,6 +97,8 @@ export async function run(argv: string[], io: Io): Promise<number> {
       throw new UsageError(`unknown platform ${platform}; expected github or gitlab`);
     }
     if (platform !== undefined && command !== "init") throw new UsageError("--platform is only for init");
+    const to = values.to as string | undefined;
+    if (to !== undefined && command !== "eject") throw new UsageError("--to is only for eject");
     const options: CommandOptions = {
       dryRun: values["dry-run"] as boolean,
       force: values.force as boolean,
@@ -105,10 +111,12 @@ export async function run(argv: string[], io: Io): Promise<number> {
       json: values.json as boolean,
       yes: values.yes as boolean,
       ...(platform !== undefined ? { platform } : {}),
+      ...(to !== undefined ? { to } : {}),
     };
     if (command === "init") return await initCommand(io.cwd, options, io);
     if (command === "check") return await checkCommand(io.cwd, options, io);
     if (command === "update") return await updateCommand(io.cwd, options, io);
+    if (command === "eject") return await ejectCommand(io.cwd, options, io);
     if (command === "github") {
       if (positionals[1] !== "apply") throw new UsageError("usage: repokeeper github apply [--dry-run] [--yes]");
       return await githubApplyCommand(io.cwd, options, io);

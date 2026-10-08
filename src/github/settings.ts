@@ -4,6 +4,11 @@ import type { ApiResponse, GitHubApi } from "./api.js";
 /** The `github:` section of .repokeeper.yml. Only the keys present are managed. */
 export interface GithubSettings {
   default_branch?: string;
+  /**
+   * Where the generated CI and release workflows find the reusable workflows they call. Not a
+   * setting of the repository on GitHub: `github apply` leaves it alone.
+   */
+  workflows?: WorkflowSource;
   description?: string;
   topics?: string[];
   merge?: { squash?: boolean; merge_commit?: boolean; rebase?: boolean; delete_branch_on_merge?: boolean };
@@ -17,6 +22,20 @@ export interface GithubSettings {
         allow_force_push?: boolean;
       }
     | false;
+}
+
+export interface WorkflowSource {
+  /**
+   * `local`: the reusable workflows are files of this repository, written once and then the
+   * repository's own. `owner/name`: a repository that holds a copy of them. Left out: repokeeper's.
+   */
+  source?: string;
+  /**
+   * What to call them at. `exact`: the release of the repokeeper that wrote the file, moved by
+   * `repokeeper update`. Anything else is used as written: a tag, a branch or a commit SHA.
+   * Left out: the moving major tag of repokeeper, or `main` of a repository of your own.
+   */
+  ref?: string;
 }
 
 export interface Change {
