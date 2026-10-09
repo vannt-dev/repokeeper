@@ -11,7 +11,11 @@ import { capture, tempDir } from "./helpers.js";
 
 const fixtures = fileURLToPath(new URL("../fixtures/", import.meta.url));
 const workflows = fileURLToPath(new URL("../.github/workflows/", import.meta.url));
-const FOR_CHANGES = [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null' }];
+const FOR_CHANGES = [
+  {
+    if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null && ($CI_COMMIT_BRANCH == null || $CI_COMMIT_MESSAGE !~ /^chore\\(release\\): /)',
+  },
+];
 
 interface Job {
   stage: string;
