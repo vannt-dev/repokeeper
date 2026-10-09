@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
@@ -147,13 +147,14 @@ describe("repokeeper on gitlab, end to end", () => {
     }
   });
 
-  it("refuses an unsupported stack before writing anything", async () => {
+  it("refuses a stack in a folder of its own before writing anything", async () => {
     const dir = await tempDir();
-    await writeFile(join(dir, "pyproject.toml"), '[project]\nname = "demo"\nversion = "0.1.0"\n');
+    await mkdir(join(dir, "backend"));
+    await writeFile(join(dir, "backend/pyproject.toml"), '[project]\nname = "demo"\nversion = "0.1.0"\n');
     sh(dir, "init", "-q", "-b", "main");
     const init = await repokeeper(dir, "init", "--platform", "gitlab");
     expect(init.code).toBe(2);
-    expect(init.err).toContain('stack "python" is not supported on gitlab yet (supported: node, go)');
+    expect(init.err).toContain("(stack_options.python.directory) is not supported on gitlab yet");
     expect(existsSync(join(dir, ".repokeeper.yml"))).toBe(false);
   });
 

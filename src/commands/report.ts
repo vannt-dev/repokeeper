@@ -105,9 +105,11 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
     }
   }
   if (ctx.platform.id === "gitlab") {
-    const os = ctx.stacks.find((stack) => stack.id === "node")?.ci?.with.os;
-    if (os !== undefined && os !== '["ubuntu-latest"]') {
-      io.out("note: node.os is ignored on gitlab (Linux runners only)");
+    for (const stack of ctx.stacks) {
+      const os = stack.ci?.with.os;
+      if (os !== undefined && os !== '["ubuntu-latest"]') {
+        io.out(`note: ${stack.id}.os is ignored on gitlab (Linux runners only)`);
+      }
     }
     // repokeeper's jobs use GitLab's default stages; a stages list of the user's own replaces those
     let ci: { stages?: unknown } | null = null;

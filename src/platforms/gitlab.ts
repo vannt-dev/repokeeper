@@ -1,6 +1,15 @@
-import { defaultBranch } from "../config/types.js";
-import { MANAGED_HEADER, type ModuleContext, type Output, type PlatformAdapter, type RepoInfo } from "../model.js";
+import { defaultBranch, STACK_IDS } from "../config/types.js";
+import {
+  MANAGED_HEADER,
+  type ModuleContext,
+  type Output,
+  type PlatformAdapter,
+  type ReleaseInfo,
+  type RepoInfo,
+} from "../model.js";
+import { releaseFiles } from "../release/bump.js";
 import { PACKAGE_VERSION, TOOL_VERSIONS } from "../version.js";
+import { FOR_CHANGES, NOT_SCHEDULED, STACK_JOB_KEYS, stackJobs } from "./gitlab-jobs.js";
 
 const md = (path: string, body: string): Output => ({
   kind: "file",
@@ -13,7 +22,7 @@ const md = (path: string, body: string): Output => ({
 const baseUrl = (repo: RepoInfo) => `https://${repo.host ?? "gitlab.com"}`;
 
 const CI_FILE = ".gitlab-ci.yml";
-const CI_KEYS = ["workflow", "node", "go", "commits", "repokeeper", "renovate", "release"] as const;
+const CI_KEYS = ["workflow", "node", "go", ...STACK_JOB_KEYS, "commits", "repokeeper", "renovate", "release"] as const;
 
 /** One managed top-level key of .gitlab-ci.yml; keys the user adds are left alone. */
 const ciKey = (module: string, key: string, value: unknown): Output => ({
@@ -25,9 +34,6 @@ const ciKey = (module: string, key: string, value: unknown): Output => ({
   order: CI_KEYS,
 });
 
-const NOT_SCHEDULED = '$CI_PIPELINE_SOURCE != "schedule"';
-/** The checks of a change: merge requests and the default branch, not schedules and not tag pipelines. */
-const FOR_CHANGES = `${NOT_SCHEDULED} && $CI_COMMIT_TAG == null`;
 /** Image of the jobs that only run tools, whatever Node.js versions the project tests on. */
 const TOOL_IMAGE = "node:24";
 
@@ -96,15 +102,17 @@ const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 /**
  * semantic-release and the plugins it does not bundle, from a scratch directory. It resolves plugins next to
  * itself before it looks in the project, so the project needs none of them installed.
+ *
+ * @param exec Whether the release runs a command of its own (the version bump of a stack npm does not know).
  */
-const SEMANTIC_RELEASE = `dir="$(mktemp -d)"
-(cd "$dir" && echo '{ "private": true }' > package.json && npm install --no-audit --no-fund semantic-release@${TOOL_VERSIONS.semanticRelease} @semantic-release/changelog@${TOOL_VERSIONS.semanticReleaseChangelog} @semantic-release/git@${TOOL_VERSIONS.semanticReleaseGit} @semantic-release/gitlab@${TOOL_VERSIONS.semanticReleaseGitlab} conventional-changelog-conventionalcommits@${TOOL_VERSIONS.conventionalCommitsPreset})
+const semanticRelease = (exec: boolean) => `dir="$(mktemp -d)"
+(cd "$dir" && echo '{ "private": true }' > package.json && npm install --no-audit --no-fund semantic-release@${TOOL_VERSIONS.semanticRelease} @semantic-release/changelog@${TOOL_VERSIONS.semanticReleaseChangelog} @semantic-release/git@${TOOL_VERSIONS.semanticReleaseGit} @semantic-release/gitlab@${TOOL_VERSIONS.semanticReleaseGitlab}${exec ? ` @semantic-release/exec@${TOOL_VERSIONS.semanticReleaseExec}` : ""} conventional-changelog-conventionalcommits@${TOOL_VERSIONS.conventionalCommitsPreset})
 "$dir/node_modules/.bin/semantic-release"
 `;
 
 export const gitlabPlatform: PlatformAdapter = {
   id: "gitlab",
-  stacks: ["node", "go"],
+  stacks: STACK_IDS,
   changeRequest: "merge request",
 
   profileUrl: (repo) => (repo.owner ? `${baseUrl(repo)}/${repo.owner}` : null),
@@ -181,6 +189,9 @@ export const gitlabPlatform: PlatformAdapter = {
     if (node) jobs.push(ciKey("ci", "node", nodeJob(node.with)));
     const go = ctx.stacks.find((stack) => stack.id === "go")?.ci;
     if (go) jobs.push(ciKey("ci", "go", goJob(go.with)));
+    for (const stack of ctx.stacks) {
+      for (const { key, job } of stackJobs(stack)) jobs.push(ciKey("ci", key, job));
+    }
     if (ctx.config.modules.commits) {
       jobs.push(
         ciKey("ci", "commits", {
@@ -217,10 +228,11 @@ export const gitlabPlatform: PlatformAdapter = {
       ...jobs,
     ];
   },
-  releaseAutomation(ctx: ModuleContext): Output[] {
+  releaseAutomation(ctx: ModuleContext, release: ReleaseInfo): Output[] {
     const branch = defaultBranch(ctx.config);
-    // a Go module's version is its tag: there is no file to bump, so the release is the changelog and the tag
-    const npm = ctx.stacks.some((stack) => stack.release.type === "node");
+    const npm = release.type === "node";
+    // the files of the other stacks that hold a version; none for a Go module, whose version is its tag
+    const versionFiles = npm ? [] : releaseFiles(release);
     return [
       {
         kind: "file",
@@ -236,10 +248,23 @@ export const gitlabPlatform: PlatformAdapter = {
             ["@semantic-release/changelog", { changelogFile: "CHANGELOG.md" }],
             // bumps package.json and the npm lock file; publishing stays the project's own business
             ...(npm ? [["@semantic-release/npm", { npmPublish: false }]] : []),
+            // semantic-release knows no other stack's version file; repokeeper writes the version into it
+            ...(versionFiles.length > 0
+              ? [
+                  [
+                    "@semantic-release/exec",
+                    { prepareCmd: `npx --yes repokeeper@${PACKAGE_VERSION} bump \${nextRelease.version}` },
+                  ],
+                ]
+              : []),
             [
               "@semantic-release/git",
               {
-                assets: ["CHANGELOG.md", ...(npm ? ["package.json", "package-lock.json", "npm-shrinkwrap.json"] : [])],
+                assets: [
+                  "CHANGELOG.md",
+                  ...(npm ? ["package.json", "package-lock.json", "npm-shrinkwrap.json"] : []),
+                  ...versionFiles,
+                ],
                 // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
                 message: "chore(release): ${nextRelease.version} [skip ci]",
               },
@@ -254,7 +279,7 @@ export const gitlabPlatform: PlatformAdapter = {
         image: TOOL_IMAGE,
         rules: [{ if: `${NOT_SCHEDULED} && $CI_COMMIT_BRANCH == "${branch}" && $GITLAB_TOKEN` }],
         variables: { GIT_DEPTH: "0" },
-        script: [SEMANTIC_RELEASE],
+        script: [semanticRelease(versionFiles.length > 0)],
       }),
     ];
   },
