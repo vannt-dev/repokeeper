@@ -1,8 +1,7 @@
 # GitLab
 
 `repokeeper init` selects GitLab when the `origin` remote's host contains `gitlab`; pass
-`--platform gitlab` otherwise (a self-hosted instance under another name, or no remote yet). The
-node and go stacks are supported on GitLab for now.
+`--platform gitlab` otherwise (a self-hosted instance under another name, or no remote yet).
 
 What differs from GitHub:
 
@@ -14,12 +13,45 @@ What differs from GitHub:
 | Releases | release-please, through a release pull request | semantic-release, on every push to the default branch |
 
 Jobs you add to `.gitlab-ci.yml` are kept; repokeeper manages only its own top-level keys
-(`workflow`, `node`, `go`, `commits`, `repokeeper`, `renovate`, `release`). `stack_options.node.os` has
-no effect: GitLab jobs run on Linux.
+(`workflow`, the jobs of the stacks below, `commits`, `repokeeper`, `renovate`, `release`).
 
-The `go` job runs `gofmt`, `go vet` and `go test` in the `golang` image, once per entry of
-`stack_options.go.versions`; `stable` there means the image's `latest` tag. It has no module cache.
-A Go module has no version file, so its release is the changelog, the tag and the GitLab release.
+## Stacks
+
+Every stack has its CI job on GitLab. A job runs the commands the stack's GitHub workflow runs, in a
+container image instead of on a runner that a setup action prepares:
+
+| Stack | Job | Image | Notes |
+| --- | --- | --- | --- |
+| node | `node` | `node:<version>` | npm cache; corepack for pnpm and yarn |
+| python | `python` | `python:<version>` | `pip install uv` first when the project has a `uv.lock` |
+| go | `go` | `golang:<version>` | `stable` is the image's `latest` tag |
+| rust | `rust` | `rust:latest` | the toolchain named in `versions` is installed with rustfmt and clippy |
+| ruby | `ruby` | `ruby:<version>` | |
+| php | `php` | `php:<version>-cli` | Composer, git and unzip are installed first; the image has PHP's default extensions only |
+| dart | `dart` | `dart:<version>`, or `ghcr.io/cirruslabs/flutter:<version>` for Flutter | |
+| java, kotlin | `java`, `kotlin` | `maven:3-eclipse-temurin-<version>`, `gradle:jdk<version>`, or `eclipse-temurin:<version>-jdk` when the project has its own `gradlew` | |
+| dotnet | `dotnet` | `mcr.microsoft.com/dotnet/sdk:<newest version>` | one job; the other SDKs in `versions` are installed beside it |
+| script | `shell`, `powershell`, `script-test` | `koalaman/shellcheck-alpine`, `mcr.microsoft.com/dotnet/sdk` (for its PowerShell) | ShellCheck and shfmt; PSScriptAnalyzer; your `test` command |
+
+What to know:
+
+- **Linux only.** `stack_options.<stack>.os` has no effect, and repokeeper says so. The script
+  stack's test command runs once, on Linux, where on GitHub it also runs on Windows.
+- **No dependency caches** except npm's. A cache has to live inside the project folder, where
+  formatters and linters would read it as the project's own code.
+- **Stacks at the root only.** A stack in a folder of its own (`stack_options.<stack>.directory`)
+  is for GitHub.
+- **Releases write the version themselves.** semantic-release knows `package.json` and nothing
+  else, so for the other stacks the release runs `repokeeper bump <version>`, which writes the
+  version into the stack's file: `pyproject.toml` (or `setup.cfg`, `setup.py`), `pubspec.yaml`,
+  `pom.xml`, `Cargo.toml` and `Cargo.lock`, `composer.json` when it has a `version`,
+  `lib/<name>/version.rb` and `Gemfile.lock`, `Directory.Build.props`, and `gradle.properties`
+  between the markers repokeeper puts around its version line. Those files and `CHANGELOG.md` are
+  what the release commits. A stack without a version file (Go, scripts, a Gradle build without
+  `version=`) is released by its changelog and tag alone. Try it with
+  `repokeeper bump 1.2.3 --dry-run`.
+
+## Jobs of your own
 
 Two things to know when you add jobs of your own:
 
@@ -29,6 +61,8 @@ Two things to know when you add jobs of your own:
   list the key under `owned` in `.repokeeper.yml`: `owned: [".gitlab-ci.yml#workflow"]`.
 - repokeeper's jobs use GitLab's default stages `test` and `deploy`. If you declare `stages`,
   include both; repokeeper warns when one is missing.
+
+## The two jobs that need a token
 
 Two jobs stay inactive until you set them up in the project's CI/CD settings:
 

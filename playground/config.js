@@ -24,10 +24,10 @@ export const STACKS = [
   { id: "ruby", label: "Ruby" },
 ];
 
-/** Stacks each platform has CI and releases for. */
+/** Stacks each platform has CI and releases for: all of them on both, today. */
 export const PLATFORM_STACKS = {
   github: STACKS.map((stack) => stack.id),
-  gitlab: ["node", "go"],
+  gitlab: STACKS.map((stack) => stack.id),
 };
 
 export const PRESETS = [

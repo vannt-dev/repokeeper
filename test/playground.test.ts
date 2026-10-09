@@ -115,7 +115,7 @@ describe("playground", () => {
     expect(fileCommands(input)).toEqual(["npx repokeeper init", "npx repokeeper github apply"]);
   });
 
-  it("leaves out what GitLab has no support for", () => {
+  it("leaves out what GitLab has no support for: folders and the GitHub settings", () => {
     const input = {
       ...filled("strict", "gitlab", [
         { id: "python", directory: "backend" },
@@ -128,11 +128,11 @@ describe("playground", () => {
       security: true,
     };
     expect(parseConfig(renderConfig(buildConfig(input)))).toEqual({
-      ...initWrites("strict", "gitlab", ["node", "go"]),
+      ...initWrites("strict", "gitlab", ["node", "python", "go"]),
       gitlab: { default_branch: "trunk" },
     });
     expect(shortcutCommand(input)).toBe(
-      "npx repokeeper init --preset strict --stack node --stack go --platform gitlab",
+      "npx repokeeper init --preset strict --stack node --stack python --stack go --platform gitlab",
     );
     expect(fileCommands(input)).toEqual(["npx repokeeper init"]);
   });

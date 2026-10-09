@@ -86,10 +86,8 @@ describe("platform selection", () => {
     expect((await buildContext(root, config("github", "node"))).platform.id).toBe("github");
   });
 
-  it("refuses a stack gitlab does not support yet", async () => {
-    await expect(buildContext(await tempDir(), config("gitlab", "python"))).rejects.toThrow(
-      'stack "python" is not supported on gitlab yet (supported: node, go)',
-    );
+  it("has every stack on both platforms", () => {
+    expect(platformFor("gitlab").stacks).toEqual(platformFor("github").stacks);
   });
 });
 
