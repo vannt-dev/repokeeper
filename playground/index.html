@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>repokeeper playground</title>
+    <meta
+      name="description"
+      content="Choose stacks and how much of the standard you want, and get the .repokeeper.yml and the command to apply it."
+    />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="top">
+      <div>
+        <h1>repokeeper <span class="sub">playground</span></h1>
+        <p>
+          Say what the repository is and how much of the standard you want. You get the
+          <code>.repokeeper.yml</code> and the command that applies it. Nothing leaves this page.
+        </p>
+      </div>
+      <nav>
+        <a href="https://github.com/vannt-dev/repokeeper#readme">Docs</a>
+        <a href="https://www.npmjs.com/package/repokeeper">npm</a>
+      </nav>
+    </header>
+
+    <main>
+      <form id="form" autocomplete="off">
+        <fieldset>
+          <legend>Platform</legend>
+          <div class="row">
+            <label class="pill"><input type="radio" name="platform" value="github" checked /> GitHub</label>
+            <label class="pill"><input type="radio" name="platform" value="gitlab" /> GitLab</label>
+          </div>
+          <p class="hint" id="platform-note" hidden>
+            On GitLab repokeeper has CI and releases for Node.js and Go, with the project at the root.
+          </p>
+        </fieldset>
+
+        <fieldset>
+          <legend>Stacks</legend>
+          <p class="hint">
+            Tick each stack the repository holds. In a monorepo, name the folder the stack lives in; leave it empty
+            for a project at the root.
+          </p>
+          <div id="stacks" class="stacks"></div>
+        </fieldset>
+
+        <fieldset>
+          <legend>How much of the standard</legend>
+          <div id="presets" class="presets"></div>
+          <p class="hint" id="custom-note" hidden>Your own selection: no preset says exactly this.</p>
+          <div id="modules" class="modules"></div>
+        </fieldset>
+
+        <fieldset id="health">
+          <legend>Community files</legend>
+          <label class="field">
+            <span>Licence</span>
+            <select name="license">
+              <option value="mit">MIT</option>
+              <option value="none">Leave licensing alone</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Copyright line</span>
+            <input type="text" name="copyright" />
+          </label>
+          <label class="field">
+            <span>Contact for the Code of Conduct</span>
+            <input type="text" name="contact" />
+          </label>
+          <label class="field">
+            <span>Code owners</span>
+            <input type="text" name="codeowners" />
+          </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Default branch</legend>
+          <label class="field">
+            <span>CI runs on it and contributors branch from it</span>
+            <input type="text" name="defaultBranch" value="main" />
+          </label>
+        </fieldset>
+
+        <fieldset id="github">
+          <legend>GitHub</legend>
+          <label class="field">
+            <span>Reusable workflows that CI and releases call</span>
+            <select name="workflowMode">
+              <option value="default">repokeeper's, following its major tag</option>
+              <option value="exact">repokeeper's, pinned to the release that wrote the file</option>
+              <option value="ref">repokeeper's, at a tag or commit I name</option>
+              <option value="mirror">A copy in a repository of mine</option>
+              <option value="local">Copies in this repository (repokeeper eject)</option>
+            </select>
+          </label>
+          <label class="field" id="workflow-source" hidden>
+            <span>Repository holding the copy</span>
+            <input type="text" name="workflowSource" placeholder="your-org/ci-workflows" />
+          </label>
+          <label class="field" id="workflow-ref" hidden>
+            <span id="workflow-ref-label">Tag, branch or commit SHA</span>
+            <input type="text" name="workflowRef" />
+          </label>
+          <label class="check">
+            <input type="checkbox" name="protect" />
+            <span>
+              Protect the default branch
+              <small>pull requests only, no force push, the commit check required when Conventional Commits is on</small>
+            </span>
+          </label>
+          <label class="field" id="approvals" hidden>
+            <span>Approvals a pull request needs</span>
+            <input type="number" name="approvals" min="0" max="10" value="1" />
+          </label>
+          <label class="check">
+            <input type="checkbox" name="security" />
+            <span>Dependabot alerts and security updates</span>
+          </label>
+          <p class="hint">
+            Protection and security are settings of the repository: the file records them, and
+            <code>repokeeper github apply</code> puts them in place.
+          </p>
+        </fieldset>
+      </form>
+
+      <section class="result" aria-live="polite">
+        <div id="shortcut" hidden>
+          <h2>Run this</h2>
+          <div class="code">
+            <pre id="shortcut-command"></pre>
+            <div class="buttons"><button type="button" data-copy="shortcut-command">Copy</button></div>
+          </div>
+          <p class="hint">
+            In the repository, with your work committed. repokeeper reads the licence holder, the contact, the code
+            owners and the default branch from git, so this command does not use what you typed for them.
+          </p>
+        </div>
+
+        <h2 id="file-title">Save the file</h2>
+        <ul id="problems" class="problems" hidden></ul>
+        <div class="code">
+          <pre id="file"></pre>
+          <div class="buttons">
+            <button type="button" data-copy="file">Copy</button>
+            <button type="button" id="download">Download</button>
+          </div>
+        </div>
+        <p class="hint">
+          Save it as <code>.repokeeper.yml</code> at the root of the repository (a browser may drop the leading dot
+          from a download), commit your work, then:
+        </p>
+        <div class="code">
+          <pre id="file-commands"></pre>
+          <div class="buttons"><button type="button" data-copy="file-commands">Copy</button></div>
+        </div>
+        <p class="hint">
+          Needs repokeeper <span id="needs"></span> or newer and Node.js 22.12 or newer. Add
+          <code>--dry-run</code> to see what would be written first.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

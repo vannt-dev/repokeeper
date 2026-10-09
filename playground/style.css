@@ -1,0 +1,337 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f7f9;
+  --panel: #ffffff;
+  --text: #1b1f24;
+  --muted: #5b6470;
+  --line: #d9dee5;
+  --accent: #0b6bcb;
+  --accent-soft: #e6f0fb;
+  --code-bg: #10151c;
+  --code-text: #e6edf3;
+  --warn: #8a5a00;
+  --warn-bg: #fff4d6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1116;
+    --panel: #171b22;
+    --text: #e6edf3;
+    --muted: #9aa5b1;
+    --line: #2b323c;
+    --accent: #6cb2ff;
+    --accent-soft: #14273d;
+    --code-bg: #0a0d12;
+    --warn: #f2cc60;
+    --warn-bg: #2d2408;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    15px / 1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+}
+
+.top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 32px;
+  align-items: flex-end;
+  justify-content: space-between;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 16px 8px;
+}
+
+.top h1 {
+  margin: 0 0 4px;
+  font-size: 24px;
+}
+
+.top .sub {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.top p {
+  max-width: 62ch;
+  margin: 0;
+  color: var(--muted);
+}
+
+.top nav {
+  display: flex;
+  gap: 16px;
+}
+
+a {
+  color: var(--accent);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+
+input[type="number"] {
+  width: 90px;
+}
+
+input:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  padding: 4px 10px;
+  border: 1px solid #3a4452;
+  border-radius: 6px;
+  background: #1f2732;
+  color: #e6edf3;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #2a3442;
+}
+
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+@media (max-width: 860px) {
+  main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+fieldset {
+  min-width: 0;
+  margin: 0 0 16px;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+fieldset > .hint:first-of-type {
+  margin: 0 0 10px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pill,
+.preset {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.pill:has(input:checked),
+.preset:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.presets {
+  display: grid;
+  gap: 8px;
+}
+
+.preset strong {
+  display: block;
+  text-transform: capitalize;
+}
+
+.preset small,
+.check small,
+.module small {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.stacks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 6px 16px;
+}
+
+.stack {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 32px;
+}
+
+.stack label {
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.stack input[type="text"] {
+  flex: 0 1 110px;
+  width: 110px;
+  min-width: 0;
+}
+
+.stack.off {
+  color: var(--muted);
+}
+
+.modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+
+.module,
+.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.check {
+  margin-top: 12px;
+}
+
+.module input,
+.check input {
+  margin-top: 4px;
+}
+
+.field {
+  display: block;
+  margin-top: 10px;
+}
+
+.field:first-of-type {
+  margin-top: 0;
+}
+
+.field > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.result {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .result {
+    position: static;
+  }
+}
+
+.result h2 {
+  margin: 18px 0 8px;
+  font-size: 16px;
+}
+
+.result > div:first-child h2,
+.result > h2:first-child {
+  margin-top: 0;
+}
+
+.code {
+  display: flex;
+  flex-direction: column;
+  color-scheme: dark;
+  border-radius: 10px;
+  background: var(--code-bg);
+}
+
+.code pre {
+  max-height: 56vh;
+  margin: 0;
+  padding: 6px 16px 14px;
+  overflow: auto;
+  color: var(--code-text);
+  white-space: pre;
+}
+
+.code .buttons {
+  display: flex;
+  order: -1;
+  gap: 6px;
+  justify-content: flex-end;
+  padding: 8px 8px 0;
+}
+
+.problems {
+  margin: 0 0 8px;
+  padding: 10px 14px 10px 30px;
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 13px;
+}
+
+[hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: hidden has to win over every display rule above */
+  display: none !important;
+}
