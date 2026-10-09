@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.7.0](https://github.com/vannt-dev/repokeeper/compare/v0.6.0...v0.7.0) (2026-10-09)
+
+
+### Features
+
+* add repokeeper bump to write a release's version into the stack's files ([#50](https://github.com/vannt-dev/repokeeper/issues/50)) ([639cd80](https://github.com/vannt-dev/repokeeper/commit/639cd801f6ed41c13c361bc173eb6d9378a2e9e5))
+* **gitlab:** support every stack on GitLab ([#51](https://github.com/vannt-dev/repokeeper/issues/51)) ([d1d3b33](https://github.com/vannt-dev/repokeeper/commit/d1d3b33c6f351bdc05d15848ffe85915d9bfe7ac))
+
 ## [0.6.0](https://github.com/vannt-dev/repokeeper/compare/v0.5.0...v0.6.0) (2026-10-09)
 
 
