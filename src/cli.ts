@@ -6,6 +6,7 @@ import { parseArgs } from "node:util";
 import { checkCommand } from "./commands/check.js";
 import { ejectCommand } from "./commands/eject.js";
 import { githubApplyCommand } from "./commands/github.js";
+import { gitlabApplyCommand } from "./commands/gitlab.js";
 import { initCommand } from "./commands/init.js";
 import { PRESET_SUMMARY, PRESETS, type Preset } from "./commands/presets.js";
 import type { CommandOptions } from "./commands/report.js";
@@ -13,6 +14,7 @@ import { updateCommand } from "./commands/update.js";
 import { STACK_IDS, type StackId } from "./config/types.js";
 import { RepokeeperError, UsageError } from "./errors.js";
 import type { GitHubApi } from "./github/api.js";
+import type { GitLabApi } from "./gitlab/api.js";
 import { PACKAGE_VERSION } from "./version.js";
 
 export interface Io {
@@ -23,6 +25,8 @@ export interface Io {
   confirm?(question: string, fallback?: boolean): Promise<boolean>;
   /** GitHub API to use instead of the REST API; tests pass a fake. */
   githubApi?: GitHubApi;
+  /** GitLab API to use instead of the REST API; tests pass a fake. */
+  gitlabApi?: GitLabApi;
 }
 
 export const USAGE = [
@@ -33,6 +37,7 @@ export const USAGE = [
   "  check   report drift from the standard without writing (exit 1 on drift)",
   "  update  move to the standard of this repokeeper version and resync",
   "  github apply  diff the GitHub settings against .repokeeper.yml and apply them",
+  "  gitlab apply  the same for a GitLab project: settings, branch protection, the Renovate schedule",
   "  eject   copy the reusable CI workflows into this repository and call them from there",
   "",
   "options:",
@@ -47,7 +52,7 @@ export const USAGE = [
   "  --relock         rebuild .repokeeper/lock.json from the current files (init)",
   "  --to <folder>    write every reusable workflow into another repository's folder instead (eject)",
   "  --json           machine-readable output (check)",
-  "  -y, --yes        apply without asking (github apply)",
+  "  -y, --yes        apply without asking (github apply, gitlab apply)",
   "  -v, --version    print the version",
 ].join("\n");
 
@@ -134,6 +139,10 @@ export async function run(argv: string[], io: Io): Promise<number> {
     if (command === "github") {
       if (positionals[1] !== "apply") throw new UsageError("usage: repokeeper github apply [--dry-run] [--yes]");
       return await githubApplyCommand(io.cwd, options, io);
+    }
+    if (command === "gitlab") {
+      if (positionals[1] !== "apply") throw new UsageError("usage: repokeeper gitlab apply [--dry-run] [--yes]");
+      return await gitlabApplyCommand(io.cwd, options, io);
     }
     throw new UsageError(`unknown command: ${command}`);
   } catch (error) {

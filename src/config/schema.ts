@@ -1,6 +1,8 @@
+import { ACCESS_LEVELS } from "../gitlab/settings.js";
 import { STACK_IDS } from "./types.js";
 
 const flag = { type: "boolean" } as const;
+const ACCESS = Object.keys(ACCESS_LEVELS);
 
 export const configSchema = {
   type: "object",
@@ -90,7 +92,34 @@ export const configSchema = {
     gitlab: {
       type: "object",
       additionalProperties: false,
-      properties: { default_branch: { type: "string", minLength: 1 } },
+      properties: {
+        default_branch: { type: "string", minLength: 1 },
+        description: { type: "string" },
+        topics: { type: "array", uniqueItems: true, items: { type: "string", minLength: 1 } },
+        merge: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            method: { enum: ["merge", "rebase_merge", "ff"] },
+            squash: { enum: ["never", "always", "default_on", "default_off"] },
+            delete_source_branch: flag,
+            pipeline_must_succeed: flag,
+            discussions_must_be_resolved: flag,
+          },
+        },
+        protect: {
+          anyOf: [
+            { const: false },
+            {
+              type: "object",
+              additionalProperties: false,
+              properties: { push: { enum: ACCESS }, merge: { enum: ACCESS }, allow_force_push: flag },
+            },
+          ],
+        },
+        // five cron fields, read in UTC; false removes the schedule repokeeper made
+        renovate_schedule: { anyOf: [{ const: false }, { type: "string", pattern: "^\\S+( \\S+){4}$" }] },
+      },
     },
   },
 } as const;

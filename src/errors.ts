@@ -22,7 +22,7 @@ export class UsageError extends RepokeeperError {
   }
 }
 
-/** A GitHub API call failed; nothing on disk was touched. */
+/** A GitHub or GitLab API call failed; nothing on disk was touched. */
 export class ApiError extends RepokeeperError {
   constructor(message: string) {
     super(message, 3);

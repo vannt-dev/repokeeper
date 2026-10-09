@@ -21,7 +21,7 @@ it("rejects the other platform's key, naming it and its line", () => {
 });
 
 it("rejects unknown gitlab keys and unknown platforms", () => {
-  expect(() => parseConfig(`${base}gitlab:\n  protect: false\n`)).toThrow("gitlab.protect is not a known key");
+  expect(() => parseConfig(`${base}gitlab:\n  rulesets: false\n`)).toThrow("gitlab.rulesets is not a known key");
   expect(() => parseConfig(base.replace("gitlab", "bitbucket"))).toThrow("platform must be one of: github, gitlab");
 });
 

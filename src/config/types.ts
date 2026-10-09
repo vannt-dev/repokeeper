@@ -1,4 +1,5 @@
 import type { GithubSettings } from "../github/settings.js";
+import type { GitlabSettings } from "../gitlab/settings.js";
 export const STACK_IDS = [
   "node",
   "python",
@@ -36,10 +37,6 @@ export interface ModulesConfig {
   /** A ci job that runs `repokeeper check`; off unless asked for. */
   drift: boolean;
   health: HealthConfig | false;
-}
-
-export interface GitlabSettings {
-  default_branch?: string;
 }
 
 export interface RepokeeperConfig {
