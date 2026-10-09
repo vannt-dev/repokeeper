@@ -13,7 +13,7 @@ const md = (path: string, body: string): Output => ({
 const baseUrl = (repo: RepoInfo) => `https://${repo.host ?? "gitlab.com"}`;
 
 const CI_FILE = ".gitlab-ci.yml";
-const CI_KEYS = ["workflow", "node", "commits", "repokeeper", "renovate", "release"] as const;
+const CI_KEYS = ["workflow", "node", "go", "commits", "repokeeper", "renovate", "release"] as const;
 
 /** One managed top-level key of .gitlab-ci.yml; keys the user adds are left alone. */
 const ciKey = (module: string, key: string, value: unknown): Output => ({
@@ -55,6 +55,25 @@ function nodeJob(input: Record<string, string>): Record<string, unknown> {
   };
 }
 
+/**
+ * The go stack's CI inputs as a GitLab job. No module cache: it would have to live inside the project
+ * folder, where `gofmt -l .` would read it as the project's own code.
+ */
+function goJob(input: Record<string, string>): Record<string, unknown> {
+  // setup-go's "stable" is the image's `latest` tag
+  const versions = (JSON.parse(input["go-versions"] ?? '["stable"]') as string[]).map((version) =>
+    version === "stable" ? "latest" : version,
+  );
+  return {
+    stage: "test",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitLab CI variable
+    image: "golang:${GO_VERSION}",
+    parallel: { matrix: [{ GO_VERSION: versions }] },
+    rules: [{ if: FOR_CHANGES }],
+    script: JSON.parse(input.commands ?? "[]") as string[],
+  };
+}
+
 /** commitlint from a scratch directory, so the project needs no commitlint of its own. */
 const COMMITLINT = `dir="$(mktemp -d)"
 (cd "$dir" && echo '{ "private": true }' > package.json && npm install --no-audit --no-fund @commitlint/cli@${TOOL_VERSIONS.commitlintCli} @commitlint/config-conventional@${TOOL_VERSIONS.commitlintConventional})
@@ -85,7 +104,7 @@ const SEMANTIC_RELEASE = `dir="$(mktemp -d)"
 
 export const gitlabPlatform: PlatformAdapter = {
   id: "gitlab",
-  stacks: ["node"],
+  stacks: ["node", "go"],
   changeRequest: "merge request",
 
   profileUrl: (repo) => (repo.owner ? `${baseUrl(repo)}/${repo.owner}` : null),
@@ -160,6 +179,8 @@ export const gitlabPlatform: PlatformAdapter = {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;
     if (node) jobs.push(ciKey("ci", "node", nodeJob(node.with)));
+    const go = ctx.stacks.find((stack) => stack.id === "go")?.ci;
+    if (go) jobs.push(ciKey("ci", "go", goJob(go.with)));
     if (ctx.config.modules.commits) {
       jobs.push(
         ciKey("ci", "commits", {
@@ -198,6 +219,8 @@ export const gitlabPlatform: PlatformAdapter = {
   },
   releaseAutomation(ctx: ModuleContext): Output[] {
     const branch = defaultBranch(ctx.config);
+    // a Go module's version is its tag: there is no file to bump, so the release is the changelog and the tag
+    const npm = ctx.stacks.some((stack) => stack.release.type === "node");
     return [
       {
         kind: "file",
@@ -212,11 +235,11 @@ export const gitlabPlatform: PlatformAdapter = {
             ["@semantic-release/release-notes-generator", { preset: "conventionalcommits" }],
             ["@semantic-release/changelog", { changelogFile: "CHANGELOG.md" }],
             // bumps package.json and the npm lock file; publishing stays the project's own business
-            ["@semantic-release/npm", { npmPublish: false }],
+            ...(npm ? [["@semantic-release/npm", { npmPublish: false }]] : []),
             [
               "@semantic-release/git",
               {
-                assets: ["CHANGELOG.md", "package.json", "package-lock.json", "npm-shrinkwrap.json"],
+                assets: ["CHANGELOG.md", ...(npm ? ["package.json", "package-lock.json", "npm-shrinkwrap.json"] : [])],
                 // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
                 message: "chore(release): ${nextRelease.version} [skip ci]",
               },

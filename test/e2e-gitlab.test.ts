@@ -69,6 +69,61 @@ describe("repokeeper on gitlab, end to end", () => {
     expect((await repokeeper(dir, "check")).code).toBe(0);
   });
 
+  it("writes a go job per version and a release that is the changelog and the tag", async () => {
+    const dir = await tempDir();
+    await writeFile(join(dir, "go.mod"), "module example.com/demo\n\ngo 1.22\n");
+    await writeFile(join(dir, "demo.go"), "package demo\n");
+    sh(dir, "init", "-q", "-b", "main");
+    sh(dir, "config", "user.name", "Demo User");
+    sh(dir, "config", "user.email", "demo@example.com");
+    sh(dir, "config", "core.autocrlf", "false");
+    sh(dir, "remote", "add", "origin", "git@gitlab.com:acme/demo.git");
+    sh(dir, "add", "-A");
+    sh(dir, "commit", "-qm", "chore: initial");
+    const init = await repokeeper(dir, "init");
+    expect(init.err).toBe("");
+    expect(init.code).toBe(0);
+
+    const ci = parse(await read(dir, ".gitlab-ci.yml"));
+    expect(Object.keys(ci)).toEqual(["workflow", "go", "commits", "renovate", "release"]);
+    expect(ci.go).toEqual({
+      stage: "test",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitLab CI variable
+      image: "golang:${GO_VERSION}",
+      // "stable" in the configuration is the image's latest tag
+      parallel: { matrix: [{ GO_VERSION: ["latest"] }] },
+      rules: [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null' }],
+      script: ['test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }', "go vet ./...", "go test ./..."],
+    });
+
+    // no version file in a Go module: nothing of npm's is bumped or committed
+    const release = JSON.parse(await read(dir, ".releaserc.json"));
+    const plugins = release.plugins.map((plugin: string | [string, unknown]) =>
+      typeof plugin === "string" ? plugin : plugin[0],
+    );
+    expect(plugins).toEqual([
+      "@semantic-release/commit-analyzer",
+      "@semantic-release/release-notes-generator",
+      "@semantic-release/changelog",
+      "@semantic-release/git",
+      "@semantic-release/gitlab",
+    ]);
+    expect(release.plugins[3][1].assets).toEqual(["CHANGELOG.md"]);
+
+    const config = `${await read(dir, ".repokeeper.yml")}`.replace(
+      "stack_options: {}",
+      'stack_options:\n  go:\n    versions: ["1.24", stable]',
+    );
+    await writeFile(join(dir, ".repokeeper.yml"), config);
+    sh(dir, "add", "-A");
+    sh(dir, "commit", "-qm", "chore: sync");
+    expect((await repokeeper(dir, "update")).code).toBe(0);
+    expect(parse(await read(dir, ".gitlab-ci.yml")).go.parallel.matrix).toEqual([{ GO_VERSION: ["1.24", "latest"] }]);
+    sh(dir, "add", "-A");
+    sh(dir, "commit", "-qm", "chore: sync");
+    expect((await repokeeper(dir, "check")).code).toBe(0);
+  });
+
   it("takes --platform over the remote and stores a default branch other than main under gitlab", async () => {
     const dir = await nodeRepo(null, "trunk");
     sh(dir, "remote", "add", "origin", dir);
@@ -98,7 +153,7 @@ describe("repokeeper on gitlab, end to end", () => {
     sh(dir, "init", "-q", "-b", "main");
     const init = await repokeeper(dir, "init", "--platform", "gitlab");
     expect(init.code).toBe(2);
-    expect(init.err).toContain('stack "python" is not supported on gitlab yet (supported: node)');
+    expect(init.err).toContain('stack "python" is not supported on gitlab yet (supported: node, go)');
     expect(existsSync(join(dir, ".repokeeper.yml"))).toBe(false);
   });
 

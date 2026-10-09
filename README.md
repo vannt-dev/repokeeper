@@ -7,7 +7,7 @@ the standard evolves.
 > Status: early development. Supported stacks: Node.js (including NestJS), Python, Dart and
 > Flutter, shell and PowerShell scripts, Java (Maven and Gradle), Kotlin, .NET, Go, Rust, PHP and
 > Ruby, each with CI and releases, plus GitHub settings through `repokeeper github apply`. GitLab is
-> supported for Node.js projects. See the
+> supported for Node.js and Go projects, with project settings through `repokeeper gitlab apply`. See the
 > [design](docs/superpowers/specs/2026-09-25-repokeeper-design.md).
 
 ## How it works
@@ -106,7 +106,7 @@ Requires Node.js 22.12 or newer.
 | [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script linting, release-please, the drift check |
 | [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
 | [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings, security, branch protection |
-| [GitLab](docs/gitlab.md) | What differs on GitLab, and the two jobs that need a token |
+| [GitLab](docs/gitlab.md) | What differs on GitLab, the two jobs that need a token, and `repokeeper gitlab apply`: merge settings, branch protection, the Renovate schedule |
 
 ## Pilots
 
