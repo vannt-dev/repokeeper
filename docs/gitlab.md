@@ -38,7 +38,51 @@ Two jobs stay inactive until you set them up in the project's CI/CD settings:
 - **`renovate`** needs a CI/CD variable `RENOVATE_TOKEN` (same scopes) and a pipeline schedule,
   for example weekly. The schedule alone decides how often Renovate runs.
 
-`repokeeper github apply` has no GitLab counterpart yet.
+## Project settings: `repokeeper gitlab apply`
+
+Settings of the project itself are kept under `gitlab:` in `.repokeeper.yml`. Only the keys you
+write are managed; anything left out stays as it is on GitLab.
+
+```yaml
+gitlab:
+  description: Keeps the build tools in one place
+  topics: [cli, tooling]
+  merge:
+    method: ff                      # merge | rebase_merge | ff
+    squash: default_on              # never | always | default_on | default_off
+    delete_source_branch: true
+    pipeline_must_succeed: true
+    discussions_must_be_resolved: true
+  protect:                          # the default branch; false removes the protection
+    push: maintainers               # none | developers | maintainers
+    merge: developers
+    allow_force_push: false
+  renovate_schedule: "0 5 * * 1"    # cron, in UTC; false removes the schedule
+```
+
+```bash
+repokeeper gitlab apply --dry-run   # show what differs, change nothing
+repokeeper gitlab apply             # show it, ask, then apply; --yes skips the question
+```
+
+It needs a token with the `api` scope and the Maintainer role on the project: `GITLAB_TOKEN` in the
+environment, or the one the GitLab CLI holds after `glab auth login`. The host is the one of the
+`origin` remote, so a self-hosted instance works the same way.
+
+What to know:
+
+- **`protect`** covers the default branch only. Keys you leave out take GitLab's own defaults:
+  Maintainers push, Maintainers merge, no force push. A protection that differs is removed and
+  created again, so the branch is unprotected for a moment while `apply` runs. The token of the
+  `release` job has to be allowed to push: with `push: maintainers`, give it the Maintainer role.
+- **`renovate_schedule`** creates one pipeline schedule, described as `repokeeper: renovate`, on the
+  default branch. Schedules under any other name are never touched. This is the schedule the
+  `renovate` job above waits for.
+- **CI/CD variables are never written.** `apply` only tells you when `GITLAB_TOKEN` (for a
+  repository with releases) or `RENOVATE_TOKEN` (with dependency updates) is not set in the project.
+  A variable inherited from a group is not visible to this check, so the note can be wrong there.
+- **No approval rules.** The number of approvals a merge request needs is a paid-tier setting on
+  GitLab, and repokeeper does not manage it.
 
 ---
 
