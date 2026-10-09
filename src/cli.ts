@@ -33,7 +33,7 @@ export const USAGE = [
   "usage: repokeeper <command> [options]",
   "",
   "commands:",
-  "  init    detect stacks, write .repokeeper.yml and apply the standard",
+  "  init    detect stacks, write .repokeeper.yml and apply the standard (or apply a .repokeeper.yml you wrote)",
   "  check   report drift from the standard without writing (exit 1 on drift)",
   "  update  move to the standard of this repokeeper version and resync",
   "  github apply  diff the GitHub settings against .repokeeper.yml and apply them",
