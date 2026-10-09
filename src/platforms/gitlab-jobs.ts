@@ -1,8 +1,15 @@
 import type { ResolvedStack } from "../model.js";
 
 export const NOT_SCHEDULED = '$CI_PIPELINE_SOURCE != "schedule"';
-/** The checks of a change: merge requests and the default branch, not schedules and not tag pipelines. */
-export const FOR_CHANGES = `${NOT_SCHEDULED} && $CI_COMMIT_TAG == null`;
+/**
+ * True unless the pipeline is for the commit the release job pushed. That commit carries no
+ * `[skip ci]`: GitLab would skip the pipeline of the release's tag with it, and the tag pipeline is
+ * where a project's own publishing jobs run. The managed jobs stay away from the commit by this rule
+ * instead. A merge request has no `CI_COMMIT_BRANCH`, so a commit named like a release is still checked there.
+ */
+export const NOT_THE_RELEASE_COMMIT = "($CI_COMMIT_BRANCH == null || $CI_COMMIT_MESSAGE !~ /^chore\\(release\\): /)";
+/** The checks of a change: merge requests and the default branch, not schedules, tag pipelines or the release commit. */
+export const FOR_CHANGES = `${NOT_SCHEDULED} && $CI_COMMIT_TAG == null && ${NOT_THE_RELEASE_COMMIT}`;
 
 type Job = Record<string, unknown>;
 type Input = Record<string, string>;

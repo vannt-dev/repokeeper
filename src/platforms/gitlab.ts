@@ -9,7 +9,7 @@ import {
 } from "../model.js";
 import { releaseFiles } from "../release/bump.js";
 import { PACKAGE_VERSION, TOOL_VERSIONS } from "../version.js";
-import { FOR_CHANGES, NOT_SCHEDULED, STACK_JOB_KEYS, stackJobs } from "./gitlab-jobs.js";
+import { FOR_CHANGES, NOT_SCHEDULED, NOT_THE_RELEASE_COMMIT, STACK_JOB_KEYS, stackJobs } from "./gitlab-jobs.js";
 
 const md = (path: string, body: string): Output => ({
   kind: "file",
@@ -266,7 +266,7 @@ export const gitlabPlatform: PlatformAdapter = {
                   ...versionFiles,
                 ],
                 // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
-                message: "chore(release): ${nextRelease.version} [skip ci]",
+                message: "chore(release): ${nextRelease.version}",
               },
             ],
             "@semantic-release/gitlab",
@@ -277,7 +277,12 @@ export const gitlabPlatform: PlatformAdapter = {
       ciKey("release", "release", {
         stage: "deploy",
         image: TOOL_IMAGE,
-        rules: [{ if: `${NOT_SCHEDULED} && $CI_COMMIT_BRANCH == "${branch}" && $GITLAB_TOKEN` }],
+        // not for its own commit: there is nothing new to release in it
+        rules: [
+          {
+            if: `${NOT_SCHEDULED} && $CI_COMMIT_BRANCH == "${branch}" && $GITLAB_TOKEN && ${NOT_THE_RELEASE_COMMIT}`,
+          },
+        ],
         variables: { GIT_DEPTH: "0" },
         script: [semanticRelease(versionFiles.length > 0)],
       }),

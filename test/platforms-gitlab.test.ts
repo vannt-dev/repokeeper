@@ -20,7 +20,11 @@ const files = (outputs: Output[]) =>
   Object.fromEntries(outputs.flatMap((o) => (o.kind === "file" ? [[o.path, o.content]] : [])));
 const keys = (outputs: Output[]) =>
   Object.fromEntries(outputs.flatMap((o) => (o.kind === "yaml" ? [[o.keyPath.join("."), o.value]] : [])));
-const NOT_SCHEDULED = [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null' }];
+const NOT_SCHEDULED = [
+  {
+    if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null && ($CI_COMMIT_BRANCH == null || $CI_COMMIT_MESSAGE !~ /^chore\\(release\\): /)',
+  },
+];
 
 describe("gitlab community files", () => {
   it("writes issue and merge request templates and CODEOWNERS under .gitlab", () => {
@@ -226,7 +230,7 @@ describe("gitlab release", () => {
         {
           assets: ["CHANGELOG.md", "package.json", "package-lock.json", "npm-shrinkwrap.json"],
           // biome-ignore lint/suspicious/noTemplateCurlyInString: a semantic-release template
-          message: "chore(release): ${nextRelease.version} [skip ci]",
+          message: "chore(release): ${nextRelease.version}",
         },
       ],
       "@semantic-release/gitlab",
@@ -240,7 +244,11 @@ describe("gitlab release", () => {
     expect(release).toMatchObject({
       stage: "deploy",
       image: "node:24",
-      rules: [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main" && $GITLAB_TOKEN' }],
+      rules: [
+        {
+          if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_BRANCH == "main" && $GITLAB_TOKEN && ($CI_COMMIT_BRANCH == null || $CI_COMMIT_MESSAGE !~ /^chore\\(release\\): /)',
+        },
+      ],
       variables: { GIT_DEPTH: "0" },
     });
     const script = release.script.join("\n");

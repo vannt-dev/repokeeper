@@ -69,7 +69,10 @@ Two jobs stay inactive until you set them up in the project's CI/CD settings:
 - **`release`** needs a CI/CD variable `GITLAB_TOKEN`: a project access token with the `api` and
   `write_repository` scopes and a role that may push to the default branch. Every push to the
   default branch with a `feat`, `fix` or breaking change then releases at once: version bump,
-  `CHANGELOG.md`, tag and GitLab release. There is no release merge request. A repository without
+  `CHANGELOG.md`, tag and GitLab release. There is no release merge request. The release commit
+  (`chore(release): x.y.z`) starts none of repokeeper's jobs, and it carries no `[skip ci]`, so the
+  pipeline of its tag does run: that is where a publishing job of your own belongs
+  (`rules: [{ if: $CI_COMMIT_TAG }]`). A repository without
   a `vX.Y.Z` tag starts at `1.0.0`; tag the current version first to continue from it. A variable
   marked Protected is only visible on protected branches, so protect the default branch or leave
   the variable unprotected; otherwise the job silently stays away.

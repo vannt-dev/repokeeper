@@ -92,7 +92,11 @@ describe("repokeeper on gitlab, end to end", () => {
       image: "golang:${GO_VERSION}",
       // "stable" in the configuration is the image's latest tag
       parallel: { matrix: [{ GO_VERSION: ["latest"] }] },
-      rules: [{ if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null' }],
+      rules: [
+        {
+          if: '$CI_PIPELINE_SOURCE != "schedule" && $CI_COMMIT_TAG == null && ($CI_COMMIT_BRANCH == null || $CI_COMMIT_MESSAGE !~ /^chore\\(release\\): /)',
+        },
+      ],
       script: ['test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }', "go vet ./...", "go test ./..."],
     });
 
