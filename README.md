@@ -81,6 +81,9 @@ applied anything yet, `init` applies it as it is written. Nothing is detected, `
 `--platform` and `--preset` are refused, and the only line it changes is `standard:`, which it sets
 to the standard it applied.
 
+The [playground](https://vannt-dev.github.io/repokeeper/) writes that file for you: tick the stacks
+and the parts you want, and it shows the `.repokeeper.yml` and the command to run.
+
 `init` reads the default branch from `origin/HEAD` and records it as `github.default_branch` when it
 isn't `main`. The release manifest starts from the latest `vX.Y.Z` tag when the stack has no version
 of its own.
