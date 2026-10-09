@@ -3,6 +3,7 @@ import { realpathSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
+import { bumpCommand } from "./commands/bump.js";
 import { checkCommand } from "./commands/check.js";
 import { ejectCommand } from "./commands/eject.js";
 import { githubApplyCommand } from "./commands/github.js";
@@ -39,6 +40,7 @@ export const USAGE = [
   "  github apply  diff the GitHub settings against .repokeeper.yml and apply them",
   "  gitlab apply  the same for a GitLab project: settings, branch protection, the Renovate schedule",
   "  eject   copy the reusable CI workflows into this repository and call them from there",
+  "  bump <version>  write a release's version into the stack's version files (the GitLab release job runs it)",
   "",
   "options:",
   "  --dry-run        show what would change without writing",
@@ -136,6 +138,7 @@ export async function run(argv: string[], io: Io): Promise<number> {
     if (command === "check") return await checkCommand(io.cwd, options, io);
     if (command === "update") return await updateCommand(io.cwd, options, io);
     if (command === "eject") return await ejectCommand(io.cwd, options, io);
+    if (command === "bump") return await bumpCommand(io.cwd, positionals[1], options, io);
     if (command === "github") {
       if (positionals[1] !== "apply") throw new UsageError("usage: repokeeper github apply [--dry-run] [--yes]");
       return await githubApplyCommand(io.cwd, options, io);
