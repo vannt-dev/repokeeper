@@ -7,7 +7,7 @@ the standard evolves.
 > Status: early development. Supported stacks: Node.js (including NestJS), Python, Dart and
 > Flutter, shell and PowerShell scripts, Java (Maven and Gradle), Kotlin, .NET, Go, Rust, PHP and
 > Ruby, each with CI and releases, plus GitHub settings through `repokeeper github apply`. GitLab is
-> supported for Node.js projects, with project settings through `repokeeper gitlab apply`. See the
+> supported for Node.js and Go projects, with project settings through `repokeeper gitlab apply`. See the
 > [design](docs/superpowers/specs/2026-09-25-repokeeper-design.md).
 
 ## How it works

@@ -88,7 +88,7 @@ describe("platform selection", () => {
 
   it("refuses a stack gitlab does not support yet", async () => {
     await expect(buildContext(await tempDir(), config("gitlab", "python"))).rejects.toThrow(
-      'stack "python" is not supported on gitlab yet (supported: node)',
+      'stack "python" is not supported on gitlab yet (supported: node, go)',
     );
   });
 });

@@ -1,8 +1,8 @@
 # GitLab
 
 `repokeeper init` selects GitLab when the `origin` remote's host contains `gitlab`; pass
-`--platform gitlab` otherwise (a self-hosted instance under another name, or no remote yet). Only
-the node stack is supported on GitLab for now.
+`--platform gitlab` otherwise (a self-hosted instance under another name, or no remote yet). The
+node and go stacks are supported on GitLab for now.
 
 What differs from GitHub:
 
@@ -14,8 +14,12 @@ What differs from GitHub:
 | Releases | release-please, through a release pull request | semantic-release, on every push to the default branch |
 
 Jobs you add to `.gitlab-ci.yml` are kept; repokeeper manages only its own top-level keys
-(`workflow`, `node`, `commits`, `repokeeper`, `renovate`, `release`). `stack_options.node.os` has
+(`workflow`, `node`, `go`, `commits`, `repokeeper`, `renovate`, `release`). `stack_options.node.os` has
 no effect: GitLab jobs run on Linux.
+
+The `go` job runs `gofmt`, `go vet` and `go test` in the `golang` image, once per entry of
+`stack_options.go.versions`; `stable` there means the image's `latest` tag. It has no module cache.
+A Go module has no version file, so its release is the changelog, the tag and the GitLab release.
 
 Two things to know when you add jobs of your own:
 
