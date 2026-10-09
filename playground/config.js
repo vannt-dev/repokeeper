@@ -27,7 +27,7 @@ export const STACKS = [
 /** Stacks each platform has CI and releases for. */
 export const PLATFORM_STACKS = {
   github: STACKS.map((stack) => stack.id),
-  gitlab: ["node"],
+  gitlab: ["node", "go"],
 };
 
 export const PRESETS = [

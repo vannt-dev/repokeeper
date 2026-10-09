@@ -118,7 +118,8 @@ describe("playground", () => {
   it("leaves out what GitLab has no support for", () => {
     const input = {
       ...filled("strict", "gitlab", [
-        { id: "go", directory: "backend" },
+        { id: "python", directory: "backend" },
+        { id: "go", directory: "tools" },
         { id: "node", directory: "web" },
       ]),
       defaultBranch: "trunk",
@@ -127,10 +128,12 @@ describe("playground", () => {
       security: true,
     };
     expect(parseConfig(renderConfig(buildConfig(input)))).toEqual({
-      ...initWrites("strict", "gitlab", ["node"]),
+      ...initWrites("strict", "gitlab", ["node", "go"]),
       gitlab: { default_branch: "trunk" },
     });
-    expect(shortcutCommand(input)).toBe("npx repokeeper init --preset strict --stack node --platform gitlab");
+    expect(shortcutCommand(input)).toBe(
+      "npx repokeeper init --preset strict --stack node --stack go --platform gitlab",
+    );
     expect(fileCommands(input)).toEqual(["npx repokeeper init"]);
   });
 
