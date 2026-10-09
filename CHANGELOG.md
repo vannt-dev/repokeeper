@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/vannt-dev/repokeeper/compare/v0.5.0...v0.6.0) (2026-10-09)
+
+
+### Features
+
+* **gitlab:** add repokeeper gitlab apply for project settings and branch protection ([#48](https://github.com/vannt-dev/repokeeper/issues/48)) ([490d80b](https://github.com/vannt-dev/repokeeper/commit/490d80bfb6e135c3eba8f55bf9e86cf5ad335ca9))
+* **gitlab:** support the go stack on GitLab ([#49](https://github.com/vannt-dev/repokeeper/issues/49)) ([3e07b84](https://github.com/vannt-dev/repokeeper/commit/3e07b843d54cf9737403185bb74e99d4f202abae))
+* **init:** apply a .repokeeper.yml that was written before the first run ([#46](https://github.com/vannt-dev/repokeeper/issues/46)) ([03e6ef8](https://github.com/vannt-dev/repokeeper/commit/03e6ef8fbee64a5535e2c92659eb3fab0b01800c))
+* manage stacks that live in folders of a monorepo ([#41](https://github.com/vannt-dev/repokeeper/issues/41)) ([ab88e60](https://github.com/vannt-dev/repokeeper/commit/ab88e60a6e22bb00ce2e07299af9d259e1a954e9))
+* pin the reusable workflows, call a mirror, or keep local copies with eject ([#43](https://github.com/vannt-dev/repokeeper/issues/43)) ([c5a725a](https://github.com/vannt-dev/repokeeper/commit/c5a725a09274235132cc68efbc75c704808f5119))
+* presets and an interactive mode for init ([#44](https://github.com/vannt-dev/repokeeper/issues/44)) ([1aa9811](https://github.com/vannt-dev/repokeeper/commit/1aa9811d0f323a463af9164324d97ca674a8a362))
+
 ## [0.5.0](https://github.com/vannt-dev/repokeeper/compare/v0.4.7...v0.5.0) (2026-10-01)
 
 
