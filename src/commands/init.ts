@@ -1,8 +1,8 @@
 import { existsSync } from "node:fs";
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Io } from "../cli.js";
-import { CONFIG_FILE, loadConfig, renderConfig } from "../config/load.js";
+import { CONFIG_FILE, loadConfig, renderConfig, setStandard } from "../config/load.js";
 import { defaultConfig, type RepokeeperConfig } from "../config/types.js";
 import { UsageError } from "../errors.js";
 import { dirtyPaths, gitUserName, remoteDefaultBranch, remoteHost, repoInfo } from "../git.js";
@@ -12,10 +12,11 @@ import { platformFor } from "../platforms/index.js";
 import { detectStackLayout } from "../stacks/index.js";
 import { applySync } from "../sync/apply.js";
 import { hashText } from "../sync/hash.js";
-import { type Lock, targetOf, writeLock } from "../sync/lock.js";
+import { type Lock, readLock, targetOf, writeLock } from "../sync/lock.js";
 import { readCurrent } from "../sync/state.js";
 import { computeSync, pathsToWrite, type SyncResult } from "../sync/sync.js";
 import { STANDARD_VERSION } from "../version.js";
+import { assertSupportedStandard } from "./check.js";
 import { buildContext } from "./context.js";
 import { applyPreset, chooseModules } from "./presets.js";
 import { type CommandOptions, nextSteps, printResult, printWarnings } from "./report.js";
@@ -53,7 +54,11 @@ export async function guardUncommitted(
 export async function initCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
   if (options.relock) return relock(root, options, io);
   if (existsSync(join(root, CONFIG_FILE))) {
-    throw new UsageError(`${CONFIG_FILE} already exists; run \`repokeeper update\` or \`repokeeper check\``);
+    // a lock means the standard was applied here before; without one the file was written by hand
+    if ((await readLock(root)) !== null) {
+      throw new UsageError(`${CONFIG_FILE} already exists; run \`repokeeper update\` or \`repokeeper check\``);
+    }
+    return initFromConfig(root, options, io);
   }
   const layout =
     options.stacks.length > 0
@@ -116,6 +121,57 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   await writeFile(join(root, CONFIG_FILE), renderConfig(config));
   await applySync(root, result, null, STANDARD_VERSION);
   io.out(`applied standard ${STANDARD_VERSION}; wrote ${CONFIG_FILE}`);
+  await printWarnings(root, ctx, io);
+  for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
+  if (config.github?.protect || config.github?.security) {
+    io.out("next: run `repokeeper github apply` to put the branch protection and security settings in place");
+  }
+  io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
+  return 0;
+}
+
+/**
+ * Applies a `.repokeeper.yml` that was written before repokeeper ran here, by hand or by the
+ * playground: nothing is detected or asked, the file says it all.
+ */
+async function initFromConfig(root: string, options: CommandOptions, io: Io): Promise<number> {
+  const given = [
+    options.stacks.length > 0 ? "--stack" : undefined,
+    options.platform !== undefined ? "--platform" : undefined,
+    options.preset !== undefined ? "--preset" : undefined,
+  ].filter((name) => name !== undefined);
+  if (given.length > 0) {
+    throw new UsageError(
+      `${CONFIG_FILE} already exists and is applied as it is written; leave out ${given.join(", ")}, or remove the file`,
+    );
+  }
+  const { confirm } = io;
+  if (options.interactive && confirm === undefined) {
+    throw new UsageError("--interactive needs a terminal to ask its questions in");
+  }
+  const config = await loadConfig(root);
+  assertSupportedStandard(config.standard);
+  io.out(`using the ${CONFIG_FILE} that is already here`);
+  const ctx = await buildContext(root, { ...config, standard: STANDARD_VERSION });
+  const adopt = options.adoptAll ? ("all" as const) : new Set(options.adopt);
+  const result = await computeSync(root, planOutputs(ctx), null, { adopt, accept: new Set() });
+  if (!options.dryRun) await guardUncommitted(root, result, options.force);
+  printResult(io, result);
+  if (options.dryRun) {
+    io.out("dry run: nothing written");
+    return 0;
+  }
+  // the module questions of a detected init have their answers in the file already
+  if (options.interactive && confirm !== undefined && !(await confirm("Write these files?", true))) {
+    io.out("nothing written");
+    return 0;
+  }
+  if (config.standard !== STANDARD_VERSION) {
+    const path = join(root, CONFIG_FILE);
+    await writeFile(path, setStandard(await readFile(path, "utf8"), STANDARD_VERSION));
+  }
+  await applySync(root, result, null, STANDARD_VERSION);
+  io.out(`applied standard ${STANDARD_VERSION}`);
   await printWarnings(root, ctx, io);
   for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
   if (config.github?.protect || config.github?.security) {

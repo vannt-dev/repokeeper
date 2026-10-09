@@ -75,6 +75,12 @@ alone. Every write command accepts `--dry-run`.
 Either way the choice ends up as plain `modules:` switches in `.repokeeper.yml`, which you can change
 later and apply with `repokeeper update`.
 
+You can also start from the file instead of from detection: put a `.repokeeper.yml` you wrote
+yourself in the repository and run `repokeeper init`. When the file is there and repokeeper has not
+applied anything yet, `init` applies it as it is written. Nothing is detected, `--stack`,
+`--platform` and `--preset` are refused, and the only line it changes is `standard:`, which it sets
+to the standard it applied.
+
 `init` reads the default branch from `origin/HEAD` and records it as `github.default_branch` when it
 isn't `main`. The release manifest starts from the latest `vX.Y.Z` tag when the stack has no version
 of its own.

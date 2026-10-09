@@ -118,6 +118,67 @@ describe("repokeeper end to end", () => {
     expect((await repokeeper(await tempDir(), "check")).code).toBe(2);
   });
 
+  it("applies a .repokeeper.yml that was written before the first run", async () => {
+    const dir = await nodeRepo();
+    const written = [
+      "# written by hand",
+      "schema: 1",
+      "standard: 1.0.0",
+      "platform: github",
+      "stacks:",
+      "  - node",
+      "modules:",
+      "  commits: false",
+      "  hooks: false",
+      "  release: false",
+      "  deps: false",
+      "  health: false",
+      "",
+    ].join("\n");
+    await writeFile(join(dir, ".repokeeper.yml"), written);
+
+    const dry = await repokeeper(dir, "init", "--dry-run");
+    expect(dry.code).toBe(0);
+    expect(existsSync(join(dir, ".repokeeper/lock.json"))).toBe(false);
+    expect(await readFile(join(dir, ".repokeeper.yml"), "utf8")).toBe(written);
+
+    const refused = await repokeeper(dir, "init", "--preset", "strict", "--stack", "node");
+    expect(refused.code).toBe(2);
+    expect(refused.err).toContain("leave out --stack, --preset");
+
+    const init = await repokeeper(dir, "init");
+    expect(init.code).toBe(0);
+    expect(init.out).toContain("using the .repokeeper.yml that is already here");
+    expect(existsSync(join(dir, ".editorconfig"))).toBe(true);
+    expect(existsSync(join(dir, ".github/workflows/ci.yml"))).toBe(true);
+    // the modules the file switches off stay off: nothing is detected or defaulted over it
+    expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
+    expect(existsSync(join(dir, "LICENSE"))).toBe(false);
+    expect(existsSync(join(dir, ".github/dependabot.yml"))).toBe(false);
+    // the file is kept as written, apart from the standard it is now on
+    expect(await readFile(join(dir, ".repokeeper.yml"), "utf8")).toBe(
+      written.replace("standard: 1.0.0", `standard: ${STANDARD_VERSION}`),
+    );
+    expect((await repokeeper(dir, "check")).code).toBe(0);
+    expect((await repokeeper(dir, "init")).code).toBe(2);
+  });
+
+  it("refuses a written .repokeeper.yml that is not valid, or is newer than this repokeeper", async () => {
+    const dir = await nodeRepo();
+    await writeFile(join(dir, ".repokeeper.yml"), "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [cobol]\n");
+    const invalid = await repokeeper(dir, "init");
+    expect(invalid.code).not.toBe(0);
+    expect(invalid.err).toContain(".repokeeper.yml:4");
+    await writeFile(
+      join(dir, ".repokeeper.yml"),
+      "schema: 1\nstandard: 99.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n",
+    );
+    const newer = await repokeeper(dir, "init");
+    expect(newer.code).toBe(2);
+    expect(newer.err).toContain("upgrade repokeeper");
+    expect(existsSync(join(dir, ".repokeeper/lock.json"))).toBe(false);
+  });
+
   it("refuses to write over uncommitted files without printing a plan it will not apply", async () => {
     const dir = await nodeRepo();
     await appendFile(join(dir, "package.json"), "\n");
