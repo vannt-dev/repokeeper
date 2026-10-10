@@ -9,6 +9,7 @@ import { commitsModule } from "../src/modules/commits.js";
 import { editorconfigModule } from "../src/modules/editorconfig.js";
 import { gitignoreModule } from "../src/modules/gitignore.js";
 import { hooksModule } from "../src/modules/hooks.js";
+import { TOOL_VERSIONS } from "../src/version.js";
 import { makeContext, nodeResolved, tempDir } from "./helpers.js";
 
 const execFileAsync = promisify(execFile);
@@ -86,7 +87,7 @@ describe("hooks", () => {
     });
     expect(config["pre-push"]).toEqual({ jobs: [{ name: "node:test", run: "npm test" }] });
     const json = outputs.find((o) => o.kind === "json") as JsonOutput;
-    expect([json.keyPath.join("."), json.value]).toEqual(["devDependencies.lefthook", "^2.1.14"]);
+    expect([json.keyPath.join("."), json.value]).toEqual(["devDependencies.lefthook", `^${TOOL_VERSIONS.lefthook}`]);
   });
 
   it("drops hooks that have nothing to run", () => {

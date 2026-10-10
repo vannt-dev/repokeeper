@@ -13,7 +13,7 @@ import { releaseModule } from "../src/modules/release.js";
 import { planOutputs } from "../src/plan.js";
 import { githubPlatform } from "../src/platforms/github.js";
 import { platformFor } from "../src/platforms/index.js";
-import { PACKAGE_VERSION } from "../src/version.js";
+import { PACKAGE_VERSION, TOOL_VERSIONS } from "../src/version.js";
 import { capture, gitlabContext, makeContext, nodeResolved, syncOnce, tempDir } from "./helpers.js";
 
 const files = (outputs: Output[]) =>
@@ -282,7 +282,7 @@ describe("gitlab dependency updates", () => {
   it("runs Renovate only in scheduled pipelines with RENOVATE_TOKEN", () => {
     expect(keys(depsModule.outputs(gitlabContext())).renovate).toEqual({
       stage: "test",
-      image: "renovate/renovate:44.128.1",
+      image: `renovate/renovate:${TOOL_VERSIONS.renovate}`,
       rules: [{ if: '$CI_PIPELINE_SOURCE == "schedule" && $RENOVATE_TOKEN' }],
       variables: {
         RENOVATE_PLATFORM: "gitlab",

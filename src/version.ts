@@ -5,10 +5,10 @@ export const PACKAGE_VERSION: string = (
 ).version;
 
 /** The standard this build of repokeeper applies. Bump it whenever generated output changes. */
-export const STANDARD_VERSION = "1.4.3";
+export const STANDARD_VERSION = "1.4.4";
 
 export const TOOL_VERSIONS = {
-  lefthook: "2.1.14",
+  lefthook: "2.2.1",
   commitlintCli: "21.2.3",
   commitlintConventional: "21.2.3",
   semanticRelease: "25.0.9",
@@ -18,7 +18,7 @@ export const TOOL_VERSIONS = {
   semanticReleaseGitlab: "13.3.3",
   // 10.x needs conventional-changelog-writer 9, and semantic-release 25's notes generator bundles 8
   conventionalCommitsPreset: "9.3.1",
-  renovate: "44.128.1",
+  renovate: "44.149.2",
 } as const;
 
 /** Repository hosting the reusable workflows that generated CI files call. */
