@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.1](https://github.com/vannt-dev/repokeeper/compare/v0.8.0...v0.8.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **gitlab:** keep Renovate off the images of the managed jobs ([#58](https://github.com/vannt-dev/repokeeper/issues/58)) ([f70632e](https://github.com/vannt-dev/repokeeper/commit/f70632e3a4b8430d9cab2b1b13bfdcf898deceb6))
+
 ## [0.8.0](https://github.com/vannt-dev/repokeeper/compare/v0.7.0...v0.8.0) (2026-10-10)
 
 
