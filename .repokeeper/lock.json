@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "standard": "1.4.3",
+  "standard": "1.4.4",
   "entries": [
     {
       "id": "block:.gitattributes#editorconfig",
@@ -179,7 +179,7 @@
     {
       "id": "json:package.json#[\"devDependencies\",\"lefthook\"]",
       "module": "hooks",
-      "hash": "634625aaac511fc861cf38d9742fb883ecb007120475e3ff1cc8bedd458e6f55",
+      "hash": "4175be08aee972e10e005bc5581bb25bc6cf650ffa32127bc965d7926f88befa",
       "target": {
         "kind": "json",
         "path": "package.json",

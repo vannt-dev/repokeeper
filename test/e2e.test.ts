@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { run } from "../src/cli.js";
-import { STANDARD_VERSION } from "../src/version.js";
+import { STANDARD_VERSION, TOOL_VERSIONS } from "../src/version.js";
 import { capture, tempDir } from "./helpers.js";
 
 const sh = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" });
@@ -49,7 +49,9 @@ describe("repokeeper end to end", () => {
     expect(config.modules.health.codeowners).toEqual(["@demo-owner"]);
     expect(config.modules.health.copyright).toMatch(/^\d{4} Demo User$/);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(true);
-    expect(JSON.parse(await readFile(join(dir, "package.json"), "utf8")).devDependencies.lefthook).toBe("^2.1.14");
+    expect(JSON.parse(await readFile(join(dir, "package.json"), "utf8")).devDependencies.lefthook).toBe(
+      `^${TOOL_VERSIONS.lefthook}`,
+    );
     commitAll(dir);
 
     expect((await repokeeper(dir, "check")).code).toBe(0);

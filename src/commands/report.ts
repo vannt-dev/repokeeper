@@ -72,7 +72,7 @@ export function printResult(io: Io, result: SyncResult): void {
 
 const WROTE: string[] = ["create", "write", "adopt"];
 
-/** What the user still has to do after a write: install the hooks, renormalize line endings. */
+/** What the user still has to do after a write: install the hooks or the dependencies, renormalize line endings. */
 export async function nextSteps(root: string, ctx: ModuleContext, result: SyncResult): Promise<string[]> {
   const steps: string[] = [];
   const wrote = (path: string) => result.decisions.some((d) => d.output.path === path && WROTE.includes(d.action));
@@ -82,6 +82,14 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
         ? "install dependencies; this installs the git hooks"
         : `run \`npx --yes lefthook@${TOOL_VERSIONS.lefthook} install\` to enable the git hooks`,
     );
+  } else if (
+    result.decisions.some(
+      (d) => d.output.kind === "json" && /(^|\/)package\.json$/.test(d.output.path) && WROTE.includes(d.action),
+    )
+  ) {
+    // A range written into package.json is not in the lockfile yet, and a frozen install (`npm ci`) refuses a
+    // lockfile that disagrees with it. A new standard moves such a range without touching lefthook.yml.
+    steps.push("package.json changed; install dependencies and commit the lockfile with it");
   }
   if (wrote(".gitattributes")) {
     const crlf = await crlfTrackedFiles(root);

@@ -5,10 +5,10 @@
  */
 
 /** The standard the generated file names; the test holds it to STANDARD_VERSION. */
-export const STANDARD = "1.4.3";
+export const STANDARD = "1.4.4";
 
-/** The first repokeeper that writes everything the form offers: the last addition is strict on GitLab. */
-export const NEEDS_VERSION = "0.8.0";
+/** The first repokeeper that knows the standard the generated file names. */
+export const NEEDS_VERSION = "0.8.2";
 
 export const STACKS = [
   { id: "node", label: "Node.js" },
