@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0](https://github.com/vannt-dev/repokeeper/compare/v0.7.0...v0.8.0) (2026-10-10)
+
+
+### Features
+
+* **gitlab:** make the strict preset protect the default branch on GitLab ([#54](https://github.com/vannt-dev/repokeeper/issues/54)) ([ac12a80](https://github.com/vannt-dev/repokeeper/commit/ac12a80de35c1b59c397cd598604b03acab870df))
+
+
+### Bug Fixes
+
+* **gitlab:** let the pipeline of a release's tag run ([#53](https://github.com/vannt-dev/repokeeper/issues/53)) ([b5fa09e](https://github.com/vannt-dev/repokeeper/commit/b5fa09ee82266463d732e273c585a1d9896574b4))
+
 ## [0.7.0](https://github.com/vannt-dev/repokeeper/compare/v0.6.0...v0.7.0) (2026-10-09)
 
 
