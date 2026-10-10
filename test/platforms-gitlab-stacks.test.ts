@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { run } from "../src/cli.js";
+import { MANAGED_IMAGES } from "../src/platforms/gitlab.js";
 import { SCRIPT_ANALYZER_VERSION, SHFMT_VERSION } from "../src/platforms/gitlab-jobs.js";
 import { PACKAGE_VERSION, TOOL_VERSIONS } from "../src/version.js";
 import { capture, tempDir } from "./helpers.js";
@@ -69,6 +70,23 @@ function expectBump(project: Awaited<ReturnType<typeof onGitlab>>, files: string
   expect(project.plugin("@semantic-release/git")?.assets).toEqual(["CHANGELOG.md", ...files]);
   expect(project.releaseScript).toContain(`@semantic-release/exec@${TOOL_VERSIONS.semanticReleaseExec}`);
 }
+
+/** Every fixture: each stack, and the second package manager or build tool of the ones that have two. */
+const FIXTURES = [
+  "node",
+  "node-pnpm",
+  "go",
+  "python",
+  "rust",
+  "ruby",
+  "php",
+  "dart",
+  "java-gradle",
+  "java-maven",
+  "kotlin",
+  "dotnet",
+  "script",
+] as const;
 
 describe("gitlab ci for the other stacks", () => {
   it("python: one job per version, pip or uv", async () => {
@@ -242,6 +260,34 @@ describe("gitlab ci for the other stacks", () => {
     const github = await readFile(join(workflows, "stack-script.yml"), "utf8");
     expect(github).toContain(`shfmt_v${SHFMT_VERSION}_linux_amd64`);
     expect(github).toContain(`-RequiredVersion ${SCRIPT_ANALYZER_VERSION} `);
+  });
+
+  // Renovate reads .gitlab-ci.yml too. An image one of repokeeper's jobs names with a version is the standard's
+  // to move, so Renovate is told to leave it: otherwise it opens a merge request against a managed key.
+  it("names for Renovate every image its own jobs pin to a version", async () => {
+    const pinned = new Set<string>();
+    for (const fixture of FIXTURES) {
+      const project = await onGitlab(fixture);
+      for (const job of Object.values(project.ci)) {
+        const image = (job as Partial<Job>).image;
+        if (!image) continue;
+        const at = image.lastIndexOf(":");
+        const [name, tag] = at < 0 ? [image, "latest"] : [image.slice(0, at), image.slice(at + 1)];
+        // a CI variable or a moving tag is nothing Renovate can raise
+        if (tag.includes("${") || tag === "latest" || tag === "stable") continue;
+        pinned.add(name);
+      }
+      const renovate = JSON.parse(await readFile(join(project.dir, "renovate.json"), "utf8")) as {
+        packageRules: Array<Record<string, unknown>>;
+      };
+      expect(renovate.packageRules.at(-1)).toEqual({
+        matchManagers: ["gitlabci"],
+        matchFileNames: [".gitlab-ci.yml"],
+        matchPackageNames: [...MANAGED_IMAGES],
+        enabled: false,
+      });
+    }
+    expect([...pinned].sort()).toEqual([...MANAGED_IMAGES].sort());
   });
 
   it("says that os has no effect, whichever stack names one", async () => {
