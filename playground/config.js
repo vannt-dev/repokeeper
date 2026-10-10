@@ -7,8 +7,8 @@
 /** The standard the generated file names; the test holds it to STANDARD_VERSION. */
 export const STANDARD = "1.4.3";
 
-/** The first repokeeper with presets, stacks in folders, workflow pinning and `init` from a written file. */
-export const NEEDS_VERSION = "0.6.0";
+/** The first repokeeper that writes everything the form offers: the last addition is strict on GitLab. */
+export const NEEDS_VERSION = "0.8.0";
 
 export const STACKS = [
   { id: "node", label: "Node.js" },
@@ -33,7 +33,7 @@ export const PLATFORM_STACKS = {
 export const PRESETS = [
   { id: "essential", summary: "editor settings, .gitignore and CI only" },
   { id: "standard", summary: "everything except the drift check (the default)" },
-  { id: "strict", summary: "everything, the drift check, and branch protection with a required review" },
+  { id: "strict", summary: "everything, the drift check, and branch protection (with a required review on GitHub)" },
 ];
 
 /** In the order `init --interactive` asks about them. */
@@ -70,9 +70,9 @@ export function presetModules(preset) {
   return modules;
 }
 
-/** A form filled in as `repokeeper init --preset <preset>` would decide. */
+/** A form filled in as `repokeeper init --preset <preset>` would decide; the approvals count on GitHub only. */
 export function presetInput(preset, platform = "github") {
-  const strict = preset === "strict" && platform === "github";
+  const strict = preset === "strict";
   return {
     platform,
     stacks: [{ id: "node", directory: "" }],
@@ -81,7 +81,7 @@ export function presetInput(preset, platform = "github") {
     defaultBranch: "main",
     workflows: { mode: "default", ref: "", source: "" },
     protect: { enabled: strict, approvals: 1 },
-    security: strict,
+    security: strict && platform === "github",
   };
 }
 
@@ -161,6 +161,9 @@ export function buildConfig(input) {
         ...(modules.commits ? { required_checks: ["commits / commitlint"] } : {}),
       };
     }
+  } else if (input.protect.enabled) {
+    if (modules.ci) settings.merge = { pipeline_must_succeed: true };
+    settings.protect = { push: "maintainers", merge: "maintainers", allow_force_push: false };
   }
   if (Object.keys(settings).length > 0) config[input.platform] = settings;
   return config;
@@ -207,12 +210,13 @@ export function matchingPreset(input) {
   if (input.workflows.mode !== "default" && input.platform === "github") return null;
   for (const { id } of PRESETS) {
     const preset = presetInput(id, input.platform);
+    // approvals and the security switches are GitHub's; the form hides them on GitLab
     const github =
       input.platform !== "github" ||
       (input.security === preset.security &&
-        input.protect.enabled === preset.protect.enabled &&
         (!input.protect.enabled || Number(input.protect.approvals) === preset.protect.approvals));
-    if (github && same(input.modules, preset.modules) && (!input.modules.health || input.health.license)) return id;
+    const settings = github && input.protect.enabled === preset.protect.enabled;
+    if (settings && same(input.modules, preset.modules) && (!input.modules.health || input.health.license)) return id;
   }
   return null;
 }
@@ -239,6 +243,7 @@ export function fileCommands(input) {
   const config = buildConfig(input);
   const commands = ["npx repokeeper init"];
   if (config.github?.protect || config.github?.security) commands.push("npx repokeeper github apply");
+  if (config.gitlab?.protect) commands.push("npx repokeeper gitlab apply");
   return commands;
 }
 

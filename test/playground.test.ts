@@ -115,7 +115,7 @@ describe("playground", () => {
     expect(fileCommands(input)).toEqual(["npx repokeeper init", "npx repokeeper github apply"]);
   });
 
-  it("leaves out what GitLab has no support for: folders and the GitHub settings", () => {
+  it("leaves out what GitLab has no support for: folders, approvals and the GitHub settings", () => {
     const input = {
       ...filled("strict", "gitlab", [
         { id: "python", directory: "backend" },
@@ -129,12 +129,31 @@ describe("playground", () => {
     };
     expect(parseConfig(renderConfig(buildConfig(input)))).toEqual({
       ...initWrites("strict", "gitlab", ["node", "python", "go"]),
-      gitlab: { default_branch: "trunk" },
+      gitlab: {
+        default_branch: "trunk",
+        merge: { pipeline_must_succeed: true },
+        protect: { push: "maintainers", merge: "maintainers", allow_force_push: false },
+      },
     });
+    // the number of approvals is not a GitLab setting here, so it does not take the preset away
+    expect(matchingPreset(input)).toBe("strict");
     expect(shortcutCommand(input)).toBe(
       "npx repokeeper init --preset strict --stack node --stack python --stack go --platform gitlab",
     );
-    expect(fileCommands(input)).toEqual(["npx repokeeper init"]);
+    expect(fileCommands(input)).toEqual(["npx repokeeper init", "npx repokeeper gitlab apply"]);
+
+    const unprotected = { ...input, protect: { enabled: false, approvals: 1 } };
+    expect(buildConfig(unprotected).gitlab).toEqual({ default_branch: "trunk" });
+    expect(matchingPreset(unprotected)).toBeNull();
+    expect(fileCommands(unprotected)).toEqual(["npx repokeeper init"]);
+    // protection without CI leaves the pipeline out of it, as init does
+    const noCi = { ...input, modules: { ...input.modules, ci: false } };
+    expect(buildConfig(noCi).gitlab).toEqual({
+      default_branch: "trunk",
+      protect: { push: "maintainers", merge: "maintainers", allow_force_push: false },
+    });
+    expect(matchingPreset(filled("standard", "gitlab"))).toBe("standard");
+    expect(matchingPreset({ ...filled("standard", "gitlab"), protect: { enabled: true, approvals: 1 } })).toBeNull();
   });
 
   it("writes every way of naming the reusable workflows so that repokeeper reads it back", () => {

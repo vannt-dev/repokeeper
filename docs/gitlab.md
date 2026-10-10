@@ -110,6 +110,23 @@ It needs a token with the `api` scope and the Maintainer role on the project: `G
 environment, or the one the GitLab CLI holds after `glab auth login`. The host is the one of the
 `origin` remote, so a self-hosted instance works the same way.
 
+`repokeeper init --preset strict` writes two of these keys for you, and names `gitlab apply` as the
+next step:
+
+```yaml
+gitlab:
+  merge:
+    pipeline_must_succeed: true
+  protect:
+    push: maintainers
+    merge: maintainers
+    allow_force_push: false
+```
+
+On gitlab.com a new project already protects its default branch this way, so the first `apply`
+often changes the merge setting only; the `protect` keys then keep the protection from being
+loosened unnoticed.
+
 What to know:
 
 - **`protect`** covers the default branch only. Keys you leave out take GitLab's own defaults:

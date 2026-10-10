@@ -67,7 +67,10 @@ alone. Every write command accepts `--dry-run`.
   workflow. `standard` is the default. `strict` adds the drift check to CI and, on GitHub, writes
   branch protection (pull requests with one approval, no force push, the commit check required) and
   Dependabot security updates into `.repokeeper.yml`; `repokeeper github apply` then puts them in
-  place. There is no preset that promises code or secret scanning: repokeeper does not set those up.
+  place. On GitLab it writes the protection of the default branch (Maintainers push and merge, no
+  force push) and a merge request that needs a passing pipeline, for `repokeeper gitlab apply`; a
+  required review is not part of it, because approval rules are a paid-tier setting there. There is
+  no preset that promises code or secret scanning: repokeeper does not set those up.
 - `repokeeper init --interactive` (or `-i`) asks about each part in turn, naming the files it would
   write, shows the result, and asks once more before writing anything. Enter keeps the preset's
   answer. Add `--dry-run` to go through the questions without the possibility of writing.

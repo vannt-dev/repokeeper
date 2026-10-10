@@ -123,11 +123,19 @@ export async function initCommand(root: string, options: CommandOptions, io: Io)
   io.out(`applied standard ${STANDARD_VERSION}; wrote ${CONFIG_FILE}`);
   await printWarnings(root, ctx, io);
   for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
+  printApplyStep(config, io);
+  io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
+  return 0;
+}
+
+/** Settings of the repository itself are only recorded by `init`; this names the command that sets them. */
+function printApplyStep(config: RepokeeperConfig, io: Io): void {
   if (config.github?.protect || config.github?.security) {
     io.out("next: run `repokeeper github apply` to put the branch protection and security settings in place");
   }
-  io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
-  return 0;
+  if (config.gitlab?.protect || config.gitlab?.merge) {
+    io.out("next: run `repokeeper gitlab apply` to put the branch protection and merge settings in place");
+  }
 }
 
 /**
@@ -174,9 +182,7 @@ async function initFromConfig(root: string, options: CommandOptions, io: Io): Pr
   io.out(`applied standard ${STANDARD_VERSION}`);
   await printWarnings(root, ctx, io);
   for (const step of await nextSteps(root, ctx, result)) io.out(`next: ${step}`);
-  if (config.github?.protect || config.github?.security) {
-    io.out("next: run `repokeeper github apply` to put the branch protection and security settings in place");
-  }
+  printApplyStep(config, io);
   io.out(`next: commit with "chore(repokeeper): apply standard ${STANDARD_VERSION}"`);
   return 0;
 }
