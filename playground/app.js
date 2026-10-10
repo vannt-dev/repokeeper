@@ -63,6 +63,20 @@ function buildLists() {
   byId("needs").textContent = NEEDS_VERSION;
 }
 
+/** What the settings of the repository amount to on each platform, and the command that sets them. */
+const SETTINGS = {
+  github: {
+    protect: "pull requests only, no force push, the commit check required when Conventional Commits is on",
+    note: "Protection and security are settings of the repository: the file records them, and ",
+    after: " puts them in place.",
+  },
+  gitlab: {
+    protect: "Maintainers push and merge, no force push, a merge request needs a passing pipeline when CI is on",
+    note: "Protection is a setting of the project: the file records it, and ",
+    after: " puts it in place. Required approvals are a paid-tier setting on GitLab, which repokeeper leaves alone.",
+  },
+};
+
 const boxes = (name) => [...form.querySelectorAll(`input[name="${name}"]`)];
 
 function readForm() {
@@ -113,7 +127,15 @@ function render() {
   byId("workflow-ref").hidden = !["ref", "mirror"].includes(input.workflows.mode);
   byId("workflow-ref-label").textContent =
     input.workflows.mode === "mirror" ? "Tag, branch or commit SHA (main when empty)" : "Tag or commit SHA";
-  byId("approvals").hidden = !input.protect.enabled;
+  byId("approvals").hidden = !(input.protect.enabled && github);
+  byId("security").hidden = !github;
+  const settings = SETTINGS[input.platform];
+  byId("protect-note").textContent = settings.protect;
+  byId("settings-note").replaceChildren(
+    settings.note,
+    element("code", { textContent: `repokeeper ${input.platform} apply` }),
+    settings.after,
+  );
 
   // which preset the switches amount to, whatever else the form says
   const switches = { ...readForm(), workflows: { mode: "default", ref: "", source: "" } };
@@ -137,7 +159,7 @@ function render() {
 
 form.addEventListener("input", (event) => {
   if (event.target.name === "preset") applyPreset(event.target.value);
-  // a preset is a choice per platform: strict protects the branch on GitHub only
+  // a preset is a choice per platform: strict switches the security settings on for GitHub only
   if (event.target.name === "platform") {
     const preset = boxes("preset").find((radio) => radio.checked);
     if (preset) applyPreset(preset.value);

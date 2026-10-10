@@ -75,7 +75,7 @@ describe("presets", () => {
     expect(applyPreset(base(), "essential").github).toBeUndefined();
   });
 
-  it("strict adds the drift check and, on GitHub, protection that requires a review", () => {
+  it("strict adds the drift check and protection, with a required review on GitHub", () => {
     const strict = applyPreset({ ...base(), github: { default_branch: "trunk" } }, "strict");
     expect(strict.modules).toEqual({ ...base().modules, drift: true });
     expect(strict.github).toEqual({
@@ -88,10 +88,24 @@ describe("presets", () => {
         required_checks: ["commits / commitlint"],
       },
     });
-    // GitLab has no repository settings repokeeper manages
-    const gitlab = applyPreset(base("gitlab"), "strict");
+  });
+
+  it("strict on GitLab protects the default branch and makes the pipeline decide a merge", () => {
+    const gitlab = applyPreset({ ...base("gitlab"), gitlab: { default_branch: "trunk" } }, "strict");
     expect(gitlab.modules.drift).toBe(true);
     expect(gitlab.github).toBeUndefined();
+    // the release job pushes its commit with a Maintainer token, so push stays open to that role
+    expect(gitlab.gitlab).toEqual({
+      default_branch: "trunk",
+      merge: { pipeline_must_succeed: true },
+      protect: { push: "maintainers", merge: "maintainers", allow_force_push: false },
+    });
+    // without CI a merge request has no pipeline, and GitLab would then refuse every merge
+    const noCi = base("gitlab");
+    noCi.modules.ci = false;
+    expect(applyPreset(noCi, "strict").gitlab).toEqual({
+      protect: { push: "maintainers", merge: "maintainers", allow_force_push: false },
+    });
   });
 });
 
@@ -140,6 +154,24 @@ describe("init --preset", () => {
     expect(config.github.protect.required_approvals).toBe(1);
     const ci = parse(await readFile(join(dir, ".github/workflows/ci.yml"), "utf8"));
     expect(Object.keys(ci.jobs).sort()).toEqual(["commits", "node", "repokeeper"]);
+  });
+
+  it("strict on GitLab writes the protection and names gitlab apply", async () => {
+    const dir = await nodeRepo();
+    const init = await repokeeper(dir, ["init", "--preset", "strict", "--platform", "gitlab"]);
+    expect(init.code).toBe(0);
+    expect(init.out).toContain(
+      "next: run `repokeeper gitlab apply` to put the branch protection and merge settings in place",
+    );
+    expect(init.out).not.toContain("github apply");
+    const config = parse(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
+    expect(config.gitlab).toEqual({
+      merge: { pipeline_must_succeed: true },
+      protect: { push: "maintainers", merge: "maintainers", allow_force_push: false },
+    });
+    const standard = await repokeeper(await nodeRepo(), ["init", "--platform", "gitlab"]);
+    expect(standard.code).toBe(0);
+    expect(standard.out).not.toContain("gitlab apply");
   });
 
   it("the default run prints nothing new and asks nothing", async () => {

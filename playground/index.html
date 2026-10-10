@@ -107,25 +107,26 @@
             <span id="workflow-ref-label">Tag, branch or commit SHA</span>
             <input type="text" name="workflowRef" />
           </label>
+        </fieldset>
+
+        <fieldset>
+          <legend>Repository settings</legend>
           <label class="check">
             <input type="checkbox" name="protect" />
             <span>
               Protect the default branch
-              <small>pull requests only, no force push, the commit check required when Conventional Commits is on</small>
+              <small id="protect-note"></small>
             </span>
           </label>
           <label class="field" id="approvals" hidden>
             <span>Approvals a pull request needs</span>
             <input type="number" name="approvals" min="0" max="10" value="1" />
           </label>
-          <label class="check">
+          <label class="check" id="security">
             <input type="checkbox" name="security" />
             <span>Dependabot alerts and security updates</span>
           </label>
-          <p class="hint">
-            Protection and security are settings of the repository: the file records them, and
-            <code>repokeeper github apply</code> puts them in place.
-          </p>
+          <p class="hint" id="settings-note"></p>
         </fieldset>
       </form>
 

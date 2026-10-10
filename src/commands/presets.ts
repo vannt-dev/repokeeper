@@ -9,7 +9,7 @@ export type Preset = (typeof PRESETS)[number];
 export const PRESET_SUMMARY: Record<Preset, string> = {
   essential: "editor settings, .gitignore and CI only",
   standard: "everything except the drift check (the default)",
-  strict: "everything, the drift check, and branch protection with a required review",
+  strict: "everything, the drift check, and branch protection (with a required review on GitHub)",
 };
 
 type ModuleId = keyof ModulesConfig;
@@ -49,7 +49,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
     };
   }
   const strict: RepokeeperConfig = { ...config, modules: { ...config.modules, drift: true } };
-  // repository settings exist on GitHub only; they take effect with `repokeeper github apply`
+  // settings of the repository itself; they take effect with `repokeeper github apply` / `gitlab apply`
   if (config.platform === "github") {
     strict.github = {
       ...config.github,
@@ -60,6 +60,15 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         allow_force_push: false,
         ...(config.modules.commits ? { required_checks: ["commits / commitlint"] } : {}),
       },
+    };
+  } else {
+    strict.gitlab = {
+      ...config.gitlab,
+      // GitLab refuses every merge while a merge request has no pipeline, so only with CI
+      ...(config.modules.ci ? { merge: { ...config.gitlab?.merge, pipeline_must_succeed: true } } : {}),
+      // not `push: none`: the release job pushes its commit, with a Maintainer's token.
+      // Approvals are a paid-tier setting, so there is no required review here.
+      protect: { push: "maintainers", merge: "maintainers", allow_force_push: false },
     };
   }
   return strict;
