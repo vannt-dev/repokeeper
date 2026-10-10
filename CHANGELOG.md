@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.2](https://github.com/vannt-dev/repokeeper/compare/v0.8.1...v0.8.2) (2026-10-10)
+
+
+### Bug Fixes
+
+* **standard:** move lefthook to 2.2.1 and Renovate to 44.149.2 ([#60](https://github.com/vannt-dev/repokeeper/issues/60)) ([211b88d](https://github.com/vannt-dev/repokeeper/commit/211b88dee580df709f07b3ede28e965a3a4adff5))
+
 ## [0.8.1](https://github.com/vannt-dev/repokeeper/compare/v0.8.0...v0.8.1) (2026-10-10)
 
 
