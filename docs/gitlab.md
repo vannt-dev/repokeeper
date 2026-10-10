@@ -77,7 +77,15 @@ Two jobs stay inactive until you set them up in the project's CI/CD settings:
   marked Protected is only visible on protected branches, so protect the default branch or leave
   the variable unprotected; otherwise the job silently stays away.
 - **`renovate`** needs a CI/CD variable `RENOVATE_TOKEN` (same scopes) and a pipeline schedule,
-  for example weekly. The schedule alone decides how often Renovate runs.
+  for example weekly. The schedule alone decides how often Renovate runs. It opens one merge
+  request for minor and patch updates, one per major, and an issue named Dependency Dashboard.
+  - Renovate leaves alone the images of repokeeper's own jobs in `.gitlab-ci.yml` (`node`,
+    `renovate/renovate`, the .NET SDK): the standard names their versions and `repokeeper update`
+    moves them. A job of your own in that file that uses one of these images is not updated
+    either.
+  - Changelogs in its merge requests come from github.com, which answers few requests without a
+    token. A CI/CD variable `GITHUB_COM_TOKEN` (a GitHub token with no scopes at all) lifts that
+    limit; without it Renovate works and says in the dashboard that release notes were skipped.
 
 ## Project settings: `repokeeper gitlab apply`
 

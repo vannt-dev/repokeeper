@@ -268,6 +268,12 @@ describe("gitlab dependency updates", () => {
       packageRules: [
         { matchUpdateTypes: ["minor", "patch"], groupName: "minor and patch updates" },
         { matchPackageNames: ["@types/node"], matchUpdateTypes: ["major"], enabled: false },
+        {
+          matchManagers: ["gitlabci"],
+          matchFileNames: [".gitlab-ci.yml"],
+          matchPackageNames: ["node", "renovate/renovate", "mcr.microsoft.com/dotnet/sdk"],
+          enabled: false,
+        },
       ],
     });
     expect(files(depsModule.outputs(gitlabContext()))[".github/dependabot.yml"]).toBeUndefined();
