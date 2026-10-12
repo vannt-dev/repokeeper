@@ -26,7 +26,7 @@ describe("parseConfig", () => {
     expect(parseConfig(renderConfig(base))).toEqual(base);
   });
 
-  it("defaults boolean modules to true (drift to false) and optional lists to empty", () => {
+  it("defaults boolean modules to true (drift and autoupdate to false) and optional lists to empty", () => {
     const config = parseConfig(
       "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n",
     );
@@ -39,6 +39,7 @@ describe("parseConfig", () => {
       deps: true,
       gitignore: true,
       drift: false,
+      autoupdate: false,
       health: false,
     });
     expect(config.owned).toEqual([]);

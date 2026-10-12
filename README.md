@@ -78,6 +78,11 @@ alone. Every write command accepts `--dry-run`.
 Either way the choice ends up as plain `modules:` switches in `.repokeeper.yml`, which you can change
 later and apply with `repokeeper update`.
 
+One switch is in no preset: `modules.autoupdate: true` adds a weekly workflow that runs
+`repokeeper update` with the newest repokeeper and opens a pull request when the standard has moved, so a
+new standard reaches every repository without anyone running the command in each (GitHub only; see
+[CI and releases](docs/ci-and-releases.md#update-pull-requests)).
+
 You can also start from the file instead of from detection: put a `.repokeeper.yml` you wrote
 yourself in the repository and run `repokeeper init`. When the file is there and repokeeper has not
 applied anything yet, `init` applies it as it is written. Nothing is detected, `--stack`,
@@ -106,7 +111,7 @@ Requires Node.js 22.12 or newer.
 
 | Guide | What it covers |
 | --- | --- |
-| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script linting, release-please, the drift check |
+| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script linting, release-please, the drift check, update pull requests |
 | [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
 | [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings, security, branch protection |
 | [GitLab](docs/gitlab.md) | What differs on GitLab, the image each stack's job runs in, how releases write the version, the two jobs that need a token, and `repokeeper gitlab apply`: merge settings, branch protection, the Renovate schedule |

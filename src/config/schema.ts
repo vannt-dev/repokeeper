@@ -25,6 +25,7 @@ export const configSchema = {
         deps: flag,
         gitignore: flag,
         drift: flag,
+        autoupdate: flag,
         health: {
           anyOf: [
             { const: false },

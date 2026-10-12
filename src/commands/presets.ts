@@ -24,6 +24,7 @@ export const MODULE_IDS: ModuleId[] = [
   "deps",
   "health",
   "drift",
+  "autoupdate",
 ];
 
 /**
@@ -44,6 +45,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         release: false,
         deps: false,
         drift: false,
+        autoupdate: false,
         health: false,
       },
     };
@@ -111,6 +113,7 @@ export async function chooseModules(
       deps: true,
       gitignore: true,
       drift: true,
+      autoupdate: true,
       health,
     },
   };

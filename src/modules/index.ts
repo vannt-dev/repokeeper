@@ -1,4 +1,5 @@
 import type { Module } from "../model.js";
+import { autoupdateModule } from "./autoupdate.js";
 import { ciModule } from "./ci.js";
 import { commitsModule } from "./commits.js";
 import { depsModule } from "./deps.js";
@@ -17,4 +18,5 @@ export const MODULES: Module[] = [
   depsModule,
   ciModule,
   releaseModule,
+  autoupdateModule,
 ];

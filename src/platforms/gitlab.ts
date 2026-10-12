@@ -199,6 +199,12 @@ export const gitlabPlatform: PlatformAdapter = {
       }),
     ];
   },
+  // proposing the update needs a job that pushes a branch and opens a merge request with a token of the
+  // project; nothing writes that job yet, and `repokeeper update` run by hand does the same work
+  standardUpdates(): Output[] {
+    return [];
+  },
+
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;

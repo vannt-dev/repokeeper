@@ -10,6 +10,9 @@ export const STANDARD = "1.4.4";
 /** The first repokeeper that knows the standard the generated file names. */
 export const NEEDS_VERSION = "0.8.2";
 
+/** The first repokeeper that knows the update pull requests; earlier ones refuse the line that asks for them. */
+export const AUTOUPDATE_NEEDS_VERSION = "0.9.0";
+
 export const STACKS = [
   { id: "node", label: "Node.js" },
   { id: "python", label: "Python" },
@@ -51,6 +54,11 @@ export const MODULES = [
   { id: "deps", label: "Dependency updates", hint: "Dependabot (Renovate on GitLab)" },
   { id: "health", label: "Community files", hint: "LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CODEOWNERS" },
   { id: "drift", label: "Drift check", hint: "a CI job that fails when a managed file was edited by hand" },
+  {
+    id: "autoupdate",
+    label: "Update pull requests",
+    hint: "a weekly workflow that opens a pull request when the standard has moved (GitHub)",
+  },
 ];
 
 /** What stands in for a detail the form was left empty on; `problems` reports each one still in use. */
@@ -60,11 +68,13 @@ export const PLACEHOLDERS = {
   codeowners: "@your-name",
 };
 
-const ESSENTIAL_OFF = ["commits", "hooks", "release", "deps", "health", "drift"];
+const ESSENTIAL_OFF = ["commits", "hooks", "release", "deps", "health", "drift", "autoupdate"];
 
 /** The module switches of a preset, `health` as a plain on or off. */
 export function presetModules(preset) {
-  const modules = Object.fromEntries(MODULES.map((module) => [module.id, module.id !== "drift"]));
+  const modules = Object.fromEntries(
+    MODULES.map((module) => [module.id, module.id !== "drift" && module.id !== "autoupdate"]),
+  );
   if (preset === "essential") for (const id of ESSENTIAL_OFF) modules[id] = false;
   if (preset === "strict") modules.drift = true;
   return modules;
@@ -132,6 +142,7 @@ export function buildConfig(input) {
       deps: modules.deps,
       gitignore: modules.gitignore,
       drift: modules.drift,
+      ...(modules.autoupdate ? { autoupdate: true } : {}),
       health: modules.health
         ? {
             license: health.license ? "MIT" : false,
@@ -186,6 +197,13 @@ export function problems(input) {
     const owners = splitOwners(health.codeowners);
     if (owners.length === 0) found.push("Code owners: still the placeholder.");
     if (owners.some((owner) => !owner.startsWith("@"))) found.push("Code owners each start with @.");
+  }
+  if (input.modules.autoupdate) {
+    found.push(
+      input.platform === "github"
+        ? `Update pull requests need repokeeper ${AUTOUPDATE_NEEDS_VERSION} or newer.`
+        : "Update pull requests are written for GitHub only: on GitLab the switch writes nothing.",
+    );
   }
   if (input.platform === "github") {
     const { mode, ref, source } = input.workflows;

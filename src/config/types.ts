@@ -36,6 +36,8 @@ export interface ModulesConfig {
   gitignore: boolean;
   /** A ci job that runs `repokeeper check`; off unless asked for. */
   drift: boolean;
+  /** A scheduled workflow that opens a pull request when the standard has moved; off unless asked for. */
+  autoupdate: boolean;
   health: HealthConfig | false;
 }
 
@@ -79,6 +81,7 @@ export function defaultConfig(input: {
       deps: true,
       gitignore: true,
       drift: false,
+      autoupdate: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],

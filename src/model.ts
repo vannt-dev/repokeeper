@@ -158,6 +158,8 @@ export interface PlatformAdapter {
   dependencyUpdates(updates: DependencyUpdate[], ctx: ModuleContext): Output[];
   /** The caller CI workflow; empty when no job would run. */
   ciWorkflow(ctx: ModuleContext): Output[];
+  /** A scheduled job that proposes the update when the standard has moved; empty where the platform has none. */
+  standardUpdates(ctx: ModuleContext): Output[];
   /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[];
 }

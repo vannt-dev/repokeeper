@@ -73,6 +73,35 @@ Set `modules.drift: true` to add a `repokeeper` job to `ci.yml` that runs `repok
 the version that wrote the standard, so a pull request that edits a managed file fails until the edit
 is resolved.
 
+## Update pull requests
+
+Set `modules.autoupdate: true` and repokeeper writes `.github/workflows/repokeeper-autoupdate.yml`: every
+Monday, and whenever you start it by hand, it runs `repokeeper update` with the newest repokeeper. When
+that changes anything, it pushes the branch `repokeeper/update` and opens a pull request named
+`chore(repokeeper): update standard to X.Y.Z`; a later run moves the same branch and edits the same pull
+request. When nothing changes, the run ends with a notice and no pull request.
+
+What the pull request holds is what `repokeeper update` would write on your machine:
+
+- Files you edited by hand, and the ones listed under `owned`, are left alone. The body of the pull request
+  carries the update's own report, so the files it kept are named there, and the run shows a warning.
+- When the update changes a `package.json` that has a `package-lock.json` beside it, the lockfile is brought
+  in step, so `npm ci` still installs. With pnpm, Yarn or Bun the body says that the lockfile is still to
+  be updated on the branch.
+
+The job needs a token:
+
+- **A token of your own, as the secret `REPOKEEPER_TOKEN`**, with read and write access to contents, pull
+  requests and workflows. This is what most repositories need, because an update usually changes a file
+  under `.github/workflows/`, which `GITHUB_TOKEN` may not push. A pull request opened with your own token
+  also starts CI by itself.
+- **Without the secret**, `GITHUB_TOKEN` is used. It can propose an update that touches no workflow file;
+  for one that does, the run fails and says so. GitHub holds the `pull_request` runs of a pull request
+  that `GITHUB_TOKEN` opened, so the `update-pr-ci` job approves them, as `release-pr-ci` does for releases.
+
+The switch is off unless you ask for it, and it is for GitHub: on GitLab it writes nothing, and
+`repokeeper update` run by hand does the same work. It needs repokeeper 0.9.0 or newer.
+
 ---
 
 Back to the [README](../README.md).
