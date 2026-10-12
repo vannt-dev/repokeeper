@@ -12,6 +12,7 @@ export interface PlaygroundInput {
 
 export const STANDARD: string;
 export const NEEDS_VERSION: string;
+export const AUTOUPDATE_NEEDS_VERSION: string;
 export const STACKS: Array<{ id: string; label: string }>;
 export const PLATFORM_STACKS: Record<"github" | "gitlab", string[]>;
 export const PRESETS: Array<{ id: string; summary: string }>;

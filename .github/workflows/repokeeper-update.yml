@@ -1,0 +1,141 @@
+name: repokeeper-update
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: repokeeper version to update with; "latest" follows every new standard
+        type: string
+        default: latest
+      branch:
+        description: Branch the update is pushed to and the pull request is opened from
+        type: string
+        default: repokeeper/update
+    secrets:
+      token:
+        description: Token to push the branch and open the pull request with. GITHUB_TOKEN is used when absent, but it may not push a change to a workflow file, and its pull requests do not start CI by themselves.
+        required: false
+    outputs:
+      changed:
+        description: "'true' when the update changed files and a pull request carries them"
+        value: ${{ jobs.update.outputs.changed }}
+      pr_branch:
+        description: Branch of the pull request this run opened or updated with GITHUB_TOKEN, whose pull_request runs GitHub holds for approval
+        value: ${{ jobs.update.outputs.pr_branch }}
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    name: repokeeper update
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      changed: ${{ steps.update.outputs.changed }}
+      pr_branch: ${{ steps.update.outputs.pr_branch }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the branch is pushed with this token, so it has to stay in the checkout
+          token: ${{ secrets.token || github.token }}
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - name: Update to the newest standard and propose it
+        id: update
+        env:
+          VERSION: ${{ inputs.version }}
+          BRANCH: ${{ inputs.branch }}
+          BASE: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ secrets.token || github.token }}
+          OWN_TOKEN: ${{ secrets.token != '' }}
+        run: |
+          set -euo pipefail
+          work="${RUNNER_TEMP:-/tmp}"
+          standard() { sed -n 's/^standard:[[:space:]]*//p' .repokeeper.yml | tr -d "\"'" | head -1; }
+          before=$(standard)
+          status=0
+          npx --yes "repokeeper@$VERSION" update > "$work/repokeeper-update.txt" 2>&1 || status=$?
+          cat "$work/repokeeper-update.txt"
+          # update exits 1 when it kept files that were edited by hand; what it did write is still worth
+          # proposing, and the files it kept are named in its report. Anything else is a failure.
+          kept=$(grep -m1 "kept because they were edited locally" "$work/repokeeper-update.txt" || true)
+          if [ "$status" -ne 0 ] && [ -z "$kept" ]; then
+            exit "$status"
+          fi
+          if [ -n "$kept" ]; then
+            echo "::warning::$kept"
+          fi
+
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::nothing to update: the repository is on standard $before"
+            exit 0
+          fi
+          after=$(standard)
+
+          # a package.json the update changed leaves its lockfile behind, and `npm ci` then refuses both
+          : > "$work/lockfiles.txt"
+          while IFS= read -r manifest; do
+            dir=$(dirname "$manifest")
+            if [ -f "$dir/package-lock.json" ]; then
+              (cd "$dir" && npm install --package-lock-only --ignore-scripts --no-audit --no-fund > /dev/null)
+              echo "- \`$dir/package-lock.json\` was brought in step with \`$manifest\`." >> "$work/lockfiles.txt"
+            elif [ -f "$dir/pnpm-lock.yaml" ] || [ -f "$dir/yarn.lock" ] || [ -f "$dir/bun.lock" ] || [ -f "$dir/bun.lockb" ]; then
+              echo "- \`$manifest\` changed and its lockfile did not: run your package manager's install on this branch and commit the lockfile." >> "$work/lockfiles.txt"
+            fi
+          done < <(git diff --name-only | grep -E '(^|/)package\.json$' || true)
+          if [ "$before" = "$after" ]; then
+            title="chore(repokeeper): bring the managed files back to standard $after"
+          else
+            title="chore(repokeeper): update standard to $after"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch --force-create "$BRANCH"
+          git add --all
+          git commit --quiet --message "$title"
+          # one branch, moved every time: an open pull request from an earlier run is brought up to date
+          if ! git push --force origin "$BRANCH" 2> "$work/push.txt"; then
+            cat "$work/push.txt" >&2
+            if grep -qi "workflow" "$work/push.txt"; then
+              echo "::error::this update changes a workflow file, which GITHUB_TOKEN may not push. Add a REPOKEEPER_TOKEN secret: a token of your own with read and write access to contents, pull requests and workflows."
+            fi
+            exit 1
+          fi
+
+          {
+            if [ "$before" = "$after" ]; then
+              echo "\`repokeeper update\` put the managed files of this repository back to standard $after."
+            else
+              echo "\`repokeeper update\` moved this repository from standard $before to $after."
+            fi
+            echo
+            echo "Files you changed yourself, and the ones listed under \`owned\`, were left alone. What it reported:"
+            echo
+            echo '```'
+            cat "$work/repokeeper-update.txt"
+            echo '```'
+            echo
+            if [ -s "$work/lockfiles.txt" ]; then
+              cat "$work/lockfiles.txt"
+              echo
+            fi
+            echo "Opened by the \`repokeeper update\` workflow (\`modules.autoupdate\` in \`.repokeeper.yml\`); a later run moves this same branch."
+          } > "$work/body.md"
+
+          number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh pr create --head "$BRANCH" --base "$BASE" --title "$title" --body-file "$work/body.md"
+          else
+            gh pr edit "$number" --title "$title" --body-file "$work/body.md"
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          # a pull request opened with the caller's own token starts CI by itself
+          if [ "$OWN_TOKEN" = "false" ]; then
+            echo "pr_branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          fi

@@ -80,7 +80,7 @@ const workflowKey = (module: string, path: string, keyPath: string[], value: unk
 });
 
 /** Waits briefly for the held runs to appear, since GitHub creates them just after the pull request event. */
-const APPROVE_RELEASE_PR_RUNS = `for attempt in 1 2 3 4 5 6; do
+const APPROVE_HELD_PR_RUNS = `for attempt in 1 2 3 4 5 6; do
   ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=$BRANCH&event=pull_request&status=action_required" --jq '.workflow_runs[].id')
   [ -n "$ids" ] && break
   sleep 10
@@ -258,6 +258,43 @@ export const githubPlatform: PlatformAdapter = {
     ];
   },
 
+  standardUpdates(ctx: ModuleContext): Output[] {
+    // not the name of the reusable workflow it calls: a repository that keeps its own copies has both
+    const path = ".github/workflows/repokeeper-autoupdate.yml";
+    return [
+      ...localWorkflows(ctx, "autoupdate", ["repokeeper-update.yml"]),
+      workflowKey("autoupdate", path, ["name"], "repokeeper update"),
+      // weekly and by hand, never on a push: the pull request it opens must not start it again
+      workflowKey("autoupdate", path, ["on"], { schedule: [{ cron: "23 5 * * 1" }], workflow_dispatch: null }),
+      workflowKey("autoupdate", path, ["permissions"], { contents: "read" }),
+      workflowKey("autoupdate", path, ["jobs", "update"], {
+        uses: workflowRef(ctx, "repokeeper-update.yml"),
+        permissions: { contents: "write", "pull-requests": "write" },
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+        secrets: { token: "${{ secrets.REPOKEEPER_TOKEN }}" },
+      }),
+      // as for the release pull request: one that GITHUB_TOKEN opened has its runs held until approved
+      workflowKey("autoupdate", path, ["jobs", "update-pr-ci"], {
+        needs: "update",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+        if: "${{ needs.update.outputs.pr_branch != '' }}",
+        "runs-on": "ubuntu-latest",
+        permissions: { actions: "write" },
+        steps: [
+          {
+            env: {
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              GH_TOKEN: "${{ github.token }}",
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              BRANCH: "${{ needs.update.outputs.pr_branch }}",
+            },
+            run: APPROVE_HELD_PR_RUNS,
+          },
+        ],
+      }),
+    ];
+  },
+
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[] {
     const path = ".github/workflows/release.yml";
     const seed = release.version ?? ctx.repo.releasedVersion ?? "0.0.0";
@@ -321,7 +358,7 @@ export const githubPlatform: PlatformAdapter = {
               // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
               BRANCH: "${{ needs.release.outputs.pr_branch }}",
             },
-            run: APPROVE_RELEASE_PR_RUNS,
+            run: APPROVE_HELD_PR_RUNS,
           },
         ],
       }),

@@ -112,6 +112,11 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
       );
     }
   }
+  if (ctx.platform.id === "gitlab" && ctx.config.modules.autoupdate) {
+    io.out(
+      "note: modules.autoupdate writes nothing on gitlab; run `repokeeper update` by hand when a new standard is out",
+    );
+  }
   if (ctx.platform.id === "gitlab") {
     for (const stack of ctx.stacks) {
       const os = stack.ci?.with.os;

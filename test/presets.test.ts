@@ -70,6 +70,7 @@ describe("presets", () => {
       release: false,
       deps: false,
       drift: false,
+      autoupdate: false,
       health: false,
     });
     expect(applyPreset(base(), "essential").github).toBeUndefined();
@@ -205,16 +206,17 @@ describe("init --interactive", () => {
     "Apply deps?",
     "Apply health?",
     "Apply drift?",
+    "Apply autoupdate?",
     "Write these files?",
   ];
 
   it("names the files of each part, takes the answers, and writes only what was chosen", async () => {
     const dir = await nodeRepo();
-    //                                         editor     ignore     commits hooks  ci         release deps       health     drift      write
+    //                                         editor     ignore     commits hooks  ci         release deps       health     drift      update     write
     const init = await repokeeper(
       dir,
       ["init", "--interactive"],
-      [undefined, undefined, true, false, undefined, false, undefined, undefined, undefined, true],
+      [undefined, undefined, true, false, undefined, false, undefined, undefined, undefined, undefined, true],
     );
     expect(init.err).toBe("");
     expect(init.code).toBe(0);
@@ -223,11 +225,15 @@ describe("init --interactive", () => {
     expect(init.out).toContain("hooks:\n  lefthook.yml");
     expect(init.out).toContain("release:\n  .github/workflows/release.yml");
     expect(init.out).toContain("a job that fails a pull request when a managed file was edited by hand");
+    expect(init.out).toContain("autoupdate:\n  .github/workflows/repokeeper-autoupdate.yml");
 
     const config = parse(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
     expect(config.modules).toMatchObject({ commits: true, hooks: false, ci: true, release: false, deps: true });
     // Enter on drift keeps the standard preset's answer, which is no
     expect(config.modules.drift).toBe(false);
+    // the same for the update pull requests, and a switch that is off is not written at all
+    expect(config.modules).not.toHaveProperty("autoupdate");
+    expect(existsSync(join(dir, ".github/workflows/repokeeper-autoupdate.yml"))).toBe(false);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
     expect(existsSync(join(dir, "release-please-config.json"))).toBe(false);
     expect(existsSync(join(dir, "commitlint.config.mjs"))).toBe(true);
@@ -236,24 +242,28 @@ describe("init --interactive", () => {
 
   it("starts from the preset: Enter all the way through essential keeps it essential", async () => {
     const dir = await nodeRepo();
-    const init = await repokeeper(dir, ["init", "-i", "--preset", "essential"], new Array(10).fill(undefined));
+    const init = await repokeeper(dir, ["init", "-i", "--preset", "essential"], new Array(11).fill(undefined));
     expect(init.code).toBe(0);
     expect(init.asked).toEqual(QUESTIONS);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
     expect(existsSync(join(dir, ".github/workflows/ci.yml"))).toBe(true);
     // a part the preset left out can still be taken, with its usual settings
     const other = await nodeRepo();
-    const answers = new Array(10).fill(undefined);
+    const answers = new Array(11).fill(undefined);
     answers[7] = true;
+    // and the update pull requests can be asked for here
+    answers[9] = true;
     await repokeeper(other, ["init", "-i", "--preset", "essential"], answers);
+    expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.autoupdate).toBe(true);
+    expect(existsSync(join(other, ".github/workflows/repokeeper-autoupdate.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.health.license).toBe("MIT");
     expect(existsSync(join(other, "CONTRIBUTING.md"))).toBe(true);
   });
 
   it("writes nothing when the last question is answered no", async () => {
     const dir = await nodeRepo();
-    const answers = new Array(10).fill(undefined);
-    answers[9] = false;
+    const answers = new Array(11).fill(undefined);
+    answers[10] = false;
     const init = await repokeeper(dir, ["init", "--interactive"], answers);
     expect(init.code).toBe(0);
     expect(init.out).toContain("nothing written");
@@ -263,9 +273,9 @@ describe("init --interactive", () => {
 
   it("with --dry-run asks about the parts and shows the result without the last question", async () => {
     const dir = await nodeRepo();
-    const init = await repokeeper(dir, ["init", "--interactive", "--dry-run"], new Array(9).fill(undefined));
+    const init = await repokeeper(dir, ["init", "--interactive", "--dry-run"], new Array(10).fill(undefined));
     expect(init.code).toBe(0);
-    expect(init.asked).toEqual(QUESTIONS.slice(0, 9));
+    expect(init.asked).toEqual(QUESTIONS.slice(0, 10));
     expect(init.out).toContain("dry run: nothing written");
     expect(existsSync(join(dir, ".repokeeper.yml"))).toBe(false);
   });
