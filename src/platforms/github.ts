@@ -1,6 +1,6 @@
 import { stringify } from "yaml";
 import { CONFIG_FILE } from "../config/load.js";
-import { defaultBranch, STACK_IDS } from "../config/types.js";
+import { defaultBranch, STACK_IDS, type StackId } from "../config/types.js";
 import { ConfigError } from "../errors.js";
 import {
   type DependencyUpdate,
@@ -88,6 +88,47 @@ done
 if [ -z "$ids" ]; then echo "::notice::no held runs for $BRANCH"; fi
 for id in $ids; do gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve"; done
 `;
+
+interface CodeqlLanguage {
+  /** CodeQL's identifier of the language. */
+  language: string;
+  /** `none`: read from source. `autobuild`: CodeQL has to watch a build, and works out how to run one. */
+  "build-mode": "none" | "autobuild";
+}
+
+/**
+ * What CodeQL calls each stack's language, or null for a stack it cannot analyze. A stack with no line
+ * here does not compile, so that a new one has to say.
+ *
+ * Go has no analysis without a build. Java is read from source but Kotlin is not, and both share one
+ * identifier, so a Kotlin stack asks for the build.
+ */
+export const CODEQL_LANGUAGES: Record<StackId, CodeqlLanguage | null> = {
+  node: { language: "javascript-typescript", "build-mode": "none" },
+  python: { language: "python", "build-mode": "none" },
+  dart: null,
+  script: null,
+  java: { language: "java-kotlin", "build-mode": "none" },
+  dotnet: { language: "csharp", "build-mode": "none" },
+  go: { language: "go", "build-mode": "autobuild" },
+  rust: { language: "rust", "build-mode": "none" },
+  kotlin: { language: "java-kotlin", "build-mode": "autobuild" },
+  php: null,
+  ruby: { language: "ruby", "build-mode": "none" },
+};
+
+/** The languages to analyze, each once: those of the stacks, then the workflow files themselves. */
+function codeqlLanguages(ctx: ModuleContext): CodeqlLanguage[] {
+  const found = new Map<string, CodeqlLanguage>();
+  for (const stack of ctx.stacks) {
+    const entry = CODEQL_LANGUAGES[stack.id];
+    if (!entry) continue;
+    // a language two stacks share is built when either of them needs the build
+    if (found.get(entry.language)?.["build-mode"] !== "autobuild") found.set(entry.language, entry);
+  }
+  // every repository this writes to has workflows: at the least, the one that runs the analysis
+  return [...found.values(), { language: "actions", "build-mode": "none" }];
+}
 
 const RELEASE_PLEASE_SCHEMA = "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json";
 // release-please's own php sections (src/strategies/php.ts) with chore hidden, as every other strategy has it
@@ -291,6 +332,34 @@ export const githubPlatform: PlatformAdapter = {
             run: APPROVE_HELD_PR_RUNS,
           },
         ],
+      }),
+    ];
+  },
+
+  codeScanning(ctx: ModuleContext): Output[] {
+    // not the name of the reusable workflow it calls: a repository that keeps its own copies has both
+    const path = ".github/workflows/security.yml";
+    return [
+      ...localWorkflows(ctx, "security", ["codeql.yml"]),
+      workflowKey("security", path, ["name"], "security"),
+      workflowKey("security", path, ["on"], {
+        pull_request: null,
+        push: { branches: [defaultBranch(ctx.config)] },
+        // weekly as well: new queries find things in code that has not changed
+        schedule: [{ cron: "41 4 * * 3" }],
+      }),
+      workflowKey("security", path, ["permissions"], { contents: "read" }),
+      workflowKey("security", path, ["concurrency"], {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+        group: "${{ github.workflow }}-${{ github.ref }}",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+      }),
+      workflowKey("security", path, ["jobs", "codeql"], {
+        uses: workflowRef(ctx, "codeql.yml"),
+        // what the called job asks for; a called workflow cannot have more than its caller grants
+        permissions: { "security-events": "write", actions: "read", contents: "read" },
+        with: { languages: JSON.stringify(codeqlLanguages(ctx)) },
       }),
     ];
   },

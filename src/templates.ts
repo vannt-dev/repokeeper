@@ -7,7 +7,8 @@ export function readTemplate(relativePath: string): string {
 }
 
 /** File names of the reusable workflows generated CI and release files can call. */
-export const REUSABLE_WORKFLOW = /^(stack-[a-z]+|commitlint|release-please|repokeeper-check|repokeeper-update)\.yml$/;
+export const REUSABLE_WORKFLOW =
+  /^(stack-[a-z]+|commitlint|release-please|repokeeper-check|repokeeper-update|codeql)\.yml$/;
 
 /** Reads one of the reusable workflows shipped with the package, with LF endings. */
 export function readWorkflow(file: string): string {

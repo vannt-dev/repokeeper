@@ -54,6 +54,7 @@ jobs:
             [kotlin]="fixtures/kotlin/ .github/workflows/stack-java.yml"
             [php]="fixtures/php/ .github/workflows/stack-php.yml"
             [ruby]="fixtures/ruby/ .github/workflows/stack-ruby.yml"
+            [codeql]="fixtures/node/ fixtures/go/ .github/workflows/codeql.yml"
           )
           files=$(git diff --name-only "$BASE" "$HEAD")
           run=","
@@ -203,3 +204,19 @@ jobs:
       ruby-versions: ${{ github.event_name == 'push' && '["3.3","3.4"]' || '["3.4"]' }}
       install-command: bundle install
       commands: '["bundle exec rake test"]'
+  # One language CodeQL reads from source, one it has to build, and the workflow files. Nothing is
+  # uploaded: the fixtures are not this repository's code, and their findings are not its alerts.
+  codeql:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',codeql,')
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    uses: ./.github/workflows/codeql.yml
+    with:
+      languages: >-
+        [{"language":"javascript-typescript","build-mode":"none"},
+        {"language":"go","build-mode":"autobuild"},
+        {"language":"actions","build-mode":"none"}]
+      upload: never

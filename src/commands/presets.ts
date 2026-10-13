@@ -25,13 +25,15 @@ export const MODULE_IDS: ModuleId[] = [
   "health",
   "drift",
   "autoupdate",
+  "security",
 ];
 
 /**
  * Applies a preset to a freshly built default configuration.
  *
- * A preset only switches on what repokeeper really does. There is no tier that promises code or
- * secret scanning, because no module writes it.
+ * A preset only switches on what works in every repository. Code scanning (`modules.security`) is in no
+ * preset: it is free on a public repository and needs GitHub Code Security on a private one, where a
+ * preset would otherwise leave a failing workflow behind.
  */
 export function applyPreset(config: RepokeeperConfig, preset: Preset): RepokeeperConfig {
   if (preset === "standard") return config;
@@ -46,6 +48,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         deps: false,
         drift: false,
         autoupdate: false,
+        security: false,
         health: false,
       },
     };
@@ -114,6 +117,7 @@ export async function chooseModules(
       gitignore: true,
       drift: true,
       autoupdate: true,
+      security: true,
       health,
     },
   };
