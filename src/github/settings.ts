@@ -12,7 +12,14 @@ export interface GithubSettings {
   description?: string;
   topics?: string[];
   merge?: { squash?: boolean; merge_commit?: boolean; rebase?: boolean; delete_branch_on_merge?: boolean };
-  security?: { dependabot_alerts?: boolean; dependabot_security_updates?: boolean };
+  security?: {
+    dependabot_alerts?: boolean;
+    dependabot_security_updates?: boolean;
+    /** GitHub's own scan of the repository for committed credentials. */
+    secret_scanning?: boolean;
+    /** Refuses a push that contains a credential; needs `secret_scanning`. */
+    secret_scanning_push_protection?: boolean;
+  };
   /** The `repokeeper` ruleset on the default branch; false removes it. */
   protect?:
     | {
@@ -214,6 +221,32 @@ export async function planGithub(
         apply: () => send(fixes ? "PUT" : "DELETE", "/automated-security-fixes", "setting Dependabot security updates"),
       });
     }
+  }
+
+  // free on a public repository; a private one needs GitHub Secret Protection, and GitHub refuses without it
+  const analysis = (current.security_and_analysis ?? {}) as Record<string, { status?: string } | undefined>;
+  for (const key of ["secret_scanning", "secret_scanning_push_protection"] as const) {
+    const want = settings.security?.[key];
+    // a token without admin access is not shown the switches; that reads as off, and the write then says so
+    const have = analysis[key]?.status === "enabled";
+    if (want === undefined || have === want) continue;
+    changes.push({
+      setting: `security.${key}`,
+      from: show(have),
+      to: show(want),
+      apply: async () => {
+        const response = await api.request("PATCH", base, {
+          security_and_analysis: { [key]: { status: want ? "enabled" : "disabled" } },
+        });
+        if (response.status === 422) {
+          const message = (response.data as { message?: string } | null)?.message ?? "HTTP 422";
+          throw new ApiError(
+            `setting security.${key} failed: ${message} (free on a public repository; a private one needs GitHub Secret Protection)`,
+          );
+        }
+        expect2xx(response, `setting security.${key}`, repo);
+      },
+    });
   }
 
   if (settings.protect !== undefined) {

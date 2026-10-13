@@ -8,6 +8,7 @@ import { gitignoreModule } from "./gitignore.js";
 import { healthModule } from "./health.js";
 import { hooksModule } from "./hooks.js";
 import { releaseModule } from "./release.js";
+import { securityModule } from "./security.js";
 
 export const MODULES: Module[] = [
   editorconfigModule,
@@ -19,4 +20,5 @@ export const MODULES: Module[] = [
   ciModule,
   releaseModule,
   autoupdateModule,
+  securityModule,
 ];

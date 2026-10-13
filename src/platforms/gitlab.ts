@@ -205,6 +205,12 @@ export const gitlabPlatform: PlatformAdapter = {
     return [];
   },
 
+  // GitLab has its own SAST and secret detection templates, pulled in with `include:`. That key is a list the
+  // project shares with repokeeper, and nothing here manages part of a list yet.
+  codeScanning(): Output[] {
+    return [];
+  },
+
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;

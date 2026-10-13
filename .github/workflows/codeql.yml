@@ -1,0 +1,46 @@
+name: codeql
+
+on:
+  workflow_call:
+    inputs:
+      languages:
+        description: >-
+          JSON list of what to analyze, each {"language", "build-mode"} in CodeQL's own names
+          ("javascript-typescript", "java-kotlin", ...; "none" or "autobuild")
+        type: string
+        required: true
+      upload:
+        description: Whether the results become code scanning alerts of the repository ("always", "failure-only" or "never")
+        type: string
+        default: always
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: codeql (${{ matrix.language }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(inputs.languages) }}
+    runs-on: ubuntu-latest
+    permissions:
+      # code scanning alerts are security events
+      security-events: write
+      # CodeQL reads the workflow run it is part of, which a private repository does not let it do otherwise
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          languages: ${{ matrix.language }}
+          # with "autobuild", the analysis below runs the build itself
+          build-mode: ${{ matrix.build-mode }}
+      - uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
+        with:
+          category: /language:${{ matrix.language }}
+          upload: ${{ inputs.upload }}
