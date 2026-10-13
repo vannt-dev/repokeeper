@@ -133,6 +133,45 @@ The job needs a token:
 The switch is off unless you ask for it, and it is for GitHub: on GitLab it writes nothing, and
 `repokeeper update` run by hand does the same work. It needs repokeeper 0.9.0 or newer.
 
+## Code scanning
+
+Set `modules.security: true` and repokeeper writes `.github/workflows/security.yml`. Its `codeql` job
+calls the reusable workflow `codeql.yml`, which runs [CodeQL](https://codeql.github.com/) and reports
+what it finds as code scanning alerts, on the pull request and under the repository's Security tab.
+It runs on every pull request, on every push to the default branch, and once a week, because new
+queries find things in code that has not changed.
+
+What is analyzed follows from the stacks in `.repokeeper.yml`:
+
+| Stack | CodeQL language | Build |
+| --- | --- | --- |
+| `node` | `javascript-typescript` | none |
+| `python` | `python` | none |
+| `java` | `java-kotlin` | none |
+| `kotlin` | `java-kotlin` | CodeQL's own (`autobuild`) |
+| `dotnet` | `csharp` | none |
+| `go` | `go` | CodeQL's own (`autobuild`) |
+| `ruby` | `ruby` | none |
+| `rust` | `rust` | none |
+| `dart`, `php`, `script`, `docker` | not analyzed: CodeQL does not know them | |
+
+The workflow files themselves are always analyzed too (`actions`), so a repository with only Dart or
+PHP still gets that. Most languages are read from source. Go and Kotlin are not: CodeQL has to watch a
+build, and works out how to run one. When that build needs something it cannot guess, list
+`.github/workflows/security.yml#jobs.codeql` under `owned` and call CodeQL with your own build steps.
+
+Three things to know:
+
+- **Public and private repositories.** Code scanning is free on a public repository. A private one
+  needs GitHub Code Security; without it the analysis runs and then fails when it uploads its results.
+  This is why no preset switches the module on.
+- **Default setup.** If CodeQL's default setup is on in the repository's settings, GitHub refuses the
+  results of a workflow. Use one or the other.
+- **GitLab.** The switch writes nothing there. GitLab has its own SAST and Secret Detection
+  templates, which you include in `.gitlab-ci.yml` yourself.
+
+It needs repokeeper 0.9.0 or newer.
+
 ---
 
 Back to the [README](../README.md).

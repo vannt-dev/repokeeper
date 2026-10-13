@@ -91,6 +91,12 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
     // lockfile that disagrees with it. A new standard moves such a range without touching lefthook.yml.
     steps.push("package.json changed; install dependencies and commit the lockfile with it");
   }
+  // said once, when the workflow is new: whether the repository is public is not something repokeeper can see
+  if (result.decisions.some((d) => d.output.path === ".github/workflows/security.yml" && d.action === "create")) {
+    steps.push(
+      "code scanning is free on a public repository; on a private one, turn on GitHub Code Security, or the security workflow fails when it uploads its results",
+    );
+  }
   if (wrote(".gitattributes")) {
     const crlf = await crlfTrackedFiles(root);
     if (crlf.length > 0) {
@@ -115,6 +121,11 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
   if (ctx.platform.id === "gitlab" && ctx.config.modules.autoupdate) {
     io.out(
       "note: modules.autoupdate writes nothing on gitlab; run `repokeeper update` by hand when a new standard is out",
+    );
+  }
+  if (ctx.platform.id === "gitlab" && ctx.config.modules.security) {
+    io.out(
+      "note: modules.security writes nothing on gitlab; include GitLab's SAST and Secret-Detection templates in .gitlab-ci.yml instead",
     );
   }
   if (ctx.platform.id === "gitlab") {

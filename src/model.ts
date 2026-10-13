@@ -160,6 +160,8 @@ export interface PlatformAdapter {
   ciWorkflow(ctx: ModuleContext): Output[];
   /** A scheduled job that proposes the update when the standard has moved; empty where the platform has none. */
   standardUpdates(ctx: ModuleContext): Output[];
+  /** A workflow that scans the code for vulnerabilities; empty where the platform has none written. */
+  codeScanning(ctx: ModuleContext): Output[];
   /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[];
 }

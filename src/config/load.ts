@@ -47,15 +47,19 @@ export function parseConfig(text: string): RepokeeperConfig {
 
 export function renderConfig(config: RepokeeperConfig): string {
   // written only when on: a file without the line is one every earlier repokeeper reads as well
-  const { autoupdate, ...modules } = config.modules;
-  const written = { ...config, modules: autoupdate ? orderedModules(config.modules) : modules };
+  const { autoupdate, security, ...modules } = config.modules;
+  const asked = { ...(autoupdate ? { autoupdate } : {}), ...(security ? { security } : {}) };
+  const written = {
+    ...config,
+    modules: Object.keys(asked).length > 0 ? orderedModules({ ...modules, ...asked }) : modules,
+  };
   return `# repokeeper configuration: https://github.com/vannt-dev/repokeeper\n${stringify(written)}`;
 }
 
 /** The module switches with `health`, the one that is a block, last. */
-function orderedModules(modules: ModulesConfig): ModulesConfig {
+function orderedModules<T extends Pick<ModulesConfig, "health">>(modules: T): T {
   const { health, ...flags } = modules;
-  return { ...flags, health };
+  return { ...flags, health } as T;
 }
 
 /** Rewrites `standard:` in place, keeping every comment and the rest of the layout. */
@@ -89,6 +93,7 @@ function withDefaults(
       gitignore: modules.gitignore ?? true,
       drift: modules.drift ?? false,
       autoupdate: modules.autoupdate ?? false,
+      security: modules.security ?? false,
       health: modules.health,
     },
     owned: data.owned ?? [],

@@ -39,6 +39,8 @@ export interface ModulesConfig {
   drift: boolean;
   /** A scheduled workflow that opens a pull request when the standard has moved; off unless asked for. */
   autoupdate: boolean;
+  /** A workflow that runs code scanning (CodeQL) on pull requests, pushes and weekly; off unless asked for. */
+  security: boolean;
   health: HealthConfig | false;
 }
 
@@ -83,6 +85,7 @@ export function defaultConfig(input: {
       gitignore: true,
       drift: false,
       autoupdate: false,
+      security: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],

@@ -69,8 +69,9 @@ alone. Every write command accepts `--dry-run`.
   Dependabot security updates into `.repokeeper.yml`; `repokeeper github apply` then puts them in
   place. On GitLab it writes the protection of the default branch (Maintainers push and merge, no
   force push) and a merge request that needs a passing pipeline, for `repokeeper gitlab apply`; a
-  required review is not part of it, because approval rules are a paid-tier setting there. There is
-  no preset that promises code or secret scanning: repokeeper does not set those up.
+  required review is not part of it, because approval rules are a paid-tier setting there. No preset
+  switches code or secret scanning on: they are free on a public repository and paid on a private
+  one, so they are yours to ask for (see below).
 - `repokeeper init --interactive` (or `-i`) asks about each part in turn, naming the files it would
   write, shows the result, and asks once more before writing anything. Enter keeps the preset's
   answer. Add `--dry-run` to go through the questions without the possibility of writing.
@@ -78,10 +79,17 @@ alone. Every write command accepts `--dry-run`.
 Either way the choice ends up as plain `modules:` switches in `.repokeeper.yml`, which you can change
 later and apply with `repokeeper update`.
 
-One switch is in no preset: `modules.autoupdate: true` adds a weekly workflow that runs
-`repokeeper update` with the newest repokeeper and opens a pull request when the standard has moved, so a
-new standard reaches every repository without anyone running the command in each (GitHub only; see
-[CI and releases](docs/ci-and-releases.md#update-pull-requests)).
+Two switches are in no preset:
+
+- `modules.autoupdate: true` adds a weekly workflow that runs `repokeeper update` with the newest
+  repokeeper and opens a pull request when the standard has moved, so a new standard reaches every
+  repository without anyone running the command in each (GitHub only; see
+  [CI and releases](docs/ci-and-releases.md#update-pull-requests)).
+- `modules.security: true` adds a workflow that runs CodeQL on every pull request, on every push to
+  the default branch and once a week, for the languages of your stacks (GitHub only; see
+  [CI and releases](docs/ci-and-releases.md#code-scanning)). Secret scanning is a setting of the
+  repository: `github.security.secret_scanning`, applied by `repokeeper github apply`
+  ([GitHub settings](docs/github-settings.md)).
 
 You can also start from the file instead of from detection: put a `.repokeeper.yml` you wrote
 yourself in the repository and run `repokeeper init`. When the file is there and repokeeper has not

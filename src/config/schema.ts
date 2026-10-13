@@ -26,6 +26,7 @@ export const configSchema = {
         gitignore: flag,
         drift: flag,
         autoupdate: flag,
+        security: flag,
         health: {
           anyOf: [
             { const: false },
@@ -71,7 +72,12 @@ export const configSchema = {
         security: {
           type: "object",
           additionalProperties: false,
-          properties: { dependabot_alerts: flag, dependabot_security_updates: flag },
+          properties: {
+            dependabot_alerts: flag,
+            dependabot_security_updates: flag,
+            secret_scanning: flag,
+            secret_scanning_push_protection: flag,
+          },
         },
         protect: {
           anyOf: [

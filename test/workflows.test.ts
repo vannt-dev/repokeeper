@@ -57,6 +57,7 @@ const REUSABLE = [
   "stack-php.yml",
   "stack-ruby.yml",
   "stack-docker.yml",
+  "codeql.yml",
 ];
 
 /** Fixture jobs in workflow-tests.yml and the pack that resolves each fixture. Each stack task appends its rows. */
@@ -159,6 +160,49 @@ it("stack-docker fails on errors and warnings unless the repository has its own 
 
 it("stack-docker checks with the hadolint the GitLab job uses", () => {
   expect(read("stack-docker.yml")).toContain(`/download/v${HADOLINT_VERSION}/hadolint-linux-x86_64`);
+});
+
+describe("codeql.yml", () => {
+  it("analyzes one language per job, with the build mode it was given", () => {
+    const wf = parse(read("codeql.yml")) as {
+      jobs: { analyze: { strategy: { matrix: { include: string } }; permissions: Record<string, string> } };
+    };
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression
+    expect(wf.jobs.analyze.strategy.matrix.include).toBe("${{ fromJSON(inputs.languages) }}");
+    expect(wf.jobs.analyze.permissions).toEqual({ "security-events": "write", actions: "read", contents: "read" });
+    const [init, analyze] = steps(workflow("codeql.yml")).filter((step) => step.uses?.includes("codeql-action")) as {
+      uses: string;
+      with: Record<string, string>;
+    }[];
+    expect(init?.uses).toMatch(/^github\/codeql-action\/init@/);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+    expect(init?.with).toEqual({ languages: "${{ matrix.language }}", "build-mode": "${{ matrix.build-mode }}" });
+    expect(analyze?.uses).toMatch(/^github\/codeql-action\/analyze@/);
+    // both steps are one release of the action
+    expect(analyze?.uses.split("@")[1]).toBe(init?.uses.split("@")[1]);
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+    expect(analyze?.with).toEqual({ category: "/language:${{ matrix.language }}", upload: "${{ inputs.upload }}" });
+  });
+
+  it("is exercised by workflow-tests on a language read from source and one that is built, without uploading", () => {
+    const tests = workflow("workflow-tests.yml");
+    const job = tests.jobs.codeql;
+    expect(job?.uses).toBe("./.github/workflows/codeql.yml");
+    expect(job?.needs).toBe("changes");
+    expect(job?.if).toBe(
+      "contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',codeql,')",
+    );
+    // what the called job asks for
+    expect(job?.permissions).toEqual({ "security-events": "write", actions: "read", contents: "read" });
+    expect(job?.with?.upload).toBe("never");
+    expect(JSON.parse(job?.with?.languages ?? "[]")).toEqual([
+      { language: "javascript-typescript", "build-mode": "none" },
+      { language: "go", "build-mode": "autobuild" },
+      { language: "actions", "build-mode": "none" },
+    ]);
+    const script = tests.jobs.changes?.steps?.map((s) => s.run ?? "").join("\n") ?? "";
+    expect(script).toContain('[codeql]="fixtures/node/ fixtures/go/ .github/workflows/codeql.yml"');
+  });
 });
 
 it("workflow-tests cancels superseded pull request runs", () => {
