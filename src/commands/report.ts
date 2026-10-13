@@ -134,6 +134,9 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
       if (os !== undefined && os !== '["ubuntu-latest"]') {
         io.out(`note: ${stack.id}.os is ignored on gitlab (Linux runners only)`);
       }
+      if (stack.id === "docker" && stack.ci?.with.build === "true") {
+        io.out("note: docker.build is ignored on gitlab: building an image there needs a runner set up for it");
+      }
     }
     // repokeeper's jobs use GitLab's default stages; a stages list of the user's own replaces those
     let ci: { stages?: unknown } | null = null;

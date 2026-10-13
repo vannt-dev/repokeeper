@@ -115,6 +115,7 @@ export const CODEQL_LANGUAGES: Record<StackId, CodeqlLanguage | null> = {
   kotlin: { language: "java-kotlin", "build-mode": "autobuild" },
   php: null,
   ruby: { language: "ruby", "build-mode": "none" },
+  docker: null,
 };
 
 /** The languages to analyze, each once: those of the stacks, then the workflow files themselves. */

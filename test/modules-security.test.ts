@@ -98,7 +98,7 @@ describe("security module", () => {
   });
 
   it("still analyzes the workflows of a repository whose stacks CodeQL does not know", () => {
-    expect(languages("dart", "php", "script")).toEqual([{ language: "actions", "build-mode": "none" }]);
+    expect(languages("dart", "php", "script", "docker")).toEqual([{ language: "actions", "build-mode": "none" }]);
   });
 
   it("has an answer for every stack", () => {

@@ -12,6 +12,7 @@ export const STACK_IDS = [
   "kotlin",
   "php",
   "ruby",
+  "docker",
 ] as const;
 export type StackId = (typeof STACK_IDS)[number];
 export type PlatformId = "github" | "gitlab";

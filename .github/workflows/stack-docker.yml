@@ -1,0 +1,69 @@
+name: stack-docker
+
+on:
+  workflow_call:
+    inputs:
+      dockerfiles:
+        description: JSON list of the Dockerfiles to check, relative to the working directory
+        type: string
+        default: '["Dockerfile"]'
+      build:
+        description: '"true" to build each image as well; nothing is pushed'
+        type: string
+        default: "false"
+      working-directory:
+        description: Directory the Dockerfiles are named from, and the context of a build
+        type: string
+        default: .
+
+permissions:
+  contents: read
+
+jobs:
+  hadolint:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: hadolint
+        env:
+          DOCKERFILES: ${{ inputs.dockerfiles }}
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/hadolint" https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-linux-x86_64
+          chmod +x "$RUNNER_TEMP/hadolint"
+          # a .hadolint.yaml here is the repository's own choice of rules; without one, errors and warnings
+          # fail the job and information-level rules are only printed
+          if [ -f .hadolint.yaml ] || [ -f .hadolint.yml ]; then
+            threshold=()
+          else
+            threshold=(--failure-threshold warning)
+          fi
+          jq -r '.[]' <<<"$DOCKERFILES" | tr '\n' '\0' |
+            xargs -0 --no-run-if-empty "$RUNNER_TEMP/hadolint" "${threshold[@]}"
+  build:
+    if: inputs.build == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build each image
+        env:
+          DOCKERFILES: ${{ inputs.dockerfiles }}
+        run: |
+          while IFS= read -r file; do
+            echo "::group::docker build --file $file ."
+            docker build --file "$file" . </dev/null
+            echo "::endgroup::"
+          done < <(jq -r '.[]' <<<"$DOCKERFILES")
