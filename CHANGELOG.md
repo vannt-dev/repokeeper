@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.9.0](https://github.com/vannt-dev/repokeeper/compare/v0.8.2...v0.9.0) (2026-10-13)
+
+
+### Features
+
+* a docker stack that lints Dockerfiles with hadolint ([#66](https://github.com/vannt-dev/repokeeper/issues/66)) ([de665b1](https://github.com/vannt-dev/repokeeper/commit/de665b1c32afe0877cf9e248f2c597cbaeca406a))
+* code scanning with CodeQL, and secret scanning as a setting ([#65](https://github.com/vannt-dev/repokeeper/issues/65)) ([bea1579](https://github.com/vannt-dev/repokeeper/commit/bea15793b45b74c6a4f725316e228fea702db359))
+* open a pull request when the standard has moved ([#62](https://github.com/vannt-dev/repokeeper/issues/62)) ([434c5bd](https://github.com/vannt-dev/repokeeper/commit/434c5bdc7c016da850aa1e3f4e8c5b814b560ce5))
+
+
+### Bug Fixes
+
+* ship the update workflow in the package ([#64](https://github.com/vannt-dev/repokeeper/issues/64)) ([47d4e27](https://github.com/vannt-dev/repokeeper/commit/47d4e2712ff349460dd215f35858677f6adba4d6))
+
 ## [0.8.2](https://github.com/vannt-dev/repokeeper/compare/v0.8.1...v0.8.2) (2026-10-10)
 
 
