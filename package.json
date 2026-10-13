@@ -12,7 +12,8 @@
     ".github/workflows/stack-*.yml",
     ".github/workflows/commitlint.yml",
     ".github/workflows/release-please.yml",
-    ".github/workflows/repokeeper-check.yml"
+    ".github/workflows/repokeeper-check.yml",
+    ".github/workflows/repokeeper-update.yml"
   ],
   "engines": {
     "node": ">=22.12.0"
