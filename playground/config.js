@@ -16,6 +16,9 @@ export const AUTOUPDATE_NEEDS_VERSION = "0.9.0";
 /** The same for code scanning. */
 export const SECURITY_NEEDS_VERSION = "0.9.0";
 
+/** The same for the stacks added after the standard the file names: an earlier repokeeper does not know them. */
+export const STACK_NEEDS_VERSION = { docker: "0.9.0" };
+
 export const STACKS = [
   { id: "node", label: "Node.js" },
   { id: "python", label: "Python" },
@@ -199,6 +202,10 @@ export function problems(input) {
   for (const stack of stacks) {
     if (/^\/|(^|\/)\.\.(\/|$)/.test(stack.directory)) {
       found.push(`The folder of ${stack.id} has to be a path inside the repository.`);
+    }
+    if (STACK_NEEDS_VERSION[stack.id]) {
+      const { label } = STACKS.find((known) => known.id === stack.id);
+      found.push(`The ${label} stack needs repokeeper ${STACK_NEEDS_VERSION[stack.id]} or newer.`);
     }
   }
   if (input.modules.health) {

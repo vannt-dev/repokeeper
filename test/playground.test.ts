@@ -244,6 +244,13 @@ describe("playground", () => {
     ]);
   });
 
+  it("names the repokeeper a stack newer than the standard needs", () => {
+    const note = "The Dockerfile stack needs repokeeper 0.9.0 or newer.";
+    expect(problems(filled("standard", "github", [{ id: "docker" }]))).toEqual([note]);
+    expect(problems(filled("standard", "gitlab", [{ id: "node" }, { id: "docker" }]))).toEqual([note]);
+    expect(problems(filled("standard", "github", [{ id: "node" }]))).toEqual([]);
+  });
+
   it("offers the command only while a preset says everything the form says", () => {
     expect(shortcutCommand(filled("standard"))).toBe("npx repokeeper init --stack node");
     expect(shortcutCommand(filled("essential"))).toBe("npx repokeeper init --preset essential --stack node");
