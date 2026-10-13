@@ -2,6 +2,7 @@ import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { STACK_IDS, type StackId } from "../config/types.js";
 import { dartStack } from "./dart.js";
+import { dockerStack } from "./docker.js";
 import { dotnetStack } from "./dotnet.js";
 import { goStack } from "./go.js";
 import { javaStack } from "./java.js";
@@ -26,18 +27,23 @@ const PACKS: Record<StackId, StackPack> = {
   kotlin: kotlinStack,
   php: phpStack,
   ruby: rubyStack,
+  docker: dockerStack,
 };
 
 export function getStackPack(id: StackId): StackPack {
   return PACKS[id];
 }
 
+/** Stacks that are tooling around a project rather than a project: scripts, and the recipe for an image. */
+const isProject = (id: StackId) => id !== "script" && id !== "docker";
+
 export async function detectStacks(root: string): Promise<StackId[]> {
   let found = STACK_IDS.filter((id) => PACKS[id].detect(root));
   // a Kotlin build is also a Gradle build; one CI job runs it
   if (found.includes("kotlin")) found = found.filter((id) => id !== "java");
-  // scripts beside another stack belong to that stack; the script pack is for script-only repositories
-  return found.length > 1 ? found.filter((id) => id !== "script") : found;
+  // scripts beside a project belong to that project; the script pack is for repositories without one.
+  // A Dockerfile is checked wherever it is: no other stack's job reads it.
+  return found.some(isProject) ? found.filter((id) => id !== "script") : found;
 }
 
 /** Folders that hold a project's by-products or samples rather than a project of the repository. */
@@ -75,8 +81,9 @@ export interface StackLayout {
 export async function detectStackLayout(root: string): Promise<StackLayout> {
   const atRoot = await detectStacks(root);
   const rooted: StackLayout = { stacks: atRoot, directories: {}, skipped: [] };
-  // loose scripts at the root do not make it a project: a monorepo often keeps some beside its folders
-  if (atRoot.some((id) => id !== "script")) return rooted;
+  // loose scripts or a Dockerfile at the root do not make it a project: a monorepo often keeps some beside
+  // its folders
+  if (atRoot.some(isProject)) return rooted;
 
   const directories: Partial<Record<StackId, string>> = {};
   const skipped: StackLayout["skipped"] = [];
@@ -90,11 +97,18 @@ export async function detectStackLayout(root: string): Promise<StackLayout> {
       else skipped.push({ stack: id, directory: folder });
     }
   }
-  let stacks = STACK_IDS.filter((id) => directories[id] !== undefined);
-  // nothing but scripts in the folders either: the root's own answer stands
-  if (atRoot.length > 0 && stacks.every((id) => id === "script")) return rooted;
+  // the root's own Dockerfile is the docker stack, at the root beside the projects in the folders; one in a
+  // folder is then a second, and is reported like any other
+  const dockerAtRoot = atRoot.includes("docker");
+  if (dockerAtRoot && directories.docker !== undefined) {
+    skipped.unshift({ stack: "docker", directory: directories.docker });
+    delete directories.docker;
+  }
+  let stacks = STACK_IDS.filter((id) => directories[id] !== undefined || (id === "docker" && dockerAtRoot));
+  // no project in the folders either: the root's own answer stands
+  if (atRoot.length > 0 && !stacks.some(isProject)) return rooted;
   // as at the root: a folder of scripts beside real projects is tooling, not a stack
-  if (stacks.length > 1 && directories.script !== undefined) {
+  if (stacks.some(isProject) && directories.script !== undefined) {
     stacks = stacks.filter((id) => id !== "script");
     delete directories.script;
   }

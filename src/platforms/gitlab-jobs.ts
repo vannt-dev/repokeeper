@@ -41,6 +41,11 @@ const once = (image: string, script: string[], more: Job = {}): Job => ({
 export const SHFMT_VERSION = "3.14.1";
 /** The version of PSScriptAnalyzer the script stack checks with; the same as in stack-script.yml. */
 export const SCRIPT_ANALYZER_VERSION = "1.25.0";
+/** The version of hadolint the docker stack checks with; the same as in .github/workflows/stack-docker.yml. */
+export const HADOLINT_VERSION = "2.15.1";
+
+/** A file name as one word of a shell command. */
+const quoted = (name: string) => (/^[\w./-]+$/.test(name) ? name : `'${name.replace(/'/g, `'\\''`)}'`);
 
 const SHFMT = `wget -q -O /usr/local/bin/shfmt https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64
 chmod +x /usr/local/bin/shfmt
@@ -211,6 +216,20 @@ export function stackJobs(stack: ResolvedStack): Array<{ key: string; job: Job }
     if (input["test-command"]) jobs.push({ key: "script-test", job: once(POWERSHELL_IMAGE, [input["test-command"]]) });
     return jobs;
   }
+  if (stack.id === "docker") {
+    const files = list(input, "dockerfiles").map(quoted).join(" ");
+    // the lint only: building an image needs a runner set up for it, which a project decides for itself.
+    // The -debian image has the shell a job's script runs in. As on GitHub: a .hadolint.yaml is the project's
+    // own choice of rules; without one, errors and warnings fail the job.
+    return [
+      {
+        key: "docker",
+        job: once(`hadolint/hadolint:v${HADOLINT_VERSION}-debian`, [
+          `if [ -f .hadolint.yaml ] || [ -f .hadolint.yml ]; then hadolint ${files}; else hadolint --failure-threshold warning ${files}; fi`,
+        ]),
+      },
+    ];
+  }
   return [];
 }
 
@@ -227,4 +246,5 @@ export const STACK_JOB_KEYS = [
   "kotlin",
   "php",
   "ruby",
+  "docker",
 ] as const;

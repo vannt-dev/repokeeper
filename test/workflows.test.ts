@@ -4,7 +4,9 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
+import { HADOLINT_VERSION } from "../src/platforms/gitlab-jobs.js";
 import { dartStack } from "../src/stacks/dart.js";
+import { dockerStack } from "../src/stacks/docker.js";
 import { dotnetStack } from "../src/stacks/dotnet.js";
 import { goStack } from "../src/stacks/go.js";
 import { javaStack } from "../src/stacks/java.js";
@@ -54,6 +56,7 @@ const REUSABLE = [
   "stack-rust.yml",
   "stack-php.yml",
   "stack-ruby.yml",
+  "stack-docker.yml",
 ];
 
 /** Fixture jobs in workflow-tests.yml and the pack that resolves each fixture. Each stack task appends its rows. */
@@ -71,6 +74,7 @@ const FIXTURES: { job: string; dir: string; pack: StackPack }[] = [
   { job: "kotlin", dir: "fixtures/kotlin", pack: kotlinStack },
   { job: "php", dir: "fixtures/php", pack: phpStack },
   { job: "ruby", dir: "fixtures/ruby", pack: rubyStack },
+  { job: "docker", dir: "fixtures/docker", pack: dockerStack },
 ];
 
 const read = (name: string) => readFileSync(`.github/workflows/${name}`, "utf8");
@@ -129,6 +133,32 @@ describe.each(FIXTURES)("fixture $dir", ({ job, dir, pack }) => {
     const ci = (await pack.resolve(dir)).ci;
     expect(script).toContain(`[${job}]="${dir}/ .github/workflows/${ci?.workflow}"`);
   });
+});
+
+it("stack-docker is run once more with the build on, which no fixture resolves to", () => {
+  const tests = workflow("workflow-tests.yml");
+  expect(tests.jobs["docker-build"]).toMatchObject({
+    needs: "changes",
+    if: "contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',docker-build,')",
+    uses: "./.github/workflows/stack-docker.yml",
+    with: { "working-directory": "fixtures/docker", dockerfiles: '["Dockerfile"]', build: "true" },
+  });
+  const build = workflow("stack-docker.yml").jobs.build;
+  expect(build?.if).toBe("inputs.build == 'true'");
+  // the image is built and left on the runner: nothing logs in and nothing is pushed
+  const commands = (build?.steps ?? []).map((step) => step.run ?? "").join("\n");
+  expect(commands).toContain('docker build --file "$file" .');
+  expect(commands).not.toMatch(/docker (push|login)/);
+});
+
+it("stack-docker fails on errors and warnings unless the repository has its own hadolint rules", () => {
+  const lint = workflow("stack-docker.yml").jobs.hadolint?.steps?.find((step) => step.name === "hadolint")?.run ?? "";
+  expect(lint).toContain("if [ -f .hadolint.yaml ] || [ -f .hadolint.yml ]; then");
+  expect(lint).toContain("threshold=(--failure-threshold warning)");
+});
+
+it("stack-docker checks with the hadolint the GitLab job uses", () => {
+  expect(read("stack-docker.yml")).toContain(`/download/v${HADOLINT_VERSION}/hadolint-linux-x86_64`);
 });
 
 it("workflow-tests cancels superseded pull request runs", () => {

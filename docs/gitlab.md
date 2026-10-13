@@ -31,6 +31,7 @@ container image instead of on a runner that a setup action prepares:
 | dart | `dart` | `dart:<version>`, or `ghcr.io/cirruslabs/flutter:<version>` for Flutter | |
 | java, kotlin | `java`, `kotlin` | `maven:3-eclipse-temurin-<version>`, `gradle:jdk<version>`, or `eclipse-temurin:<version>-jdk` when the project has its own `gradlew` | |
 | dotnet | `dotnet` | `mcr.microsoft.com/dotnet/sdk:<newest version>` | one job; the other SDKs in `versions` are installed beside it |
+| docker | `docker` | `hadolint/hadolint:<version>-debian` | the lint only; `build` has no effect |
 | script | `shell`, `powershell`, `script-test` | `koalaman/shellcheck-alpine`, `mcr.microsoft.com/dotnet/sdk` (for its PowerShell) | ShellCheck and shfmt; PSScriptAnalyzer; your `test` command |
 
 What to know:

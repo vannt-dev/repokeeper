@@ -271,7 +271,7 @@ describe("gitlab dependency updates", () => {
         {
           matchManagers: ["gitlabci"],
           matchFileNames: [".gitlab-ci.yml"],
-          matchPackageNames: ["node", "renovate/renovate", "mcr.microsoft.com/dotnet/sdk"],
+          matchPackageNames: ["node", "renovate/renovate", "mcr.microsoft.com/dotnet/sdk", "hadolint/hadolint"],
           enabled: false,
         },
       ],

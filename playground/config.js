@@ -25,6 +25,7 @@ export const STACKS = [
   { id: "kotlin", label: "Kotlin" },
   { id: "php", label: "PHP" },
   { id: "ruby", label: "Ruby" },
+  { id: "docker", label: "Dockerfile" },
 ];
 
 /** Stacks each platform has CI and releases for: all of them on both, today. */

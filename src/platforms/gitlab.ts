@@ -38,11 +38,16 @@ const ciKey = (module: string, key: string, value: unknown): Output => ({
 const TOOL_IMAGE = "node:24";
 
 /**
- * The images repokeeper's own jobs name with a version Renovate would move: the tool image, Renovate itself and
- * the .NET SDK of the dotnet and powershell jobs. Images named through a CI variable or by a moving tag
+ * The images repokeeper's own jobs name with a version Renovate would move: the tool image, Renovate itself,
+ * the .NET SDK of the dotnet and powershell jobs and hadolint. Images named through a CI variable or by a moving tag
  * (`latest`, `stable`) are not in its reach.
  */
-export const MANAGED_IMAGES = ["node", "renovate/renovate", "mcr.microsoft.com/dotnet/sdk"] as const;
+export const MANAGED_IMAGES = [
+  "node",
+  "renovate/renovate",
+  "mcr.microsoft.com/dotnet/sdk",
+  "hadolint/hadolint",
+] as const;
 
 /** The node stack's CI inputs, as the GitHub reusable workflow receives them, as a GitLab job. */
 function nodeJob(input: Record<string, string>): Record<string, unknown> {

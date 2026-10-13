@@ -54,6 +54,8 @@ jobs:
             [kotlin]="fixtures/kotlin/ .github/workflows/stack-java.yml"
             [php]="fixtures/php/ .github/workflows/stack-php.yml"
             [ruby]="fixtures/ruby/ .github/workflows/stack-ruby.yml"
+            [docker]="fixtures/docker/ .github/workflows/stack-docker.yml"
+            [docker-build]="fixtures/docker/ .github/workflows/stack-docker.yml"
           )
           files=$(git diff --name-only "$BASE" "$HEAD")
           run=","
@@ -203,3 +205,20 @@ jobs:
       ruby-versions: ${{ github.event_name == 'push' && '["3.3","3.4"]' || '["3.4"]' }}
       install-command: bundle install
       commands: '["bundle exec rake test"]'
+  docker:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',docker,')
+    uses: ./.github/workflows/stack-docker.yml
+    with:
+      working-directory: fixtures/docker
+      dockerfiles: '["Dockerfile"]'
+      build: "false"
+  # the build is off unless a repository asks for it, so the fixture is run once more with it on
+  docker-build:
+    needs: changes
+    if: contains(needs.changes.outputs.run, ',all,') || contains(needs.changes.outputs.run, ',docker-build,')
+    uses: ./.github/workflows/stack-docker.yml
+    with:
+      working-directory: fixtures/docker
+      dockerfiles: '["Dockerfile"]'
+      build: "true"

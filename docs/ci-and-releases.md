@@ -67,6 +67,37 @@ work:
 A repository with no release yet (manifest at `0.0.0`) gets `initial-version: 0.1.0`, so its first
 release is 0.1.0 rather than release-please's default 1.0.0.
 
+## Dockerfiles
+
+The docker stack is detected from a `Dockerfile` or `Containerfile` (also with a suffix, as in
+`Dockerfile.dev`, or named `<name>.Dockerfile`). Unlike scripts, it is kept beside another stack: a
+Node.js project with a Dockerfile gets both jobs. Its job runs [hadolint](https://github.com/hadolint/hadolint)
+on every Dockerfile at the stack's root, and Dependabot keeps the base images up to date (and the
+images of a compose file, when there is one).
+
+hadolint fails the job on errors and warnings; information-level rules are printed and do not fail
+it. To choose the rules yourself, add a `.hadolint.yaml` beside the Dockerfiles. The job then uses it
+as it is, so set `failure-threshold` in it unless you want every rule to fail the job:
+
+```yaml
+failure-threshold: warning
+ignored:
+  - DL3018   # pin versions in apk add
+```
+
+Two options, under `stack_options.docker`:
+
+```yaml
+stack_options:
+  docker:
+    files: [Dockerfile, docker/worker.Dockerfile]   # instead of the ones found at the root
+    build: true                                     # also `docker build` each one; nothing is pushed
+```
+
+The build is off unless you ask for it: a build may need a context, arguments or secrets a lint does
+not. When it is on, each file is built with the stack's folder as its context. On GitLab only the lint
+is written; building an image there needs a runner set up for it, and repokeeper says so.
+
 ## Drift check
 
 Set `modules.drift: true` to add a `repokeeper` job to `ci.yml` that runs `repokeeper check` with

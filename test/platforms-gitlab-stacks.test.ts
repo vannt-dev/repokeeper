@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { run } from "../src/cli.js";
 import { MANAGED_IMAGES } from "../src/platforms/gitlab.js";
-import { SCRIPT_ANALYZER_VERSION, SHFMT_VERSION } from "../src/platforms/gitlab-jobs.js";
+import { HADOLINT_VERSION, SCRIPT_ANALYZER_VERSION, SHFMT_VERSION } from "../src/platforms/gitlab-jobs.js";
 import { PACKAGE_VERSION, TOOL_VERSIONS } from "../src/version.js";
 import { capture, tempDir } from "./helpers.js";
 
@@ -86,6 +86,7 @@ const FIXTURES = [
   "kotlin",
   "dotnet",
   "script",
+  "docker",
 ] as const;
 
 describe("gitlab ci for the other stacks", () => {
@@ -260,6 +261,29 @@ describe("gitlab ci for the other stacks", () => {
     const github = await readFile(join(workflows, "stack-script.yml"), "utf8");
     expect(github).toContain(`shfmt_v${SHFMT_VERSION}_linux_amd64`);
     expect(github).toContain(`-RequiredVersion ${SCRIPT_ANALYZER_VERSION} `);
+  });
+
+  it("docker: hadolint on every Dockerfile, and no build", async () => {
+    const docker = await onGitlab("docker", { "Dockerfile.dev": "FROM alpine:3.22\n" });
+    expect(Object.keys(docker.ci)).toEqual(["workflow", "docker", "commits", "renovate", "release"]);
+    expect(docker.ci.docker).toEqual({
+      stage: "test",
+      image: `hadolint/hadolint:v${HADOLINT_VERSION}-debian`,
+      rules: FOR_CHANGES,
+      // a .hadolint.yaml is the project's own choice of rules; without one, errors and warnings fail the job
+      script: [
+        "if [ -f .hadolint.yaml ] || [ -f .hadolint.yml ]; then hadolint Dockerfile Dockerfile.dev; else hadolint --failure-threshold warning Dockerfile Dockerfile.dev; fi",
+      ],
+    });
+
+    // a build that was asked for is not written, and repokeeper says so
+    const building = await onGitlab("docker", {}, "  docker:\n    build: true");
+    expect(Object.keys(building.ci)).toEqual(["workflow", "docker", "commits", "renovate", "release"]);
+    const c = capture(building.dir);
+    expect(await run(["check"], c.io)).toBe(0);
+    expect(c.out).toContain(
+      "note: docker.build is ignored on gitlab: building an image there needs a runner set up for it",
+    );
   });
 
   // Renovate reads .gitlab-ci.yml too. An image one of repokeeper's jobs names with a version is the standard's

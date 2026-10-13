@@ -5,8 +5,8 @@ files, editor and gitignore settings, Dependabot, CI and releases — applied on
 the standard evolves.
 
 > Status: early development. Supported stacks: Node.js (including NestJS), Python, Dart and
-> Flutter, shell and PowerShell scripts, Java (Maven and Gradle), Kotlin, .NET, Go, Rust, PHP and
-> Ruby, each with CI and releases, on GitHub and on GitLab, plus repository settings through
+> Flutter, shell and PowerShell scripts, Java (Maven and Gradle), Kotlin, .NET, Go, Rust, PHP, Ruby
+> and Dockerfiles, each with CI and releases, on GitHub and on GitLab, plus repository settings through
 > `repokeeper github apply` and `repokeeper gitlab apply`. See the
 > [design](docs/superpowers/specs/2026-09-25-repokeeper-design.md).
 
@@ -111,7 +111,7 @@ Requires Node.js 22.12 or newer.
 
 | Guide | What it covers |
 | --- | --- |
-| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script linting, release-please, the drift check, update pull requests |
+| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script and Dockerfile linting, release-please, the drift check, update pull requests |
 | [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
 | [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings, security, branch protection |
 | [GitLab](docs/gitlab.md) | What differs on GitLab, the image each stack's job runs in, how releases write the version, the two jobs that need a token, and `repokeeper gitlab apply`: merge settings, branch protection, the Renovate schedule |
