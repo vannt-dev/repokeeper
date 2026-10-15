@@ -1,5 +1,7 @@
 # repokeeper
 
+[![Official vannt-dev build](https://vannt-dev.github.io/badges/official.svg)](https://vannt-dev.github.io/official.html)
+
 Keep every repository on one maintained standard: Conventional Commits, git hooks, community health
 files, editor and gitignore settings, Dependabot, CI and releases — applied once and kept in sync as
 the standard evolves.
