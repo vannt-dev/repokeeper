@@ -62,6 +62,19 @@ export const configSchema = {
             ref: { type: "string", pattern: "^[A-Za-z0-9_./-]+$" },
           },
         },
+        ci: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            // globs; a pull request that changes only matching paths skips the stack jobs
+            skip_when_only: {
+              type: "array",
+              minItems: 1,
+              uniqueItems: true,
+              items: { type: "string", pattern: "^[^'\\s]+$" },
+            },
+          },
+        },
         description: { type: "string" },
         topics: { type: "array", uniqueItems: true, items: { type: "string", pattern: "^[a-z0-9][a-z0-9-]{0,49}$" } },
         merge: {

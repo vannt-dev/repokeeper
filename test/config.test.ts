@@ -57,6 +57,20 @@ describe("parseConfig", () => {
     expect(errorOf(text)).toBe(".repokeeper.yml:7: modules.hoks is not a known key");
   });
 
+  it("refuses a required check on a stack job that docs-only pull requests skip", () => {
+    const base = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n";
+    const github =
+      "github:\n  ci:\n    skip_when_only: ['*.md']\n  protect:\n    required_checks: ['node / test (22)']\n";
+    expect(errorOf(base + github)).toMatch(/required_checks.*node \/ test \(22\).*skip_when_only/);
+  });
+
+  it("accepts skip_when_only next to required checks outside the stack jobs", () => {
+    const base = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n";
+    const github =
+      "github:\n  ci:\n    skip_when_only: ['*.md', 'docs/**']\n  protect:\n    required_checks: ['commits / commitlint']\n";
+    expect(parseConfig(base + github).github?.ci).toEqual({ skip_when_only: ["*.md", "docs/**"] });
+  });
+
   it("checks the github section key by key", () => {
     const base = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n";
     expect(errorOf(`${base}github:\n  merge:\n    squosh: true\n`)).toBe(

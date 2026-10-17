@@ -57,6 +57,36 @@ describe("ci module", () => {
     });
   });
 
+  it("skips the stack jobs of a pull request that changes only the listed paths, when asked", () => {
+    const ctx = makeContext({
+      config: { github: { ci: { skip_when_only: ["*.md", "docs/**"] } } },
+      modules: { drift: true },
+    });
+    const out = keys(ciModule.outputs(ctx));
+    expect(out["jobs.changes"]).toMatchObject({
+      "runs-on": "ubuntu-latest",
+      permissions: { "pull-requests": "read" },
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression
+      outputs: { code: "${{ steps.files.outputs.code }}" },
+    });
+    const script = (out["jobs.changes"] as { steps: { run: string }[] }).steps[0]?.run ?? "";
+    expect(script).toContain("grep -Evq '^([^/]*\\.md|docs/.*)$'");
+    expect(out["jobs.node"]).toMatchObject({
+      needs: "changes",
+      // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression
+      if: "${{ !cancelled() && needs.changes.outputs.code != 'false' }}",
+    });
+    // the required check and the drift check run on every pull request
+    expect(out["jobs.commits"]).not.toHaveProperty("needs");
+    expect(out["jobs.repokeeper"]).not.toHaveProperty("needs");
+  });
+
+  it("leaves the stack jobs ungated without the setting", () => {
+    const out = keys(ciModule.outputs(makeContext()));
+    expect(out["jobs.changes"]).toBeUndefined();
+    expect(out["jobs.node"]).not.toHaveProperty("needs");
+  });
+
   it("produces nothing when no job would run", () => {
     const ctx = makeContext({ modules: { commits: false }, stacks: [nodeResolved({ ci: null })] });
     expect(ciModule.outputs(ctx)).toEqual([]);

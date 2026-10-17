@@ -36,6 +36,32 @@ github:
   refers to this repository. The copies are yours: repokeeper writes them once and never changes
   them, so updates are yours to take, by comparing with a newer `repokeeper eject --to`.
 
+## Pull requests that change only documentation
+
+A pull request that only fixes a typo in the README still waits for every stack job. To skip
+them, list the paths that cannot change what the jobs test:
+
+```yaml
+github:
+  ci:
+    skip_when_only:
+      - "*.md"          # Markdown at the root only, as in GitHub's path filters
+      - "docs/**"
+```
+
+`ci.yml` then gets a `changes` job that asks the API for the pull request's files. When every
+file matches, the stack jobs are skipped; GitHub counts a skipped job as passed. The commit
+message check and the drift check still run on every pull request, and pushes to the default
+branch always run everything. If the `changes` job cannot tell (the API call fails, say), the stack
+jobs run.
+
+- Leave out any file your tests read. A test that checks the README's examples, for instance,
+  needs `README.md` kept out of the list.
+- A skipped job that calls a reusable workflow reports only its own name, never the checks inside
+  it (`node / test (22)`), so a required check on a stack job would wait forever. repokeeper refuses
+  such a `github.protect.required_checks` entry while `skip_when_only` is set.
+- GitHub only: GitLab's `rules:changes` can say "any of these changed", not "only these".
+
 ## Shell and PowerShell scripts
 
 The script stack runs ShellCheck and `shfmt -d` on `*.sh` (format with `shfmt -w` before pushing)
