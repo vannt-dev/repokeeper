@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/vannt-dev/repokeeper/compare/v0.9.0...v0.10.0) (2026-10-17)
+
+
+### Features
+
+* skip the stack jobs of docs-only pull requests, when asked ([#70](https://github.com/vannt-dev/repokeeper/issues/70)) ([72ed441](https://github.com/vannt-dev/repokeeper/commit/72ed4418d106239832afbf3ae6ea38d7c806e524))
+
 ## [0.9.0](https://github.com/vannt-dev/repokeeper/compare/v0.8.2...v0.9.0) (2026-10-13)
 
 
