@@ -42,6 +42,21 @@ export function parseConfig(text: string): RepokeeperConfig {
       `${CONFIG_FILE}:${lineOf(doc, lineCounter, [other])}: ${other} is not used on the ${typed.platform} platform`,
     );
   }
+  const skipped = typed.github?.ci?.skip_when_only;
+  const protect = typed.github?.protect;
+  if (skipped && protect) {
+    // a skipped job that calls a reusable workflow reports only its own name, never the checks inside it
+    const gated = protect.required_checks?.find((check) =>
+      typed.stacks.some((stack) => check === stack || check.startsWith(`${stack} / `)),
+    );
+    if (gated) {
+      throw new ConfigError(
+        `${CONFIG_FILE}:${lineOf(doc, lineCounter, ["github", "protect", "required_checks"])}: required_checks names ` +
+          `"${gated}", a stack job that github.ci.skip_when_only skips on docs-only pull requests; ` +
+          "such a pull request would wait for it forever",
+      );
+    }
+  }
   return withDefaults(typed);
 }
 

@@ -9,6 +9,15 @@ export interface GithubSettings {
    * setting of the repository on GitHub: `github apply` leaves it alone.
    */
   workflows?: WorkflowSource;
+  /** How the generated CI workflow runs. Not a setting of the repository either. */
+  ci?: {
+    /**
+     * Globs, read as GitHub's path filters. A pull request that changes only matching paths
+     * skips the stack jobs; the commit message and drift checks still run, so a required check
+     * on them is still reported. GitHub only: GitLab's `rules:changes` cannot say "only".
+     */
+    skip_when_only?: string[];
+  };
   description?: string;
   topics?: string[];
   merge?: { squash?: boolean; merge_commit?: boolean; rebase?: boolean; delete_branch_on_merge?: boolean };

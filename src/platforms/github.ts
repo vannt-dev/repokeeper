@@ -2,6 +2,7 @@ import { stringify } from "yaml";
 import { CONFIG_FILE } from "../config/load.js";
 import { defaultBranch, STACK_IDS, type StackId } from "../config/types.js";
 import { ConfigError } from "../errors.js";
+import { globsToRegex } from "../glob.js";
 import {
   type DependencyUpdate,
   MANAGED_HEADER,
@@ -257,10 +258,16 @@ export const githubPlatform: PlatformAdapter = {
   ciWorkflow(ctx: ModuleContext): Output[] {
     const path = ".github/workflows/ci.yml";
     const jobs: Output[] = [];
+    const skipWhenOnly = ctx.config.github?.ci?.skip_when_only;
+    const gated = skipWhenOnly !== undefined && ctx.stacks.some((stack) => stack.ci);
+    if (gated) {
+      jobs.push(workflowKey("ci", path, ["jobs", "changes"], changesJob(skipWhenOnly)));
+    }
     for (const stack of ctx.stacks) {
       if (stack.ci) {
         jobs.push(
           workflowKey("ci", path, ["jobs", stack.id], {
+            ...(gated ? { needs: "changes", if: SKIP_DOCS_ONLY } : {}),
             uses: workflowRef(ctx, stack.ci.workflow),
             with: stack.directory ? { ...stack.ci.with, "working-directory": stack.directory } : stack.ci.with,
           }),
@@ -435,3 +442,43 @@ export const githubPlatform: PlatformAdapter = {
     ];
   },
 };
+
+// Runs the stack job unless the changes job said "only listed paths". A changes job that failed
+// gives no answer, and then the stack job runs: an error never skips the tests.
+// biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+const SKIP_DOCS_ONLY = "${{ !cancelled() && needs.changes.outputs.code != 'false' }}";
+
+/**
+ * The job that tells whether a pull request changes anything outside `globs`. It asks the API for
+ * the pull request's files instead of checking out the history, which also works for a fork.
+ */
+function changesJob(globs: string[]): Record<string, unknown> {
+  return {
+    "runs-on": "ubuntu-latest",
+    permissions: { "pull-requests": "read" },
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+    outputs: { code: "${{ steps.files.outputs.code }}" },
+    steps: [
+      {
+        id: "files",
+        env: {
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+          GH_TOKEN: "${{ github.token }}",
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+          EVENT: "${{ github.event_name }}",
+          // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+          PR: "${{ github.event.pull_request.number }}",
+        },
+        run: [
+          "code=true",
+          'if [ "$EVENT" = pull_request ] && files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --jq \'.[].filename\'); then',
+          "  printf '%s\\n' \"$files\"",
+          `  if [ -n "$files" ] && ! printf '%s\\n' "$files" | grep -Evq '${globsToRegex(globs)}'; then code=false; fi`,
+          "fi",
+          'echo "code=$code" >> "$GITHUB_OUTPUT"',
+          "",
+        ].join("\n"),
+      },
+    ],
+  };
+}
