@@ -67,7 +67,11 @@ export const MODULES = [
   },
   { id: "deps", label: "Dependency updates", hint: "Dependabot (Renovate on GitLab)" },
   { id: "health", label: "Community files", hint: "LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CODEOWNERS" },
-  { id: "drift", label: "Drift check", hint: "a CI job that fails when a managed file was edited by hand" },
+  {
+    id: "drift",
+    label: "Drift check",
+    hint: "a CI job that fails when a managed file was edited by hand (a Dependabot bump of an action it uses is not drift)",
+  },
   {
     id: "autoupdate",
     label: "Update pull requests",
