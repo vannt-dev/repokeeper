@@ -312,7 +312,8 @@ describe("gitlab ci for the other stacks", () => {
       });
     }
     expect([...pinned].sort()).toEqual([...MANAGED_IMAGES].sort());
-  });
+    // one init per fixture: about 5 s here, and past the 20 s default on a busy Windows runner
+  }, 60_000);
 
   it("says that os has no effect, whichever stack names one", async () => {
     const python = await onGitlab("python", {}, "  python:\n    os: [ubuntu-latest, windows-latest]");
