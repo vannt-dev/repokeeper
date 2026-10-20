@@ -224,6 +224,48 @@ The switch is off unless you ask for it, and no preset turns it on: it deletes t
 It is for GitHub only. On GitLab it writes nothing, because GitLab has no Actions caches: a runner keeps
 its own cache and expires it there. It needs repokeeper 0.11.0 or newer.
 
+## Dependabot auto-merge
+
+Set `modules.automerge: true` and repokeeper writes `.github/workflows/automerge.yml`. On each of
+Dependabot's pull requests, its job calls the reusable workflow `dependabot-automerge.yml`. That
+workflow reads what the update is with
+[`dependabot/fetch-metadata`](https://github.com/dependabot/fetch-metadata) and, for a **patch or
+minor** update, turns on GitHub's auto-merge for the pull request. A **major** update is never
+auto-merged. A grouped pull request counts as its biggest update, so one major in the group leaves the
+whole group for you. Pull requests from anyone else are not touched.
+
+Auto-merge does not merge right away. GitHub merges the pull request only once everything the default
+branch requires has passed: the required checks, and the required reviews if the branch asks for any.
+A failing check keeps the pull request open. Because of this, the workflow turns auto-merge on only
+when the default branch requires something: a ruleset with a required check or with at least one
+required approval, or classic branch protection with required status checks. When nothing is required,
+auto-merge would merge before CI has run, so the run leaves it off and shows a warning. Set
+`github.protect.required_checks` (see [GitHub settings](github-settings.md)) to the checks that must
+pass, for example `["node / test (ubuntu-latest, 22)", "commits / commitlint"]`.
+
+Two things to set up, once:
+
+- **Allow auto-merge in the repository.** `repokeeper github apply` turns on the repository setting
+  (`allow_auto_merge`) whenever the module is on. You can also write it yourself as
+  `github.merge.auto_merge: true`. Setting it to `false` while the module is on is refused, because
+  the workflow would fail on every pull request.
+- **Optional: a token, as the Dependabot secret `AUTOMERGE_TOKEN`.** With the default `GITHUB_TOKEN`,
+  the push that the merge makes to the default branch starts no workflow: the `ci` run on the default
+  branch and the `release` workflow wait for the next push. A fine-grained token with read and write
+  access to contents and pull requests, saved under *Settings → Secrets and variables → Dependabot*
+  (not under Actions: a run that Dependabot starts sees only Dependabot secrets), makes the merge
+  start them as usual.
+
+The merge method is the first one `github.merge` allows, in this order: squash, merge commit, rebase.
+
+**Presets.** No preset turns the module on. If you turn it on with the `strict` preset, its ruleset
+still asks for one approving review on every pull request. Auto-merge then waits for a person to
+approve, because the workflow never approves anything itself. Under `strict`, the module saves you the
+merge click and nothing more.
+
+On GitLab the switch writes nothing: Renovate opens the updates there and has its own `automerge`
+setting. It needs repokeeper 0.11.0 or newer.
+
 ---
 
 Back to the [README](../README.md).

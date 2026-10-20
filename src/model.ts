@@ -164,6 +164,8 @@ export interface PlatformAdapter {
   codeScanning(ctx: ModuleContext): Output[];
   /** A workflow that deletes the CI caches nothing will read again; empty where the platform has none. */
   cacheCleanup(ctx: ModuleContext): Output[];
+  /** A workflow that turns on auto-merge for patch and minor dependency updates; empty where the platform has none. */
+  dependencyAutomerge(ctx: ModuleContext): Output[];
   /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[];
 }

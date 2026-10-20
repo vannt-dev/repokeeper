@@ -15,6 +15,7 @@ export const NEEDS_VERSION: string;
 export const AUTOUPDATE_NEEDS_VERSION: string;
 export const SECURITY_NEEDS_VERSION: string;
 export const CACHE_CLEANUP_NEEDS_VERSION: string;
+export const AUTOMERGE_NEEDS_VERSION: string;
 export const STACK_NEEDS_VERSION: Record<string, string>;
 export const STACKS: Array<{ id: string; label: string }>;
 export const PLATFORM_STACKS: Record<"github" | "gitlab", string[]>;
