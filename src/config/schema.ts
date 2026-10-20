@@ -27,6 +27,7 @@ export const configSchema = {
         drift: flag,
         autoupdate: flag,
         security: flag,
+        cache_cleanup: flag,
         health: {
           anyOf: [
             { const: false },

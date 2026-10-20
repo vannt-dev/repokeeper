@@ -16,6 +16,9 @@ export const AUTOUPDATE_NEEDS_VERSION = "0.9.0";
 /** The same for code scanning. */
 export const SECURITY_NEEDS_VERSION = "0.9.0";
 
+/** The same for the cache cleanup. */
+export const CACHE_CLEANUP_NEEDS_VERSION = "0.11.0";
+
 /** The same for the stacks added after the standard the file names: an earlier repokeeper does not know them. */
 export const STACK_NEEDS_VERSION = { docker: "0.9.0" };
 
@@ -71,6 +74,11 @@ export const MODULES = [
     label: "Code scanning",
     hint: "a workflow that runs CodeQL on pull requests, pushes and weekly (GitHub; free on public repositories)",
   },
+  {
+    id: "cache_cleanup",
+    label: "Cache cleanup",
+    hint: "a workflow that deletes the Actions caches of closed pull requests and stale copies (GitHub)",
+  },
 ];
 
 /** What stands in for a detail the form was left empty on; `problems` reports each one still in use. */
@@ -80,10 +88,20 @@ export const PLACEHOLDERS = {
   codeowners: "@your-name",
 };
 
-const ESSENTIAL_OFF = ["commits", "hooks", "release", "deps", "health", "drift", "autoupdate", "security"];
+const ESSENTIAL_OFF = [
+  "commits",
+  "hooks",
+  "release",
+  "deps",
+  "health",
+  "drift",
+  "autoupdate",
+  "security",
+  "cache_cleanup",
+];
 
 /** The switches no preset turns on. */
-const IN_NO_PRESET = ["drift", "autoupdate", "security"];
+const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup"];
 
 /** The module switches of a preset, `health` as a plain on or off. */
 export function presetModules(preset) {
@@ -157,6 +175,7 @@ export function buildConfig(input) {
       drift: modules.drift,
       ...(modules.autoupdate ? { autoupdate: true } : {}),
       ...(modules.security ? { security: true } : {}),
+      ...(modules.cache_cleanup ? { cache_cleanup: true } : {}),
       health: modules.health
         ? {
             license: health.license ? "MIT" : false,
@@ -228,6 +247,13 @@ export function problems(input) {
       input.platform === "github"
         ? `Code scanning needs repokeeper ${SECURITY_NEEDS_VERSION} or newer, and on a private repository GitHub Code Security.`
         : "Code scanning is written for GitHub only: on GitLab the switch writes nothing.",
+    );
+  }
+  if (input.modules.cache_cleanup) {
+    found.push(
+      input.platform === "github"
+        ? `The cache cleanup needs repokeeper ${CACHE_CLEANUP_NEEDS_VERSION} or newer.`
+        : "The cache cleanup is written for GitHub only: on GitLab the switch writes nothing.",
     );
   }
   if (input.platform === "github") {

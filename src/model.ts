@@ -162,6 +162,8 @@ export interface PlatformAdapter {
   standardUpdates(ctx: ModuleContext): Output[];
   /** A workflow that scans the code for vulnerabilities; empty where the platform has none written. */
   codeScanning(ctx: ModuleContext): Output[];
+  /** A workflow that deletes the CI caches nothing will read again; empty where the platform has none. */
+  cacheCleanup(ctx: ModuleContext): Output[];
   /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[];
 }

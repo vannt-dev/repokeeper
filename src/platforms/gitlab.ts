@@ -216,6 +216,11 @@ export const gitlabPlatform: PlatformAdapter = {
     return [];
   },
 
+  // Actions caches are GitHub's; a GitLab runner's cache lives with the runner and expires there
+  cacheCleanup(): Output[] {
+    return [];
+  },
+
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;

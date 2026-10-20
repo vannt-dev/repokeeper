@@ -81,7 +81,7 @@ alone. Every write command accepts `--dry-run`.
 Either way the choice ends up as plain `modules:` switches in `.repokeeper.yml`, which you can change
 later and apply with `repokeeper update`.
 
-Two switches are in no preset:
+These switches are in no preset:
 
 - `modules.autoupdate: true` adds a weekly workflow that runs `repokeeper update` with the newest
   repokeeper and opens a pull request when the standard has moved, so a new standard reaches every
@@ -92,6 +92,10 @@ Two switches are in no preset:
   [CI and releases](docs/ci-and-releases.md#code-scanning)). Secret scanning is a setting of the
   repository: `github.security.secret_scanning`, applied by `repokeeper github apply`
   ([GitHub settings](docs/github-settings.md)).
+- `modules.cache_cleanup: true` adds a workflow that deletes the Actions caches nothing will read
+  again: a pull request's caches when it closes, and in a weekly sweep the caches of closed pull
+  requests and the older copies of a cache that a newer run saved again (GitHub only; see
+  [CI and releases](docs/ci-and-releases.md#cache-cleanup)).
 
 You can also start from the file instead of from detection: put a `.repokeeper.yml` you wrote
 yourself in the repository and run `repokeeper init`. When the file is there and repokeeper has not
@@ -121,7 +125,7 @@ Requires Node.js 22.12 or newer.
 
 | Guide | What it covers |
 | --- | --- |
-| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script and Dockerfile linting, release-please, the drift check, update pull requests |
+| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script and Dockerfile linting, release-please, the drift check, update pull requests, code scanning, cache cleanup |
 | [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
 | [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings, security, branch protection |
 | [GitLab](docs/gitlab.md) | What differs on GitLab, the image each stack's job runs in, how releases write the version, the two jobs that need a token, and `repokeeper gitlab apply`: merge settings, branch protection, the Renovate schedule |

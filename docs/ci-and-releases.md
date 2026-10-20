@@ -198,6 +198,32 @@ Three things to know:
 
 It needs repokeeper 0.9.0 or newer.
 
+## Cache cleanup
+
+Actions caches share a 10 GB limit per repository. Over it, GitHub evicts caches on its own, including
+ones still in use. Set `modules.cache_cleanup: true` and repokeeper writes
+`.github/workflows/cache-cleanup.yml`, which deletes the caches nothing will read again:
+
+- **When a pull request closes** (merged or not), the caches it saved. Only that pull request could read
+  them. The workflow runs on `pull_request_target`, so a pull request from a fork gets a token that can
+  delete them too. Nothing is checked out and no code from the pull request runs: the job reads only the
+  pull request number.
+- **Once a week** (Sunday 03:23 UTC, or when you start it by hand), a sweep:
+  - deletes the caches of every closed pull request, including ones that closed before the workflow
+    existed;
+  - on each branch, groups the caches by kind (the key without its trailing hash) and deletes every copy
+    left unused for more than a day longer than the newest one. These are older copies that a newer run
+    saved again under a new key, after a lockfile changed for example. GitHub would drop them only after
+    7 days without use.
+
+The job uses only `gh` and `jq`, which the runner already has, with `GITHUB_TOKEN` and
+`actions: write`. It lists each deleted cache in the log and writes the count and the size to the run
+summary.
+
+The switch is off unless you ask for it, and no preset turns it on: it deletes things, so you decide.
+It is for GitHub only. On GitLab it writes nothing, because GitLab has no Actions caches: a runner keeps
+its own cache and expires it there. It needs repokeeper 0.11.0 or newer.
+
 ---
 
 Back to the [README](../README.md).

@@ -62,8 +62,12 @@ export function parseConfig(text: string): RepokeeperConfig {
 
 export function renderConfig(config: RepokeeperConfig): string {
   // written only when on: a file without the line is one every earlier repokeeper reads as well
-  const { autoupdate, security, ...modules } = config.modules;
-  const asked = { ...(autoupdate ? { autoupdate } : {}), ...(security ? { security } : {}) };
+  const { autoupdate, security, cache_cleanup, ...modules } = config.modules;
+  const asked = {
+    ...(autoupdate ? { autoupdate } : {}),
+    ...(security ? { security } : {}),
+    ...(cache_cleanup ? { cache_cleanup } : {}),
+  };
   const written = {
     ...config,
     modules: Object.keys(asked).length > 0 ? orderedModules({ ...modules, ...asked }) : modules,
@@ -109,6 +113,7 @@ function withDefaults(
       drift: modules.drift ?? false,
       autoupdate: modules.autoupdate ?? false,
       security: modules.security ?? false,
+      cache_cleanup: modules.cache_cleanup ?? false,
       health: modules.health,
     },
     owned: data.owned ?? [],

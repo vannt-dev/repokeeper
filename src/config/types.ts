@@ -41,6 +41,8 @@ export interface ModulesConfig {
   autoupdate: boolean;
   /** A workflow that runs code scanning (CodeQL) on pull requests, pushes and weekly; off unless asked for. */
   security: boolean;
+  /** A workflow that deletes the Actions caches nothing will read again; off unless asked for. */
+  cache_cleanup: boolean;
   health: HealthConfig | false;
 }
 
@@ -86,6 +88,7 @@ export function defaultConfig(input: {
       drift: false,
       autoupdate: false,
       security: false,
+      cache_cleanup: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],
