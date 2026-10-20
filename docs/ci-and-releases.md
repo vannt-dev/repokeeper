@@ -130,6 +130,11 @@ Set `modules.drift: true` to add a `repokeeper` job to `ci.yml` that runs `repok
 the version that wrote the standard, so a pull request that edits a managed file fails until the edit
 is resolved.
 
+One edit is not drift: a step of a managed job that uses the same action at another commit or tag, as
+a Dependabot pull request leaves it. `check` passes, and `update` keeps the newer version. Any other
+change to the job still counts, and so does the ref a job calls a reusable workflow at
+(`uses: …/.github/workflows/…@v0`), which repokeeper pins on purpose.
+
 ## Update pull requests
 
 Set `modules.autoupdate: true` and repokeeper writes `.github/workflows/repokeeper-autoupdate.yml`: every
@@ -265,6 +270,71 @@ merge click and nothing more.
 
 On GitLab the switch writes nothing: Renovate opens the updates there and has its own `automerge`
 setting. It needs repokeeper 0.11.0 or newer.
+
+## Publishing to npm and PyPI
+
+Set `modules.publish: true` and repokeeper adds a `publish` job to `.github/workflows/release.yml`. When
+the release job has created a release (the moment release-please's pull request is merged), the job
+checks out the release and publishes it:
+
+| Released stack | Registry | What the job runs |
+| --- | --- | --- |
+| `node` | npm | Node.js 24, the stack's install command (`npm ci`, `pnpm install`, ...), then `npm publish --access public` |
+| `python` | PyPI | `python -m build`, then [`pypa/gh-action-pypi-publish`](https://github.com/pypa/gh-action-pypi-publish) |
+
+It uses **trusted publishing**: the job has `id-token: write`, and the registry accepts the short-lived
+OIDC token that GitHub gives the run. No npm or PyPI token is stored anywhere. On npm, a package
+published this way from a public repository gets a
+[provenance statement](https://docs.npmjs.com/generating-provenance-statements) by itself. That is why
+the job does not pass `--provenance`: npm makes no provenance for a private repository and would refuse
+the flag there.
+
+The job is part of `release.yml` itself, not a reusable workflow. PyPI does not accept a reusable
+workflow as a trusted publisher, and npm checks the name of the calling workflow. So on both registries
+the trusted publisher names `release.yml`.
+
+**Set up once, before the first release** (until then the job fails):
+
+- **npm:** on npmjs.com, open the package → *Settings* → *Trusted publishing* → *GitHub Actions*, and
+  enter the owner, the repository and the workflow filename `release.yml`. Leave the environment empty.
+  Under the allowed actions, allow `npm publish`. A package that is not on npm yet has to be published
+  once by hand first, because the setting belongs to an existing package. The `repository.url` in
+  `package.json` has to point at this repository too.
+- **PyPI:** on pypi.org, under *Your projects* → *Publishing* (or, for a new project, *Add a pending
+  publisher*), add a GitHub publisher with the owner, the repository and the workflow `release.yml`,
+  and leave the environment empty.
+
+**The trap.** Every field is matched exactly and is case-sensitive, and the registry does not check the
+entry when you save it. When the owner, the repository or the workflow filename differs in any way (for
+example `release.yaml`, `publish.yml`, or an owner spelled with different capitals), the token is
+refused. npm then answers the publish with **404 Not Found** or **403 Forbidden**, which reads like a
+missing package or a missing permission rather than a mismatch. If the first publish fails that way,
+compare the entry with the repository's URL and `release.yml` letter by letter. PyPI states the reason
+more plainly (`invalid-publisher`), but the fix is the same.
+
+What else to know:
+
+- The job builds what the package itself builds: npm runs the package's `prepack` and `prepublishOnly`
+  scripts during `npm publish`, so put the build there. For Python, `python -m build` uses the build
+  backend in `pyproject.toml`.
+- It publishes the stack that is released, which is the first stack with a release type of its own (see
+  [Releases](#releases)). When that stack is neither `node` nor `python`, the switch writes nothing, and
+  `init`, `update` and `check` say so. The same happens when `modules.release` is off.
+- **Folders are not supported.** release-please names the outputs of a package in a folder after the
+  folder, and the release workflow does not pass those on. A stack under
+  `stack_options.<stack>.directory` is therefore not published, and the switch says so.
+- The actions the job uses are pinned to commits, the same ones repokeeper's own workflows use.
+  Dependabot keeps them up to date like any other action: a newer commit or tag of the same action is
+  not drift (see [Drift check](#drift-check)). While the job is still as repokeeper wrote it,
+  `repokeeper update` moves the pins itself.
+- No preset turns the module on: not every package is meant to be public, and the registry has to be
+  set up first.
+- A `publish` job you wrote yourself, as repokeeper's own `release.yml` has, is reported as unmanaged.
+  Adopt it with `--adopt`, or keep it by listing `.github/workflows/release.yml#jobs.publish` under
+  `owned`.
+- On GitLab the switch writes nothing: releases there are semantic-release's.
+
+It needs repokeeper 0.11.0 or newer.
 
 ---
 

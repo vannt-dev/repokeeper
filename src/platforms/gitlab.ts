@@ -226,6 +226,11 @@ export const gitlabPlatform: PlatformAdapter = {
     return [];
   },
 
+  // releases on GitLab are semantic-release's, whose own plugins publish; repokeeper does not write them yet
+  registryPublish(): Output[] {
+    return [];
+  },
+
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;

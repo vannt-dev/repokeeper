@@ -28,6 +28,7 @@ export const MODULE_IDS: ModuleId[] = [
   "security",
   "cache_cleanup",
   "automerge",
+  "publish",
 ];
 
 /**
@@ -39,6 +40,8 @@ export const MODULE_IDS: ModuleId[] = [
  * none either: it deletes things, so it is yours to ask for. Nor is Dependabot auto-merge
  * (`modules.automerge`): merging without a person is a choice the repository's owner makes. Under
  * `strict` it still waits for the review the ruleset requires, since the workflow never approves.
+ * Nor is publishing (`modules.publish`): it needs a trusted publisher set up on the registry first, and
+ * not every package is meant to be public.
  */
 export function applyPreset(config: RepokeeperConfig, preset: Preset): RepokeeperConfig {
   if (preset === "standard") return config;
@@ -56,6 +59,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         security: false,
         cache_cleanup: false,
         automerge: false,
+        publish: false,
         health: false,
       },
     };
@@ -127,6 +131,7 @@ export async function chooseModules(
       security: true,
       cache_cleanup: true,
       automerge: true,
+      publish: true,
       health,
     },
   };

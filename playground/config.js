@@ -20,6 +20,8 @@ export const SECURITY_NEEDS_VERSION = "0.9.0";
 export const CACHE_CLEANUP_NEEDS_VERSION = "0.11.0";
 /** The same for Dependabot auto-merge. */
 export const AUTOMERGE_NEEDS_VERSION = "0.11.0";
+/** The same for publishing. */
+export const PUBLISH_NEEDS_VERSION = "0.11.0";
 
 /** The same for the stacks added after the standard the file names: an earlier repokeeper does not know them. */
 export const STACK_NEEDS_VERSION = { docker: "0.9.0" };
@@ -86,6 +88,11 @@ export const MODULES = [
     label: "Dependabot auto-merge",
     hint: "auto-merge for patch and minor updates, after the required checks and reviews (GitHub)",
   },
+  {
+    id: "publish",
+    label: "Publishing",
+    hint: "a release job that publishes to npm or PyPI with trusted publishing, no token (GitHub)",
+  },
 ];
 
 /** What stands in for a detail the form was left empty on; `problems` reports each one still in use. */
@@ -106,10 +113,11 @@ const ESSENTIAL_OFF = [
   "security",
   "cache_cleanup",
   "automerge",
+  "publish",
 ];
 
 /** The switches no preset turns on. */
-const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup", "automerge"];
+const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup", "automerge", "publish"];
 
 /** The module switches of a preset, `health` as a plain on or off. */
 export function presetModules(preset) {
@@ -185,6 +193,7 @@ export function buildConfig(input) {
       ...(modules.security ? { security: true } : {}),
       ...(modules.cache_cleanup ? { cache_cleanup: true } : {}),
       ...(modules.automerge ? { automerge: true } : {}),
+      ...(modules.publish ? { publish: true } : {}),
       health: modules.health
         ? {
             license: health.license ? "MIT" : false,
@@ -270,6 +279,13 @@ export function problems(input) {
       input.platform === "github"
         ? `Dependabot auto-merge needs repokeeper ${AUTOMERGE_NEEDS_VERSION} or newer.`
         : "Dependabot auto-merge is written for GitHub only: on GitLab the switch writes nothing.",
+    );
+  }
+  if (input.modules.publish) {
+    found.push(
+      input.platform === "github"
+        ? `Publishing needs repokeeper ${PUBLISH_NEEDS_VERSION} or newer, a node or python stack at the root, and a trusted publisher on npmjs.com or pypi.org.`
+        : "Publishing is written for GitHub only: on GitLab the switch writes nothing.",
     );
   }
   if (input.platform === "github") {

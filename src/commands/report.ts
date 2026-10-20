@@ -5,12 +5,20 @@ import type { Io } from "../cli.js";
 import { duplicateTestRuns } from "../duplicates.js";
 import { crlfTrackedFiles } from "../git.js";
 import { describeOutput, type ModuleContext, nodeAtRoot, type Output } from "../model.js";
+import { publishPlan, type Registry } from "../modules/publish.js";
 import { overriddenAttributes } from "../sync/attributes.js";
 import type { RemovalAction } from "../sync/decide.js";
 import type { SyncResult } from "../sync/sync.js";
 import { TOOL_VERSIONS } from "../version.js";
 
 const AUTOMERGE_WORKFLOW = ".github/workflows/automerge.yml";
+
+/** What to enter on the registry once, so that it takes the release workflow's word for who publishes. */
+function trustedPublisherStep(ctx: ModuleContext, registry: Registry): string {
+  const repo = ctx.repo.owner ? `${ctx.repo.owner}/${ctx.repo.name}` : "this repository";
+  const where = registry === "npm" ? "npmjs.com (allow npm publish)" : "pypi.org (environment left empty)";
+  return `add a trusted publisher on ${where}: repository ${repo}, workflow release.yml, exactly; until then the publish job fails`;
+}
 
 export interface CommandOptions {
   dryRun: boolean;
@@ -104,6 +112,13 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
       "run `repokeeper github apply` to allow auto-merge; Dependabot's updates then merge once the checks and reviews the default branch requires have passed, and not at all while it requires none",
     );
   }
+  const publish = result.decisions.find(
+    (d) => d.output.module === "publish" && d.output.kind === "yaml" && d.action === "create",
+  );
+  if (publish && ctx.platform.id === "github") {
+    const plan = publishPlan(ctx);
+    if (!("problem" in plan)) steps.push(trustedPublisherStep(ctx, plan.registry));
+  }
   if (wrote(".gitattributes")) {
     const crlf = await crlfTrackedFiles(root);
     if (crlf.length > 0) {
@@ -142,6 +157,16 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
   }
   if (ctx.platform.id === "gitlab" && ctx.config.modules.automerge) {
     io.out("note: modules.automerge writes nothing on gitlab; Renovate's own automerge setting does that work there");
+  }
+  if (ctx.config.modules.publish) {
+    const plan = publishPlan(ctx);
+    if (ctx.platform.id === "gitlab") {
+      io.out(
+        "note: modules.publish writes nothing on gitlab; publishing is written for GitHub's release workflow only",
+      );
+    } else if ("problem" in plan) {
+      io.out(`note: modules.publish writes nothing: ${plan.problem}`);
+    }
   }
   if (ctx.platform.id === "gitlab") {
     for (const stack of ctx.stacks) {

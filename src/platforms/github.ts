@@ -10,9 +10,20 @@ import {
   type Output,
   type PlatformAdapter,
   type ReleaseInfo,
+  type ResolvedStack,
 } from "../model.js";
+import type { Registry } from "../modules/publish.js";
 import { readWorkflow } from "../templates.js";
-import { EXACT_WORKFLOW_REF, PACKAGE_VERSION, REUSABLE_REPO, WORKFLOW_REF } from "../version.js";
+import {
+  ACTION_PINS,
+  EXACT_WORKFLOW_REF,
+  PACKAGE_VERSION,
+  REUSABLE_REPO,
+  TOOL_VERSIONS,
+  WORKFLOW_REF,
+} from "../version.js";
+
+const pinned = (pin: (typeof ACTION_PINS)[keyof typeof ACTION_PINS]) => `${pin.action}@${pin.sha}`;
 
 const yamlFile = (module: string, path: string, data: unknown): Output => ({
   kind: "file",
@@ -463,6 +474,12 @@ export const githubPlatform: PlatformAdapter = {
     ];
   },
 
+  registryPublish(_ctx: ModuleContext, stack: ResolvedStack, registry: Registry): Output[] {
+    // A job of release.yml itself, not a reusable workflow: PyPI does not take a reusable workflow as a
+    // trusted publisher, and npm checks the name of the calling workflow. Both then name release.yml.
+    return [workflowKey("publish", ".github/workflows/release.yml", ["jobs", "publish"], publishJob(stack, registry))];
+  },
+
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[] {
     const path = ".github/workflows/release.yml";
     const seed = release.version ?? ctx.repo.releasedVersion ?? "0.0.0";
@@ -540,6 +557,49 @@ function mergeMethod(ctx: ModuleContext): "squash" | "merge" | "rebase" {
   if (merge.squash !== false) return "squash";
   if (merge.merge_commit !== false) return "merge";
   return "rebase";
+}
+
+/**
+ * The job that publishes a release once release-please has made it. The registry trusts the run through
+ * OIDC (`id-token: write`), so no token is stored; npm adds provenance by itself for a public repository.
+ */
+function publishJob(stack: ResolvedStack, registry: Registry): Record<string, unknown> {
+  const checkout = { uses: pinned(ACTION_PINS.checkout), with: { "persist-credentials": false } };
+  const common = {
+    needs: "release",
+    // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+    if: "${{ needs.release.outputs.release_created == 'true' }}",
+    "runs-on": "ubuntu-latest",
+    permissions: { contents: "read", "id-token": "write" },
+  };
+  if (registry === "pypi") {
+    return {
+      ...common,
+      steps: [
+        checkout,
+        { uses: pinned(ACTION_PINS.setupPython), with: { "python-version": "3.x" } },
+        { name: "Build", run: `python -m pip install build==${TOOL_VERSIONS.pypaBuild} && python -m build` },
+        { name: "Publish to PyPI", uses: pinned(ACTION_PINS.pypiPublish) },
+      ],
+    };
+  }
+  const manager = stack.ci?.with["package-manager"] ?? "npm";
+  return {
+    ...common,
+    ...(manager !== "npm" ? { env: { COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" } } : {}),
+    steps: [
+      checkout,
+      // Node.js 24 comes with an npm new enough (11.5.1 or later) to publish through OIDC
+      {
+        uses: pinned(ACTION_PINS.setupNode),
+        with: { "node-version": "24", "registry-url": "https://registry.npmjs.org" },
+      },
+      ...(manager !== "npm" ? [{ name: "Enable corepack", run: "corepack enable" }] : []),
+      { name: "Install dependencies", run: stack.ci?.with["install-command"] ?? "npm ci" },
+      // npm itself, whatever the package manager: it is the client that signs in through OIDC
+      { name: "Publish to npm", run: "npm publish --access public" },
+    ],
+  };
 }
 
 // Runs the stack job unless the changes job said "only listed paths". A changes job that failed
