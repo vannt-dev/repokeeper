@@ -12,7 +12,7 @@ import {
   type ReleaseInfo,
   type ResolvedStack,
 } from "../model.js";
-import { publishPlan, type Registry } from "../modules/publish.js";
+import type { Registry } from "../modules/publish.js";
 import { readWorkflow } from "../templates.js";
 import {
   ACTION_PINS,
@@ -24,12 +24,6 @@ import {
 } from "../version.js";
 
 const pinned = (pin: (typeof ACTION_PINS)[keyof typeof ACTION_PINS]) => `${pin.action}@${pin.sha}`;
-
-/** The actions the publish job for `registry` uses. */
-const PUBLISH_ACTIONS: Record<Registry, (typeof ACTION_PINS)[keyof typeof ACTION_PINS][]> = {
-  npm: [ACTION_PINS.checkout, ACTION_PINS.setupNode],
-  pypi: [ACTION_PINS.checkout, ACTION_PINS.setupPython, ACTION_PINS.pypiPublish],
-};
 
 const yamlFile = (module: string, path: string, data: unknown): Output => ({
   kind: "file",
@@ -282,13 +276,6 @@ export const githubPlatform: PlatformAdapter = {
     // Dependabot bump of it would edit a key repokeeper manages and show up as drift every time
     const origin = workflowOrigin(ctx);
     const pinnedWorkflows = !origin.local && origin.pinned ? [{ "dependency-name": `${origin.repo}*` }] : [];
-    // the same for the actions of the publish job, which repokeeper writes into release.yml itself
-    const plan = ctx.config.modules.publish ? publishPlan(ctx) : null;
-    const publishActions =
-      plan && "registry" in plan
-        ? PUBLISH_ACTIONS[plan.registry].map((pin) => ({ "dependency-name": pin.action }))
-        : [];
-    const leftAlone = [...pinnedWorkflows, ...publishActions];
     // workflows always live at the root, whatever folders the stacks are in
     const all = [...requested, { ecosystem: "github-actions", directory: "/" }];
     const unique = all.filter(
@@ -307,7 +294,7 @@ export const githubPlatform: PlatformAdapter = {
       ...(ecosystem === "npm"
         ? { ignore: [{ "dependency-name": "@types/node", "update-types": ["version-update:semver-major"] }] }
         : {}),
-      ...(ecosystem === "github-actions" && leftAlone.length > 0 ? { ignore: leftAlone } : {}),
+      ...(ecosystem === "github-actions" && pinnedWorkflows.length > 0 ? { ignore: pinnedWorkflows } : {}),
     }));
     return [yamlFile("deps", ".github/dependabot.yml", { version: 2, updates })];
   },

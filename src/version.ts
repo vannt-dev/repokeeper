@@ -25,8 +25,9 @@ export const TOOL_VERSIONS = {
 
 /**
  * Actions used by jobs written straight into a repository's own workflows (the publish job), pinned by
- * commit. Dependabot is told to leave them alone there, as a bump would edit a key repokeeper manages;
- * they move with the same actions in the reusable workflows here, which a test holds them to.
+ * commit. `repokeeper update` moves them while the key is as it wrote it; a newer commit of the same
+ * action, from Dependabot, is not drift. They move with the same actions in the reusable workflows
+ * here, which a test holds them to.
  */
 export const ACTION_PINS = {
   checkout: { action: "actions/checkout", sha: "3d3c42e5aac5ba805825da76410c181273ba90b1", version: "v7.0.1" },

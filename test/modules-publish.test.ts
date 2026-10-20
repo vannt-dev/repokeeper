@@ -145,19 +145,10 @@ describe("publish module", () => {
     expect(await notes(on())).toEqual([]);
   });
 
-  it("keeps Dependabot off the actions it writes into release.yml, which would show up as drift", () => {
-    expect(dependabotIgnore(makeContext())).toBeUndefined();
-    expect(dependabotIgnore(on())).toEqual([
-      { "dependency-name": "actions/checkout" },
-      { "dependency-name": "actions/setup-node" },
-    ]);
-    expect(dependabotIgnore(on({ config: { stacks: ["python"] }, stacks: [python] }))).toEqual([
-      { "dependency-name": "actions/checkout" },
-      { "dependency-name": "actions/setup-python" },
-      { "dependency-name": "pypa/gh-action-pypi-publish" },
-    ]);
-    // nothing to leave alone where nothing is written
-    expect(dependabotIgnore(on({ modules: { release: false } }))).toBeUndefined();
+  it("leaves Dependabot free to bump the actions it writes, here and in the repository's own workflows", () => {
+    // a version-only bump of them is not drift (see sync-action-versions.test.ts)
+    expect(dependabotIgnore(on())).toBeUndefined();
+    expect(dependabotIgnore(on({ config: { stacks: ["python"] }, stacks: [python] }))).toBeUndefined();
   });
 
   it("pins the actions it writes to the commits the reusable workflows here use", () => {

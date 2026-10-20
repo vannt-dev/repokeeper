@@ -130,6 +130,11 @@ Set `modules.drift: true` to add a `repokeeper` job to `ci.yml` that runs `repok
 the version that wrote the standard, so a pull request that edits a managed file fails until the edit
 is resolved.
 
+One edit is not drift: a step of a managed job that uses the same action at another commit or tag, as
+a Dependabot pull request leaves it. `check` passes, and `update` keeps the newer version. Any other
+change to the job still counts, and so does the ref a job calls a reusable workflow at
+(`uses: …/.github/workflows/…@v0`), which repokeeper pins on purpose.
+
 ## Update pull requests
 
 Set `modules.autoupdate: true` and repokeeper writes `.github/workflows/repokeeper-autoupdate.yml`: every
@@ -318,11 +323,10 @@ What else to know:
 - **Folders are not supported.** release-please names the outputs of a package in a folder after the
   folder, and the release workflow does not pass those on. A stack under
   `stack_options.<stack>.directory` is therefore not published, and the switch says so.
-- The actions the job uses are pinned to commits, the same ones repokeeper's own workflows use, and
-  `repokeeper update` moves them. The generated `dependabot.yml` tells Dependabot to leave those
-  actions alone (`actions/checkout`, `actions/setup-node`, or `actions/setup-python` and
-  `pypa/gh-action-pypi-publish`), because a bump would edit a key repokeeper manages and show up as
-  drift. This also means Dependabot no longer bumps those actions in workflows of your own.
+- The actions the job uses are pinned to commits, the same ones repokeeper's own workflows use.
+  Dependabot keeps them up to date like any other action: a newer commit or tag of the same action is
+  not drift (see [Drift check](#drift-check)). While the job is still as repokeeper wrote it,
+  `repokeeper update` moves the pins itself.
 - No preset turns the module on: not every package is meant to be public, and the registry has to be
   set up first.
 - A `publish` job you wrote yourself, as repokeeper's own `release.yml` has, is reported as unmanaged.
