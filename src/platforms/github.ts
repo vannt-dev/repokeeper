@@ -443,6 +443,26 @@ export const githubPlatform: PlatformAdapter = {
     ];
   },
 
+  dependencyAutomerge(ctx: ModuleContext): Output[] {
+    // not the name of the reusable workflow it calls: a repository that keeps its own copies has both
+    const path = ".github/workflows/automerge.yml";
+    return [
+      ...localWorkflows(ctx, "automerge", ["dependabot-automerge.yml"]),
+      workflowKey("automerge", path, ["name"], "automerge"),
+      workflowKey("automerge", path, ["on"], { pull_request: null }),
+      workflowKey("automerge", path, ["permissions"], { contents: "read" }),
+      workflowKey("automerge", path, ["jobs", "automerge"], {
+        uses: workflowRef(ctx, "dependabot-automerge.yml"),
+        // what the called job asks for; a run that Dependabot starts has a read-only token without it
+        permissions: { contents: "write", "pull-requests": "write" },
+        with: { "merge-method": mergeMethod(ctx) },
+        // a Dependabot secret: a run that Dependabot starts sees no Actions secret
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+        secrets: { token: "${{ secrets.AUTOMERGE_TOKEN }}" },
+      }),
+    ];
+  },
+
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[] {
     const path = ".github/workflows/release.yml";
     const seed = release.version ?? ctx.repo.releasedVersion ?? "0.0.0";
@@ -513,6 +533,14 @@ export const githubPlatform: PlatformAdapter = {
     ];
   },
 };
+
+/** The first merge method `github.merge` leaves allowed, squash first; GitHub allows all three by default. */
+function mergeMethod(ctx: ModuleContext): "squash" | "merge" | "rebase" {
+  const merge = ctx.config.github?.merge ?? {};
+  if (merge.squash !== false) return "squash";
+  if (merge.merge_commit !== false) return "merge";
+  return "rebase";
+}
 
 // Runs the stack job unless the changes job said "only listed paths". A changes job that failed
 // gives no answer, and then the stack job runs: an error never skips the tests.

@@ -28,6 +28,7 @@ export const configSchema = {
         autoupdate: flag,
         security: flag,
         cache_cleanup: flag,
+        automerge: flag,
         health: {
           anyOf: [
             { const: false },
@@ -81,7 +82,13 @@ export const configSchema = {
         merge: {
           type: "object",
           additionalProperties: false,
-          properties: { squash: flag, merge_commit: flag, rebase: flag, delete_branch_on_merge: flag },
+          properties: {
+            squash: flag,
+            merge_commit: flag,
+            rebase: flag,
+            delete_branch_on_merge: flag,
+            auto_merge: flag,
+          },
         },
         security: {
           type: "object",

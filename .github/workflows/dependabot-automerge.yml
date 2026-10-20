@@ -1,0 +1,59 @@
+name: dependabot-automerge
+
+on:
+  workflow_call:
+    inputs:
+      merge-method:
+        description: How the pull request is merged once its checks pass ("squash", "merge" or "rebase")
+        type: string
+        default: squash
+    secrets:
+      token:
+        description: >-
+          Token that turns auto-merge on, kept as a Dependabot secret. GITHUB_TOKEN is used when absent,
+          but then the push of the merge starts no workflow on the default branch.
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  automerge:
+    # only Dependabot's own pull requests; everyone else's are merged by a person
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      # a run that Dependabot starts gets a read-only token unless the workflow asks for these
+      contents: write
+      pull-requests: write
+    steps:
+      - id: metadata
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+      # a grouped pull request reports its highest update, so one major in the group keeps it all manual
+      - name: Turn on auto-merge for a patch or minor update
+        if: >-
+          steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+          steps.metadata.outputs.update-type == 'version-update:semver-minor'
+        env:
+          GH_TOKEN: ${{ secrets.token || github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+          METHOD: ${{ inputs.merge-method }}
+        run: |
+          set -euo pipefail
+          case "$METHOD" in squash | merge | rebase) ;; *) echo "::error::unknown merge-method $METHOD"; exit 1 ;; esac
+          # Auto-merge waits for what the branch requires. With nothing required it would merge at once,
+          # before CI has run, so it is turned on only behind a required check or a required review.
+          gated=$(gh api "repos/$GITHUB_REPOSITORY/rules/branches/$BASE" --jq '[.[] | select(
+            .type == "required_status_checks" or
+            (.type == "pull_request" and (.parameters.required_approving_review_count // 0) > 0)
+          )] | length')
+          if [ "$gated" = 0 ]; then
+            gated=$(gh api "repos/$GITHUB_REPOSITORY/branches/$BASE" \
+              --jq '(.protection.required_status_checks.contexts // []) | length')
+          fi
+          if [ "$gated" = 0 ]; then
+            echo "::warning::$BASE requires no check and no review, so auto-merge would merge at once; left off"
+            exit 0
+          fi
+          gh pr merge --auto "--$METHOD" "$PR_URL"

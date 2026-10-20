@@ -18,6 +18,8 @@ export const SECURITY_NEEDS_VERSION = "0.9.0";
 
 /** The same for the cache cleanup. */
 export const CACHE_CLEANUP_NEEDS_VERSION = "0.11.0";
+/** The same for Dependabot auto-merge. */
+export const AUTOMERGE_NEEDS_VERSION = "0.11.0";
 
 /** The same for the stacks added after the standard the file names: an earlier repokeeper does not know them. */
 export const STACK_NEEDS_VERSION = { docker: "0.9.0" };
@@ -79,6 +81,11 @@ export const MODULES = [
     label: "Cache cleanup",
     hint: "a workflow that deletes the Actions caches of closed pull requests and stale copies (GitHub)",
   },
+  {
+    id: "automerge",
+    label: "Dependabot auto-merge",
+    hint: "auto-merge for patch and minor updates, after the required checks and reviews (GitHub)",
+  },
 ];
 
 /** What stands in for a detail the form was left empty on; `problems` reports each one still in use. */
@@ -98,10 +105,11 @@ const ESSENTIAL_OFF = [
   "autoupdate",
   "security",
   "cache_cleanup",
+  "automerge",
 ];
 
 /** The switches no preset turns on. */
-const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup"];
+const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup", "automerge"];
 
 /** The module switches of a preset, `health` as a plain on or off. */
 export function presetModules(preset) {
@@ -176,6 +184,7 @@ export function buildConfig(input) {
       ...(modules.autoupdate ? { autoupdate: true } : {}),
       ...(modules.security ? { security: true } : {}),
       ...(modules.cache_cleanup ? { cache_cleanup: true } : {}),
+      ...(modules.automerge ? { automerge: true } : {}),
       health: modules.health
         ? {
             license: health.license ? "MIT" : false,
@@ -256,6 +265,13 @@ export function problems(input) {
         : "The cache cleanup is written for GitHub only: on GitLab the switch writes nothing.",
     );
   }
+  if (input.modules.automerge) {
+    found.push(
+      input.platform === "github"
+        ? `Dependabot auto-merge needs repokeeper ${AUTOMERGE_NEEDS_VERSION} or newer.`
+        : "Dependabot auto-merge is written for GitHub only: on GitLab the switch writes nothing.",
+    );
+  }
   if (input.platform === "github") {
     const { mode, ref, source } = input.workflows;
     if ((mode === "ref" || (mode === "mirror" && ref.trim() !== "")) && !/^[A-Za-z0-9_./-]+$/.test(ref.trim())) {
@@ -311,7 +327,9 @@ export function shortcutCommand(input) {
 export function fileCommands(input) {
   const config = buildConfig(input);
   const commands = ["npx repokeeper init"];
-  if (config.github?.protect || config.github?.security) commands.push("npx repokeeper github apply");
+  // auto-merge is a setting of the repository as well, which `github apply` turns on for the module
+  if (config.github?.protect || config.github?.security || (input.platform === "github" && input.modules.automerge))
+    commands.push("npx repokeeper github apply");
   if (config.gitlab?.protect) commands.push("npx repokeeper gitlab apply");
   return commands;
 }

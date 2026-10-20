@@ -58,6 +58,7 @@ const REUSABLE = [
   "stack-ruby.yml",
   "stack-docker.yml",
   "codeql.yml",
+  "dependabot-automerge.yml",
 ];
 
 /** Fixture jobs in workflow-tests.yml and the pack that resolves each fixture. Each stack task appends its rows. */

@@ -7,7 +7,7 @@
 github:
   description: Keeps repositories on one standard
   topics: [cli, conventional-commits]
-  merge: { squash: true, merge_commit: false, rebase: false, delete_branch_on_merge: true }
+  merge: { squash: true, merge_commit: false, rebase: false, delete_branch_on_merge: true, auto_merge: true }
   security:
     dependabot_alerts: true
     dependabot_security_updates: true
@@ -29,6 +29,10 @@ Secret scanning and push protection are free on a public repository, where GitHu
 on already. A private repository needs GitHub Secret Protection; without it GitHub refuses the change
 and `github apply` reports its answer. Code scanning is not a setting here but a workflow: see
 `modules.security` in [CI and releases](ci-and-releases.md#code-scanning).
+
+`merge.auto_merge` is the repository's "Allow auto-merge" setting. With `modules.automerge` on,
+`github apply` turns it on even when the line is not written; see
+[Dependabot auto-merge](ci-and-releases.md#dependabot-auto-merge).
 
 ---
 

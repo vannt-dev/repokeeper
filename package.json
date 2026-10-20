@@ -14,7 +14,8 @@
     ".github/workflows/release-please.yml",
     ".github/workflows/repokeeper-check.yml",
     ".github/workflows/repokeeper-update.yml",
-    ".github/workflows/codeql.yml"
+    ".github/workflows/codeql.yml",
+    ".github/workflows/dependabot-automerge.yml"
   ],
   "engines": {
     "node": ">=22.12.0"

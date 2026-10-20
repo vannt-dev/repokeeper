@@ -27,6 +27,7 @@ export const MODULE_IDS: ModuleId[] = [
   "autoupdate",
   "security",
   "cache_cleanup",
+  "automerge",
 ];
 
 /**
@@ -35,7 +36,9 @@ export const MODULE_IDS: ModuleId[] = [
  * A preset only switches on what works in every repository. Code scanning (`modules.security`) is in no
  * preset: it is free on a public repository and needs GitHub Code Security on a private one, where a
  * preset would otherwise leave a failing workflow behind. The cache cleanup (`modules.cache_cleanup`) is in
- * none either: it deletes things, so it is yours to ask for.
+ * none either: it deletes things, so it is yours to ask for. Nor is Dependabot auto-merge
+ * (`modules.automerge`): merging without a person is a choice the repository's owner makes. Under
+ * `strict` it still waits for the review the ruleset requires, since the workflow never approves.
  */
 export function applyPreset(config: RepokeeperConfig, preset: Preset): RepokeeperConfig {
   if (preset === "standard") return config;
@@ -52,6 +55,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         autoupdate: false,
         security: false,
         cache_cleanup: false,
+        automerge: false,
         health: false,
       },
     };
@@ -122,6 +126,7 @@ export async function chooseModules(
       autoupdate: true,
       security: true,
       cache_cleanup: true,
+      automerge: true,
       health,
     },
   };

@@ -260,6 +260,11 @@ describe("playground", () => {
     expect(shortcutCommand(custom)).toBeNull();
     expect(shortcutCommand({ ...filled("strict"), protect: { enabled: true, approvals: 2 } })).toBeNull();
     expect(shortcutCommand({ ...filled("standard"), security: true })).toBeNull();
+    const automerge = filled("standard");
+    automerge.modules.automerge = true;
+    expect(shortcutCommand(automerge)).toBeNull();
+    expect(fileCommands(automerge)).toEqual(["npx repokeeper init", "npx repokeeper github apply"]);
+    expect(fileCommands({ ...automerge, platform: "gitlab" })).toEqual(["npx repokeeper init"]);
     const unlicensed = filled("standard");
     unlicensed.health.license = false;
     expect(shortcutCommand(unlicensed)).toBeNull();

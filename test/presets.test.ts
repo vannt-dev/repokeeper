@@ -73,6 +73,7 @@ describe("presets", () => {
       autoupdate: false,
       security: false,
       cache_cleanup: false,
+      automerge: false,
       health: false,
     });
     expect(applyPreset(base(), "essential").github).toBeUndefined();
@@ -211,12 +212,13 @@ describe("init --interactive", () => {
     "Apply autoupdate?",
     "Apply security?",
     "Apply cache_cleanup?",
+    "Apply automerge?",
     "Write these files?",
   ];
 
   it("names the files of each part, takes the answers, and writes only what was chosen", async () => {
     const dir = await nodeRepo();
-    // editor, ignore, commits, hooks, ci, release, deps, health, drift, update, security, caches, write
+    // editor, ignore, commits, hooks, ci, release, deps, health, drift, update, security, caches, automerge, write
     const init = await repokeeper(
       dir,
       ["init", "--interactive"],
@@ -227,6 +229,7 @@ describe("init --interactive", () => {
         false,
         undefined,
         false,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -246,6 +249,7 @@ describe("init --interactive", () => {
     expect(init.out).toContain("autoupdate:\n  .github/workflows/repokeeper-autoupdate.yml");
     expect(init.out).toContain("security:\n  .github/workflows/security.yml");
     expect(init.out).toContain("cache_cleanup:\n  .github/workflows/cache-cleanup.yml");
+    expect(init.out).toContain("automerge:\n  .github/workflows/automerge.yml");
 
     const config = parse(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
     expect(config.modules).toMatchObject({ commits: true, hooks: false, ci: true, release: false, deps: true });
@@ -260,6 +264,9 @@ describe("init --interactive", () => {
     // and for the cache cleanup
     expect(config.modules).not.toHaveProperty("cache_cleanup");
     expect(existsSync(join(dir, ".github/workflows/cache-cleanup.yml"))).toBe(false);
+    // and for Dependabot auto-merge
+    expect(config.modules).not.toHaveProperty("automerge");
+    expect(existsSync(join(dir, ".github/workflows/automerge.yml"))).toBe(false);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
     expect(existsSync(join(dir, "release-please-config.json"))).toBe(false);
     expect(existsSync(join(dir, "commitlint.config.mjs"))).toBe(true);
@@ -287,6 +294,8 @@ describe("init --interactive", () => {
     answers[10] = true;
     // and the cache cleanup
     answers[11] = true;
+    // and Dependabot auto-merge
+    answers[12] = true;
     await repokeeper(other, ["init", "-i", "--preset", "essential"], answers);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.autoupdate).toBe(true);
     expect(existsSync(join(other, ".github/workflows/repokeeper-autoupdate.yml"))).toBe(true);
@@ -294,6 +303,8 @@ describe("init --interactive", () => {
     expect(existsSync(join(other, ".github/workflows/security.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.cache_cleanup).toBe(true);
     expect(existsSync(join(other, ".github/workflows/cache-cleanup.yml"))).toBe(true);
+    expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.automerge).toBe(true);
+    expect(existsSync(join(other, ".github/workflows/automerge.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.health.license).toBe("MIT");
     expect(existsSync(join(other, "CONTRIBUTING.md"))).toBe(true);
   });

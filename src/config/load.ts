@@ -57,16 +57,24 @@ export function parseConfig(text: string): RepokeeperConfig {
       );
     }
   }
+  if (typed.modules?.automerge === true && typed.github?.merge?.auto_merge === false) {
+    // the workflow would fail on every Dependabot pull request
+    throw new ConfigError(
+      `${CONFIG_FILE}:${lineOf(doc, lineCounter, ["github", "merge", "auto_merge"])}: github.merge.auto_merge is false, ` +
+        "but modules.automerge needs auto-merge allowed; remove the line, or switch the module off",
+    );
+  }
   return withDefaults(typed);
 }
 
 export function renderConfig(config: RepokeeperConfig): string {
   // written only when on: a file without the line is one every earlier repokeeper reads as well
-  const { autoupdate, security, cache_cleanup, ...modules } = config.modules;
+  const { autoupdate, security, cache_cleanup, automerge, ...modules } = config.modules;
   const asked = {
     ...(autoupdate ? { autoupdate } : {}),
     ...(security ? { security } : {}),
     ...(cache_cleanup ? { cache_cleanup } : {}),
+    ...(automerge ? { automerge } : {}),
   };
   const written = {
     ...config,
@@ -114,6 +122,7 @@ function withDefaults(
       autoupdate: modules.autoupdate ?? false,
       security: modules.security ?? false,
       cache_cleanup: modules.cache_cleanup ?? false,
+      automerge: modules.automerge ?? false,
       health: modules.health,
     },
     owned: data.owned ?? [],

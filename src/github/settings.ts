@@ -20,7 +20,14 @@ export interface GithubSettings {
   };
   description?: string;
   topics?: string[];
-  merge?: { squash?: boolean; merge_commit?: boolean; rebase?: boolean; delete_branch_on_merge?: boolean };
+  merge?: {
+    squash?: boolean;
+    merge_commit?: boolean;
+    rebase?: boolean;
+    delete_branch_on_merge?: boolean;
+    /** Lets a pull request merge by itself once what the branch requires has passed. */
+    auto_merge?: boolean;
+  };
   security?: {
     dependabot_alerts?: boolean;
     dependabot_security_updates?: boolean;
@@ -85,6 +92,7 @@ const MERGE_FIELDS = {
   merge_commit: "allow_merge_commit",
   rebase: "allow_rebase_merge",
   delete_branch_on_merge: "delete_branch_on_merge",
+  auto_merge: "allow_auto_merge",
 } as const;
 
 interface RuleSummary {

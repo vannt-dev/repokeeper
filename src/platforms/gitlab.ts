@@ -221,6 +221,11 @@ export const gitlabPlatform: PlatformAdapter = {
     return [];
   },
 
+  // Renovate opens the updates on GitLab, with its own `automerge`; repokeeper does not write it yet
+  dependencyAutomerge(): Output[] {
+    return [];
+  },
+
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;

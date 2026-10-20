@@ -10,6 +10,8 @@ import type { RemovalAction } from "../sync/decide.js";
 import type { SyncResult } from "../sync/sync.js";
 import { TOOL_VERSIONS } from "../version.js";
 
+const AUTOMERGE_WORKFLOW = ".github/workflows/automerge.yml";
+
 export interface CommandOptions {
   dryRun: boolean;
   force: boolean;
@@ -97,6 +99,11 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
       "code scanning is free on a public repository; on a private one, turn on GitHub Code Security, or the security workflow fails when it uploads its results",
     );
   }
+  if (result.decisions.some((d) => d.output.path === AUTOMERGE_WORKFLOW && d.action === "create")) {
+    steps.push(
+      "run `repokeeper github apply` to allow auto-merge; Dependabot's updates then merge once the checks and reviews the default branch requires have passed, and not at all while it requires none",
+    );
+  }
   if (wrote(".gitattributes")) {
     const crlf = await crlfTrackedFiles(root);
     if (crlf.length > 0) {
@@ -132,6 +139,9 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
     io.out(
       "note: modules.cache_cleanup writes nothing on gitlab; there are no Actions caches there, and runner caches expire on the runner",
     );
+  }
+  if (ctx.platform.id === "gitlab" && ctx.config.modules.automerge) {
+    io.out("note: modules.automerge writes nothing on gitlab; Renovate's own automerge setting does that work there");
   }
   if (ctx.platform.id === "gitlab") {
     for (const stack of ctx.stacks) {

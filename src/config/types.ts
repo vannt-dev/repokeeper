@@ -43,6 +43,8 @@ export interface ModulesConfig {
   security: boolean;
   /** A workflow that deletes the Actions caches nothing will read again; off unless asked for. */
   cache_cleanup: boolean;
+  /** A workflow that turns on auto-merge for Dependabot's patch and minor updates; off unless asked for. */
+  automerge: boolean;
   health: HealthConfig | false;
 }
 
@@ -89,6 +91,7 @@ export function defaultConfig(input: {
       autoupdate: false,
       security: false,
       cache_cleanup: false,
+      automerge: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],
