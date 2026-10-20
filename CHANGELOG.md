@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.0](https://github.com/vannt-dev/repokeeper/compare/v0.10.0...v0.11.0) (2026-10-20)
+
+
+### Features
+
+* a newer version of an action a managed step uses is not drift ([3987e52](https://github.com/vannt-dev/repokeeper/commit/3987e52ce8afe11c15cfdd463d55628c049907b3))
+* auto-merge Dependabot's patch and minor updates, when asked ([43719d3](https://github.com/vannt-dev/repokeeper/commit/43719d3415de0151cc30ee526b2d1ba0e2f6df22))
+* auto-merge Dependabot's patch and minor updates, when asked ([52c1a35](https://github.com/vannt-dev/repokeeper/commit/52c1a354a6476432bab87833dbfdd2e8881725cc))
+* delete Actions caches nothing will read again, when asked ([5a19c3f](https://github.com/vannt-dev/repokeeper/commit/5a19c3f1b517343baf14abae40b81687e7ce354c))
+* delete Actions caches nothing will read again, when asked ([cada235](https://github.com/vannt-dev/repokeeper/commit/cada235ef2dceff2eafdb530d940a5498c946bd7))
+* publish releases to npm and PyPI through trusted publishing, when asked ([a50597c](https://github.com/vannt-dev/repokeeper/commit/a50597c828b2cef95271c215d55d5fc9cbd1bf4c))
+* publish releases to npm and PyPI through trusted publishing, when asked ([768e626](https://github.com/vannt-dev/repokeeper/commit/768e6262c4f84c5fc6c2ed3d84e9f5d33c58fbc6))
+
 ## [0.10.0](https://github.com/vannt-dev/repokeeper/compare/v0.9.0...v0.10.0) (2026-10-17)
 
 
