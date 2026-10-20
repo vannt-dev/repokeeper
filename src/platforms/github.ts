@@ -90,6 +90,39 @@ if [ -z "$ids" ]; then echo "::notice::no held runs for $BRANCH"; fi
 for id in $ids; do gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve"; done
 `;
 
+/**
+ * Deletes the Actions caches nothing will read again. With a pull request number (the pull request has
+ * closed): that pull request's caches, which only it could read. Without (the weekly sweep): the caches of
+ * every closed pull request, and on each branch, per kind of cache (its key without the trailing hash),
+ * the copies left unused for a day longer than the newest one. GitHub itself drops them only after 7 days.
+ */
+const CACHE_CLEANUP = String.raw`set -euo pipefail
+gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" --jq '.actions_caches[]' > caches.json
+if [ -n "$PR_NUMBER" ]; then
+  open='[]'
+  filter='map(select(.ref == "refs/pull/'"$PR_NUMBER"'/merge"))'
+else
+  open=$(gh pr list --state open --limit 500 --json number --jq '[.[] | "refs/pull/\(.number)/merge"]')
+  filter='
+    def t: .last_accessed_at[0:19] + "Z" | fromdateiso8601;
+    def kind: .key | sub("[-_|][0-9a-f]{12,}.*$"; "");
+    map(select(.ref | startswith("refs/pull/")) | select(.ref as $r | $open | index($r) | not))
+    + (map(select(.ref | startswith("refs/pull/") | not))
+       | group_by([.ref, kind])
+       | map((map(t) | max) as $newest | map(select(t < $newest - 86400)))
+       | add // [])'
+fi
+jq -rs --argjson open "$open" "$filter | .[] | [.id, .size_in_bytes, .ref, .key] | @tsv" caches.json > delete.tsv
+deleted=0; bytes=0
+while IFS=$'\t' read -r id size ref key; do
+  if gh api -X DELETE "repos/$GH_REPO/actions/caches/$id" > /dev/null; then
+    echo "deleted $ref $key"
+    deleted=$((deleted + 1)); bytes=$((bytes + size))
+  fi
+done < delete.tsv
+echo "### Deleted $deleted caches, $((bytes / 1048576)) MB" >> "$GITHUB_STEP_SUMMARY"
+`;
+
 interface CodeqlLanguage {
   /** CodeQL's identifier of the language. */
   language: string;
@@ -368,6 +401,44 @@ export const githubPlatform: PlatformAdapter = {
         // what the called job asks for; a called workflow cannot have more than its caller grants
         permissions: { "security-events": "write", actions: "read", contents: "read" },
         with: { languages: JSON.stringify(codeqlLanguages(ctx)) },
+      }),
+    ];
+  },
+
+  cacheCleanup(): Output[] {
+    const path = ".github/workflows/cache-cleanup.yml";
+    return [
+      workflowKey("cache_cleanup", path, ["name"], "cache cleanup"),
+      workflowKey("cache_cleanup", path, ["on"], {
+        // not pull_request: a pull request from a fork would get a token that cannot delete caches
+        pull_request_target: { types: ["closed"] },
+        // also catches the pull requests that closed before the workflow existed
+        schedule: [{ cron: "23 3 * * 0" }],
+        workflow_dispatch: null,
+      }),
+      // nothing is checked out: the job reads only the pull request number
+      workflowKey("cache_cleanup", path, ["permissions"], {
+        actions: "write",
+        contents: "read",
+        "pull-requests": "read",
+      }),
+      workflowKey("cache_cleanup", path, ["jobs", "cleanup"], {
+        "runs-on": "ubuntu-latest",
+        "timeout-minutes": 10,
+        steps: [
+          {
+            name: "Delete caches nothing will read again",
+            env: {
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              GH_TOKEN: "${{ github.token }}",
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              GH_REPO: "${{ github.repository }}",
+              // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+              PR_NUMBER: "${{ github.event.pull_request.number }}",
+            },
+            run: CACHE_CLEANUP,
+          },
+        ],
       }),
     ];
   },

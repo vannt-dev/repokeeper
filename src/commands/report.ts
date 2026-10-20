@@ -128,6 +128,11 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
       "note: modules.security writes nothing on gitlab; include GitLab's SAST and Secret-Detection templates in .gitlab-ci.yml instead",
     );
   }
+  if (ctx.platform.id === "gitlab" && ctx.config.modules.cache_cleanup) {
+    io.out(
+      "note: modules.cache_cleanup writes nothing on gitlab; there are no Actions caches there, and runner caches expire on the runner",
+    );
+  }
   if (ctx.platform.id === "gitlab") {
     for (const stack of ctx.stacks) {
       const os = stack.ci?.with.os;

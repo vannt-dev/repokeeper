@@ -26,6 +26,7 @@ export const MODULE_IDS: ModuleId[] = [
   "drift",
   "autoupdate",
   "security",
+  "cache_cleanup",
 ];
 
 /**
@@ -33,7 +34,8 @@ export const MODULE_IDS: ModuleId[] = [
  *
  * A preset only switches on what works in every repository. Code scanning (`modules.security`) is in no
  * preset: it is free on a public repository and needs GitHub Code Security on a private one, where a
- * preset would otherwise leave a failing workflow behind.
+ * preset would otherwise leave a failing workflow behind. The cache cleanup (`modules.cache_cleanup`) is in
+ * none either: it deletes things, so it is yours to ask for.
  */
 export function applyPreset(config: RepokeeperConfig, preset: Preset): RepokeeperConfig {
   if (preset === "standard") return config;
@@ -49,6 +51,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         drift: false,
         autoupdate: false,
         security: false,
+        cache_cleanup: false,
         health: false,
       },
     };
@@ -118,6 +121,7 @@ export async function chooseModules(
       drift: true,
       autoupdate: true,
       security: true,
+      cache_cleanup: true,
       health,
     },
   };

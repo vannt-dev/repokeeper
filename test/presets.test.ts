@@ -72,6 +72,7 @@ describe("presets", () => {
       drift: false,
       autoupdate: false,
       security: false,
+      cache_cleanup: false,
       health: false,
     });
     expect(applyPreset(base(), "essential").github).toBeUndefined();
@@ -209,12 +210,13 @@ describe("init --interactive", () => {
     "Apply drift?",
     "Apply autoupdate?",
     "Apply security?",
+    "Apply cache_cleanup?",
     "Write these files?",
   ];
 
   it("names the files of each part, takes the answers, and writes only what was chosen", async () => {
     const dir = await nodeRepo();
-    // editor, ignore, commits, hooks, ci, release, deps, health, drift, update, security, write
+    // editor, ignore, commits, hooks, ci, release, deps, health, drift, update, security, caches, write
     const init = await repokeeper(
       dir,
       ["init", "--interactive"],
@@ -225,6 +227,7 @@ describe("init --interactive", () => {
         false,
         undefined,
         false,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -242,6 +245,7 @@ describe("init --interactive", () => {
     expect(init.out).toContain("a job that fails a pull request when a managed file was edited by hand");
     expect(init.out).toContain("autoupdate:\n  .github/workflows/repokeeper-autoupdate.yml");
     expect(init.out).toContain("security:\n  .github/workflows/security.yml");
+    expect(init.out).toContain("cache_cleanup:\n  .github/workflows/cache-cleanup.yml");
 
     const config = parse(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
     expect(config.modules).toMatchObject({ commits: true, hooks: false, ci: true, release: false, deps: true });
@@ -253,6 +257,9 @@ describe("init --interactive", () => {
     // and for code scanning
     expect(config.modules).not.toHaveProperty("security");
     expect(existsSync(join(dir, ".github/workflows/security.yml"))).toBe(false);
+    // and for the cache cleanup
+    expect(config.modules).not.toHaveProperty("cache_cleanup");
+    expect(existsSync(join(dir, ".github/workflows/cache-cleanup.yml"))).toBe(false);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
     expect(existsSync(join(dir, "release-please-config.json"))).toBe(false);
     expect(existsSync(join(dir, "commitlint.config.mjs"))).toBe(true);
@@ -261,32 +268,40 @@ describe("init --interactive", () => {
 
   it("starts from the preset: Enter all the way through essential keeps it essential", async () => {
     const dir = await nodeRepo();
-    const init = await repokeeper(dir, ["init", "-i", "--preset", "essential"], new Array(12).fill(undefined));
+    const init = await repokeeper(
+      dir,
+      ["init", "-i", "--preset", "essential"],
+      new Array(QUESTIONS.length).fill(undefined),
+    );
     expect(init.code).toBe(0);
     expect(init.asked).toEqual(QUESTIONS);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
     expect(existsSync(join(dir, ".github/workflows/ci.yml"))).toBe(true);
     // a part the preset left out can still be taken, with its usual settings
     const other = await nodeRepo();
-    const answers = new Array(12).fill(undefined);
+    const answers = new Array(QUESTIONS.length).fill(undefined);
     answers[7] = true;
     // and the update pull requests can be asked for here
     answers[9] = true;
     // and code scanning
     answers[10] = true;
+    // and the cache cleanup
+    answers[11] = true;
     await repokeeper(other, ["init", "-i", "--preset", "essential"], answers);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.autoupdate).toBe(true);
     expect(existsSync(join(other, ".github/workflows/repokeeper-autoupdate.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.security).toBe(true);
     expect(existsSync(join(other, ".github/workflows/security.yml"))).toBe(true);
+    expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.cache_cleanup).toBe(true);
+    expect(existsSync(join(other, ".github/workflows/cache-cleanup.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.health.license).toBe("MIT");
     expect(existsSync(join(other, "CONTRIBUTING.md"))).toBe(true);
   });
 
   it("writes nothing when the last question is answered no", async () => {
     const dir = await nodeRepo();
-    const answers = new Array(12).fill(undefined);
-    answers[11] = false;
+    const answers = new Array(QUESTIONS.length).fill(undefined);
+    answers[QUESTIONS.length - 1] = false;
     const init = await repokeeper(dir, ["init", "--interactive"], answers);
     expect(init.code).toBe(0);
     expect(init.out).toContain("nothing written");
@@ -296,9 +311,13 @@ describe("init --interactive", () => {
 
   it("with --dry-run asks about the parts and shows the result without the last question", async () => {
     const dir = await nodeRepo();
-    const init = await repokeeper(dir, ["init", "--interactive", "--dry-run"], new Array(11).fill(undefined));
+    const init = await repokeeper(
+      dir,
+      ["init", "--interactive", "--dry-run"],
+      new Array(QUESTIONS.length - 1).fill(undefined),
+    );
     expect(init.code).toBe(0);
-    expect(init.asked).toEqual(QUESTIONS.slice(0, 11));
+    expect(init.asked).toEqual(QUESTIONS.slice(0, -1));
     expect(init.out).toContain("dry run: nothing written");
     expect(existsSync(join(dir, ".repokeeper.yml"))).toBe(false);
   });
