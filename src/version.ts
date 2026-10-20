@@ -19,6 +19,24 @@ export const TOOL_VERSIONS = {
   // 10.x needs conventional-changelog-writer 9, and semantic-release 25's notes generator bundles 8
   conventionalCommitsPreset: "9.3.1",
   renovate: "44.149.2",
+  // PyPA's `build`, which the publish job builds a Python package with
+  pypaBuild: "1.6.1",
+} as const;
+
+/**
+ * Actions used by jobs written straight into a repository's own workflows (the publish job), pinned by
+ * commit. Dependabot is told to leave them alone there, as a bump would edit a key repokeeper manages;
+ * they move with the same actions in the reusable workflows here, which a test holds them to.
+ */
+export const ACTION_PINS = {
+  checkout: { action: "actions/checkout", sha: "3d3c42e5aac5ba805825da76410c181273ba90b1", version: "v7.0.1" },
+  setupNode: { action: "actions/setup-node", sha: "949feb2413d6458794dcd2491c4babbbce0c15c1", version: "v7.1.0" },
+  setupPython: { action: "actions/setup-python", sha: "5fda3b95a4ea91299a34e894583c3862153e4b97", version: "v7.0.0" },
+  pypiPublish: {
+    action: "pypa/gh-action-pypi-publish",
+    sha: "dc37677b2e1c63e2034f94d8a5b11f265b73ba33",
+    version: "v1.14.2",
+  },
 } as const;
 
 /** Repository hosting the reusable workflows that generated CI files call. */

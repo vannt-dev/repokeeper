@@ -29,6 +29,7 @@ export const configSchema = {
         security: flag,
         cache_cleanup: flag,
         automerge: flag,
+        publish: flag,
         health: {
           anyOf: [
             { const: false },

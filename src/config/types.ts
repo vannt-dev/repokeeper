@@ -45,6 +45,8 @@ export interface ModulesConfig {
   cache_cleanup: boolean;
   /** A workflow that turns on auto-merge for Dependabot's patch and minor updates; off unless asked for. */
   automerge: boolean;
+  /** A job in the release workflow that publishes each release to npm or PyPI; off unless asked for. */
+  publish: boolean;
   health: HealthConfig | false;
 }
 
@@ -92,6 +94,7 @@ export function defaultConfig(input: {
       security: false,
       cache_cleanup: false,
       automerge: false,
+      publish: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],

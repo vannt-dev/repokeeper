@@ -9,6 +9,7 @@ import { editorconfigModule } from "./editorconfig.js";
 import { gitignoreModule } from "./gitignore.js";
 import { healthModule } from "./health.js";
 import { hooksModule } from "./hooks.js";
+import { publishModule } from "./publish.js";
 import { releaseModule } from "./release.js";
 import { securityModule } from "./security.js";
 
@@ -25,4 +26,5 @@ export const MODULES: Module[] = [
   securityModule,
   cacheCleanupModule,
   automergeModule,
+  publishModule,
 ];
