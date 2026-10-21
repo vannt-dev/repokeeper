@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/vannt-dev/repokeeper/compare/v0.11.0...v0.12.0) (2026-10-21)
+
+
+### Features
+
+* **dotnet:** test on the .NET 10 SDK by default ([#79](https://github.com/vannt-dev/repokeeper/issues/79)) ([156030c](https://github.com/vannt-dev/repokeeper/commit/156030cbaca864d5f5d4f8ac7ca79472757f593d))
+
 ## [0.11.0](https://github.com/vannt-dev/repokeeper/compare/v0.10.0...v0.11.0) (2026-10-20)
 
 
