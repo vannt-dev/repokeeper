@@ -6,7 +6,7 @@ on:
       dotnet-versions:
         description: JSON list of .NET SDK versions, all installed side by side
         type: string
-        default: '["8.0","9.0"]'
+        default: '["10.0"]'
       os:
         description: JSON list of runner labels
         type: string

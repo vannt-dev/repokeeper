@@ -178,7 +178,7 @@ export function stackJobs(stack: ResolvedStack): Array<{ key: string; job: Job }
     return [{ key: stack.id, job: perVersion(image, "JAVA_VERSION", list(input, "java-versions"), commands) }];
   }
   if (stack.id === "dotnet") {
-    const [newest = "9.0", ...older] = newestFirst(list(input, "dotnet-versions"));
+    const [newest = "10.0", ...older] = newestFirst(list(input, "dotnet-versions"));
     return [
       {
         key: "dotnet",
