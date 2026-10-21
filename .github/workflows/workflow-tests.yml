@@ -19,7 +19,7 @@ concurrency:
 # version; the full matrix, Windows included, runs on every push to main.
 jobs:
   changes:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -77,7 +77,7 @@ jobs:
     uses: ./.github/workflows/stack-node.yml
     with:
       working-directory: fixtures/node
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       node-versions: ${{ github.event_name == 'push' && '["22","24"]' || '["24"]' }}
       package-manager: npm
       install-command: npm ci
@@ -89,7 +89,7 @@ jobs:
     uses: ./.github/workflows/stack-node.yml
     with:
       working-directory: fixtures/node-pnpm
-      os: '["ubuntu-latest"]'
+      os: '["ubuntu-26.04"]'
       node-versions: '["24"]'
       package-manager: pnpm
       install-command: pnpm install --frozen-lockfile
@@ -101,7 +101,7 @@ jobs:
     uses: ./.github/workflows/stack-python.yml
     with:
       working-directory: fixtures/python
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       python-versions: ${{ github.event_name == 'push' && '["3.11","3.13"]' || '["3.13"]' }}
       manager: pip
       install-command: python -m pip install -e . && python -m pip install ruff pytest
@@ -112,7 +112,7 @@ jobs:
     uses: ./.github/workflows/stack-dart.yml
     with:
       working-directory: fixtures/dart
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       sdk-versions: '["stable"]'
       flutter: "false"
       install-command: dart pub get
@@ -132,7 +132,7 @@ jobs:
     uses: ./.github/workflows/stack-java.yml
     with:
       working-directory: fixtures/java-maven
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       java-versions: ${{ github.event_name == 'push' && '["17","21"]' || '["21"]' }}
       build-tool: maven
       gradle-version: ""
@@ -143,7 +143,7 @@ jobs:
     uses: ./.github/workflows/stack-java.yml
     with:
       working-directory: fixtures/java-gradle
-      os: '["ubuntu-latest"]'
+      os: '["ubuntu-26.04"]'
       java-versions: '["21"]'
       build-tool: gradle
       gradle-version: current
@@ -154,7 +154,7 @@ jobs:
     uses: ./.github/workflows/stack-dotnet.yml
     with:
       working-directory: fixtures/dotnet
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       dotnet-versions: '["8.0","9.0"]'
       commands: '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]'
   go:
@@ -163,7 +163,7 @@ jobs:
     uses: ./.github/workflows/stack-go.yml
     with:
       working-directory: fixtures/go
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       go-versions: '["stable"]'
       commands: '["test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }","go vet ./...","go test ./..."]'
   rust:
@@ -172,7 +172,7 @@ jobs:
     uses: ./.github/workflows/stack-rust.yml
     with:
       working-directory: fixtures/rust
-      os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
+      os: ${{ github.event_name == 'push' && '["ubuntu-26.04","windows-latest"]' || '["ubuntu-26.04"]' }}
       rust-versions: '["stable"]'
       commands: '["cargo fmt --all --check","cargo clippy --workspace --all-targets -- -D warnings","cargo test --workspace --all-targets","cargo test --workspace --doc"]'
   kotlin:
@@ -181,7 +181,7 @@ jobs:
     uses: ./.github/workflows/stack-java.yml
     with:
       working-directory: fixtures/kotlin
-      os: '["ubuntu-latest"]'
+      os: '["ubuntu-26.04"]'
       java-versions: '["17"]'
       build-tool: gradle
       gradle-version: current
@@ -192,7 +192,7 @@ jobs:
     uses: ./.github/workflows/stack-php.yml
     with:
       working-directory: fixtures/php
-      os: '["ubuntu-latest"]'
+      os: '["ubuntu-26.04"]'
       php-versions: ${{ github.event_name == 'push' && '["8.3","8.4"]' || '["8.4"]' }}
       install-command: composer install --no-interaction --no-progress
       commands: '["composer validate --no-check-publish","composer test"]'
@@ -202,7 +202,7 @@ jobs:
     uses: ./.github/workflows/stack-ruby.yml
     with:
       working-directory: fixtures/ruby
-      os: '["ubuntu-latest"]'
+      os: '["ubuntu-26.04"]'
       ruby-versions: ${{ github.event_name == 'push' && '["3.3","3.4"]' || '["3.4"]' }}
       install-command: bundle install
       commands: '["bundle exec rake test"]'

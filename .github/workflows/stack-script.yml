@@ -26,7 +26,7 @@ permissions:
 jobs:
   shell:
     if: inputs.shell-scripts == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     defaults:
@@ -72,7 +72,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-26.04, windows-latest]
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read

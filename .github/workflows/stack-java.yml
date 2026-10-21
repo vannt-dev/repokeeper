@@ -10,7 +10,7 @@ on:
       os:
         description: JSON list of runner labels
         type: string
-        default: '["ubuntu-latest"]'
+        default: '["ubuntu-26.04"]'
       build-tool:
         description: maven or gradle
         type: string

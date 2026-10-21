@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJSON(inputs.languages) }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       # code scanning alerts are security events
       security-events: write

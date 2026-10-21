@@ -10,7 +10,7 @@ on:
       os:
         description: JSON list of runner labels
         type: string
-        default: '["ubuntu-latest"]'
+        default: '["ubuntu-26.04"]'
       package-manager:
         description: npm, pnpm or yarn
         type: string

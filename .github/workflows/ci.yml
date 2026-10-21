@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/stack-node.yml
     with:
       node-versions: '["22","24"]'
-      os: '["ubuntu-latest","windows-latest"]'
+      os: '["ubuntu-26.04","windows-latest"]'
       package-manager: npm
       install-command: npm ci
       cache: npm

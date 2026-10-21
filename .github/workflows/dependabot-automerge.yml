@@ -21,7 +21,7 @@ jobs:
   automerge:
     # only Dependabot's own pull requests; everyone else's are merged by a person
     if: github.event.pull_request.user.login == 'dependabot[bot]'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       # a run that Dependabot starts gets a read-only token unless the workflow asks for these
       contents: write

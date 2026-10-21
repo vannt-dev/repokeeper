@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   hadolint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     defaults:
@@ -48,7 +48,7 @@ jobs:
             xargs -0 --no-run-if-empty "$RUNNER_TEMP/hadolint" "${threshold[@]}"
   build:
     if: inputs.build == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     defaults:
