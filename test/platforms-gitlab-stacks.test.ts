@@ -230,6 +230,9 @@ describe("gitlab ci for the other stacks", () => {
         "<Project>\n  <PropertyGroup>\n    <Version>0.1.0</Version>\n  </PropertyGroup>\n</Project>\n",
     });
     expectBump(versioned, ["Directory.Build.props"]);
+    // with no versions set, the .NET 10 SDK alone
+    expect(versioned.ci.dotnet?.image).toBe("mcr.microsoft.com/dotnet/sdk:10.0");
+    expect(versioned.ci.dotnet?.script?.[0]).toBe("dotnet restore");
   });
 
   it("script: a job per kind of script, with the versions the GitHub workflow pins", async () => {

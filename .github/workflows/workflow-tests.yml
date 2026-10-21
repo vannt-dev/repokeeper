@@ -155,7 +155,7 @@ jobs:
     with:
       working-directory: fixtures/dotnet
       os: ${{ github.event_name == 'push' && '["ubuntu-latest","windows-latest"]' || '["ubuntu-latest"]' }}
-      dotnet-versions: '["8.0","9.0"]'
+      dotnet-versions: '["10.0"]'
       commands: '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]'
   go:
     needs: changes

@@ -63,7 +63,7 @@ export const dotnetStack: StackPack = {
       ci: {
         workflow: "stack-dotnet.yml",
         with: {
-          "dotnet-versions": JSON.stringify(stringList("dotnet", options, "versions") ?? ["8.0", "9.0"]),
+          "dotnet-versions": JSON.stringify(stringList("dotnet", options, "versions") ?? ["10.0"]),
           os: JSON.stringify(stringList("dotnet", options, "os") ?? ["ubuntu-latest"]),
           commands: JSON.stringify([
             `dotnet restore${target}`,

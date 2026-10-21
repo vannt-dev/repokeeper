@@ -22,7 +22,7 @@ it("restores, checks formatting, builds and tests, and releases through Director
   expect(stack.ci).toEqual({
     workflow: "stack-dotnet.yml",
     with: {
-      "dotnet-versions": '["8.0","9.0"]',
+      "dotnet-versions": '["10.0"]',
       os: '["ubuntu-latest"]',
       commands:
         '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]',
