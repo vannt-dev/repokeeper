@@ -128,6 +128,50 @@ projects, which the dotnet CLI can't build.
 
 Requires Node.js 22.12 or newer.
 
+## Status across repositories
+
+`repokeeper github status` looks at every repository of a GitHub user or organization and lists the
+ones that need attention. It runs from any folder and writes nothing:
+
+```text
+$ repokeeper github status --owner vannt-dev
+repo               prs  alerts    ci    unreleased                    graph
+aspnet             0    0         none  no tags                       stale (2)
+dynamic-field-kit  0    0         ok    6 since v1.12.0 (1 feat/fix)  ok
+web-ban-hang       0    1 medium  none  no tags                       ok
+
+stale dependency graph (GitHub still reads old versions; a commit touching the manifest makes GitHub re-read it):
+  aspnet: nuget Microsoft.Owin 3.0.1 in the graph, 4.2.2 in OnlineShop/packages.config
+  aspnet: nuget bootstrap 3.0.0 in the graph, 3.4.1 in OnlineShop/packages.config
+
+55 of 58 repositories clean, 3 need attention
+```
+
+For each repository that is not archived (forks only with `--forks`) it reads:
+
+- **prs**: open pull requests, with the combined state of their check runs.
+- **alerts**: open Dependabot alerts by severity; `off` when Dependabot alerts are disabled.
+- **ci**: the latest finished run of each workflow on the default branch. Dependabot's update jobs,
+  Pages deployments, pull request runs and cancelled or skipped runs are left out; `none` when nothing
+  ran. A failure is listed with its date and link, since it may be an old run of a workflow that no
+  longer runs on that branch.
+- **unreleased**: commits on the default branch since the latest release (or the highest version
+  tag), and how many of them are `feat`, `fix`, `perf`, `revert` or breaking, the commits
+  release-please would release. Only those count as needing attention.
+- **graph**: whether GitHub's dependency graph is stale. It compares the npm and NuGet versions of the
+  graph's SBOM with the lockfiles on the default branch (`package-lock.json`, `npm-shrinkwrap.json`,
+  `pnpm-lock.yaml`, `packages.config`) and reports a package the graph names at a version no lockfile
+  contains while a lockfile has it at another one. GitHub then still raises Dependabot alerts for the
+  old version, and they never close; any commit that touches the manifest makes GitHub read it again.
+
+`--all` lists every repository, `--json` prints the whole result for a script, and `--exit-code`
+exits 1 when a repository needs attention, for a scheduled workflow. `--owner` defaults to the user
+the token belongs to; for another owner only public repositories are listed unless the owner is an
+organization the token can read. The token comes from `GITHUB_TOKEN` or `gh auth token`; reading
+Dependabot alerts needs a token with access to them (the `GITHUB_TOKEN` of a workflow sees only its
+own repository). A repository that cannot be read, or hits the rate limit, is reported under
+`could not check` and the others carry on.
+
 ## Guides
 
 | Guide | What it covers |

@@ -38,6 +38,14 @@ export interface CommandOptions {
   to?: string;
   /** Folder of each stack given as `--stack id:folder` (init). */
   stackDirectories?: Partial<Record<import("../config/types.js").StackId, string>>;
+  /** User or organization whose repositories to read (github status). */
+  owner?: string;
+  /** List every repository, not only those that need attention (github status). */
+  all?: boolean;
+  /** Include forks (github status). */
+  forks?: boolean;
+  /** Exit 1 when a repository needs attention (github status). */
+  exitCode?: boolean;
   /** Platform to use instead of detection from the origin remote (init). */
   platform?: import("../config/types.js").PlatformId;
 }

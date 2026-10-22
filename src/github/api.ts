@@ -5,6 +5,8 @@ import { ApiError } from "../errors.js";
 export interface ApiResponse {
   status: number;
   data: unknown;
+  /** The `Link` header, which cursor-paginated lists use to name the next page. */
+  link?: string;
 }
 
 /** The slice of the GitHub REST API `github apply` needs; tests pass a fake. */
@@ -51,7 +53,8 @@ export function restApi(token: string, base = "https://api.github.com"): GitHubA
       } catch {
         data = text;
       }
-      return { status: response.status, data };
+      const link = response.headers.get("link");
+      return { status: response.status, data, ...(link ? { link } : {}) };
     },
   };
 }
