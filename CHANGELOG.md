@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/vannt-dev/repokeeper/compare/v0.12.0...v0.13.0) (2026-10-22)
+
+
+### Features
+
+* add github status, a report across an owner's repositories ([#82](https://github.com/vannt-dev/repokeeper/issues/82)) ([8303c04](https://github.com/vannt-dev/repokeeper/commit/8303c043e91f93ff643e9db6ecc7b8e75703196b))
+
 ## [0.12.0](https://github.com/vannt-dev/repokeeper/compare/v0.11.0...v0.12.0) (2026-10-21)
 
 
