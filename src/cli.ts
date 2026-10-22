@@ -11,6 +11,7 @@ import { gitlabApplyCommand } from "./commands/gitlab.js";
 import { initCommand } from "./commands/init.js";
 import { PRESET_SUMMARY, PRESETS, type Preset } from "./commands/presets.js";
 import type { CommandOptions } from "./commands/report.js";
+import { githubStatusCommand } from "./commands/status.js";
 import { updateCommand } from "./commands/update.js";
 import { STACK_IDS, type StackId } from "./config/types.js";
 import { RepokeeperError, UsageError } from "./errors.js";
@@ -38,6 +39,8 @@ export const USAGE = [
   "  check   report drift from the standard without writing (exit 1 on drift)",
   "  update  move to the standard of this repokeeper version and resync",
   "  github apply  diff the GitHub settings against .repokeeper.yml and apply them",
+  "  github status  what needs attention across an owner's repositories: open pull requests, Dependabot",
+  "                alerts, failing CI, unreleased changes, a stale dependency graph (runs from anywhere)",
   "  gitlab apply  the same for a GitLab project: settings, branch protection, the Renovate schedule",
   "  eject   copy the reusable CI workflows into this repository and call them from there",
   "  bump <version>  write a release's version into the stack's version files (the GitLab release job runs it)",
@@ -53,7 +56,11 @@ export const USAGE = [
   "  -i, --interactive  ask which parts to apply, naming the files of each, and confirm before writing (init)",
   "  --relock         rebuild .repokeeper/lock.json from the current files (init)",
   "  --to <folder>    write every reusable workflow into another repository's folder instead (eject)",
-  "  --json           machine-readable output (check)",
+  "  --json           machine-readable output (check, github status)",
+  "  --owner <name>   user or organization whose repositories to read (github status; default: the token's user)",
+  "  --all            list every repository, not only those that need attention (github status)",
+  "  --forks          include forks (github status)",
+  "  --exit-code      exit 1 when a repository needs attention (github status)",
   "  -y, --yes        apply without asking (github apply, gitlab apply)",
   "  -v, --version    print the version",
 ].join("\n");
@@ -79,6 +86,10 @@ export async function run(argv: string[], io: Io): Promise<number> {
         relock: { type: "boolean", default: false },
         to: { type: "string" },
         json: { type: "boolean", default: false },
+        owner: { type: "string" },
+        all: { type: "boolean", default: false },
+        forks: { type: "boolean", default: false },
+        "exit-code": { type: "boolean", default: false },
         yes: { type: "boolean", short: "y", default: false },
         version: { type: "boolean", short: "v", default: false },
         help: { type: "boolean", short: "h", default: false },
@@ -117,6 +128,11 @@ export async function run(argv: string[], io: Io): Promise<number> {
       throw new UsageError("--preset and --interactive are only for init");
     }
     const to = values.to as string | undefined;
+    const owner = values.owner as string | undefined;
+    const status = command === "github" && positionals[1] === "status";
+    if ((owner !== undefined || values.all || values.forks || values["exit-code"]) && !status) {
+      throw new UsageError("--owner, --all, --forks and --exit-code are only for github status");
+    }
     if (to !== undefined && command !== "eject") throw new UsageError("--to is only for eject");
     const options: CommandOptions = {
       dryRun: values["dry-run"] as boolean,
@@ -131,6 +147,10 @@ export async function run(argv: string[], io: Io): Promise<number> {
       yes: values.yes as boolean,
       ...(platform !== undefined ? { platform } : {}),
       ...(to !== undefined ? { to } : {}),
+      ...(owner !== undefined ? { owner } : {}),
+      all: values.all as boolean,
+      forks: values.forks as boolean,
+      exitCode: values["exit-code"] as boolean,
       ...(preset !== undefined ? { preset: preset as Preset } : {}),
       interactive: values.interactive as boolean,
     };
@@ -140,7 +160,12 @@ export async function run(argv: string[], io: Io): Promise<number> {
     if (command === "eject") return await ejectCommand(io.cwd, options, io);
     if (command === "bump") return await bumpCommand(io.cwd, positionals[1], options, io);
     if (command === "github") {
-      if (positionals[1] !== "apply") throw new UsageError("usage: repokeeper github apply [--dry-run] [--yes]");
+      if (status) return await githubStatusCommand(options, io);
+      if (positionals[1] !== "apply") {
+        throw new UsageError(
+          "usage: repokeeper github apply [--dry-run] [--yes] | repokeeper github status [--owner <name>]",
+        );
+      }
       return await githubApplyCommand(io.cwd, options, io);
     }
     if (command === "gitlab") {
