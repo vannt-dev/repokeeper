@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/vannt-dev/repokeeper/compare/v0.13.1...v0.14.0) (2026-10-26)
+
+
+### Features
+
+* name the new files a Biome or Prettier setup should leave alone ([#88](https://github.com/vannt-dev/repokeeper/issues/88)) ([359978f](https://github.com/vannt-dev/repokeeper/commit/359978f4a59f87bbf525a2057ee59869a32fcf85))
+
 ## [0.13.1](https://github.com/vannt-dev/repokeeper/compare/v0.13.0...v0.13.1) (2026-10-26)
 
 
