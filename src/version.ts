@@ -32,11 +32,11 @@ export const TOOL_VERSIONS = {
 export const ACTION_PINS = {
   checkout: { action: "actions/checkout", sha: "3d3c42e5aac5ba805825da76410c181273ba90b1", version: "v7.0.1" },
   setupNode: { action: "actions/setup-node", sha: "949feb2413d6458794dcd2491c4babbbce0c15c1", version: "v7.1.0" },
-  setupPython: { action: "actions/setup-python", sha: "5fda3b95a4ea91299a34e894583c3862153e4b97", version: "v7.0.0" },
+  setupPython: { action: "actions/setup-python", sha: "6d4fd22b20465ccc0f7354476588e8df7c9ca0e0", version: "v7.1.0" },
   pypiPublish: {
     action: "pypa/gh-action-pypi-publish",
-    sha: "dc37677b2e1c63e2034f94d8a5b11f265b73ba33",
-    version: "v1.14.2",
+    sha: "7245906fb61fa33a13554f9d5fb856fe61758086",
+    version: "v1.14.3",
   },
 } as const;
 
