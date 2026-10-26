@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.1](https://github.com/vannt-dev/repokeeper/compare/v0.13.0...v0.13.1) (2026-10-26)
+
+
+### Bug Fixes
+
+* **deps:** update fast-uri to 3.1.9 ([#86](https://github.com/vannt-dev/repokeeper/issues/86)) ([f469106](https://github.com/vannt-dev/repokeeper/commit/f46910694cd1d8b5a1b478f34c15168860e679cf))
+
 ## [0.13.0](https://github.com/vannt-dev/repokeeper/compare/v0.12.0...v0.13.0) (2026-10-22)
 
 
