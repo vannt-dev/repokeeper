@@ -63,6 +63,10 @@ yours. `owned` also takes a single key of a shared file, such as `.github/workfl
 `package.json#devDependencies.lefthook`; repokeeper then leaves that key, and everything under it,
 alone. Every write command accepts `--dry-run`.
 
+Keep your formatter off the files repokeeper writes: a reformatted copy no longer matches, and
+`check` reports it as edited. With Biome (2.6 also formats Markdown and YAML) or Prettier in a Node
+repository, `init` and `update` name the new files to exclude in `biome.json` or `.prettierignore`.
+
 `init` applies the whole standard unless you say otherwise:
 
 - `repokeeper init --preset essential` writes only the editor settings, `.gitignore` and the CI

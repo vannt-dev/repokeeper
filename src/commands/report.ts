@@ -90,6 +90,29 @@ export function printResult(io: Io, result: SyncResult): void {
 
 const WROTE: string[] = ["create", "write", "adopt"];
 
+/** Files Biome (2.6 and later) or Prettier would format: a formatted copy no longer matches what check expects. */
+const FORMATTED = /\.(m?js|cjs|json|jsonc|md|ya?ml)$/;
+
+/** Said when such a file is new: the formatter has to leave repokeeper's files, and its lock, alone. */
+function formatterStep(ctx: ModuleContext, result: SyncResult): string | null {
+  const jobs = ctx.stacks.filter((stack) => stack.id === "node" && !stack.directory).flatMap((stack) => stack.staged);
+  const tool = jobs.some((job) => job.name === "node:biome")
+    ? "Biome"
+    : jobs.some((job) => job.name === "node:prettier")
+      ? "Prettier"
+      : null;
+  if (!tool) return null;
+  const paths = result.decisions
+    .filter((d) => (d.output.kind === "file" || d.output.kind === "seed") && d.action === "create")
+    .map((d) => d.output.path)
+    .filter((path) => FORMATTED.test(path));
+  if (paths.length === 0) return null;
+  const why = `${tool} would reformat files repokeeper owns, and \`repokeeper check\` would then report them as edited`;
+  return tool === "Biome"
+    ? `${why}; add ${[...paths, ".repokeeper"].map((p) => `"!${p}"`).join(", ")} to files.includes in biome.json`
+    : `${why}; add ${[...paths, ".repokeeper/"].join(", ")} to .prettierignore`;
+}
+
 /** What the user still has to do after a write: install the hooks or the dependencies, renormalize line endings. */
 export async function nextSteps(root: string, ctx: ModuleContext, result: SyncResult): Promise<string[]> {
   const steps: string[] = [];
@@ -127,6 +150,8 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
     const plan = publishPlan(ctx);
     if (!("problem" in plan)) steps.push(trustedPublisherStep(ctx, plan.registry));
   }
+  const formatter = formatterStep(ctx, result);
+  if (formatter) steps.push(formatter);
   if (wrote(".gitattributes")) {
     const crlf = await crlfTrackedFiles(root);
     if (crlf.length > 0) {
