@@ -1,4 +1,6 @@
+import { parse } from "yaml";
 import { ApiError } from "../errors.js";
+import { compareVersions, STANDARD_VERSION } from "../version.js";
 import type { GitHubApi } from "./api.js";
 import {
   type GraphPackage,
@@ -59,6 +61,12 @@ export type Graph =
   | { state: "unchecked"; reason: string }
   | { state: "stale"; packages: (StalePackage & { files: string[] })[] };
 
+/** The repokeeper standard named in `.repokeeper.yml` on the default branch, against this build's. */
+export type Standard =
+  | { state: "none" }
+  | { state: "current"; version: string }
+  | { state: "behind" | "ahead"; version: string; current: string };
+
 export interface RepoStatus {
   repo: string;
   defaultBranch: string;
@@ -67,6 +75,7 @@ export interface RepoStatus {
   ci: Part<Ci>;
   release: Part<Release>;
   graph: Part<Graph>;
+  standard: Part<Standard>;
   /** Why the repository needs attention; empty when it is clean. */
   attention: string[];
 }
@@ -401,16 +410,35 @@ async function graph(api: GitHubApi, base: string, branch: string): Promise<Grap
   return { state: "ok" };
 }
 
+async function standard(api: GitHubApi, base: string, branch: string): Promise<Standard> {
+  let file: { content?: string; encoding?: string };
+  try {
+    file = await get(api, `${base}/contents/.repokeeper.yml?ref=${encodeURIComponent(branch)}`);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) return { state: "none" };
+    throw error;
+  }
+  const text = Buffer.from(file.content ?? "", file.encoding === "base64" ? "base64" : "utf8").toString("utf8");
+  const config: unknown = parse(text);
+  const version =
+    typeof config === "object" && config !== null && "standard" in config ? String(config.standard) : undefined;
+  if (version === undefined) throw new Error(".repokeeper.yml names no standard");
+  const order = compareVersions(version, STANDARD_VERSION);
+  if (order === 0) return { state: "current", version };
+  return { state: order < 0 ? "behind" : "ahead", version, current: STANDARD_VERSION };
+}
+
 /** Collects the status of one repository; a part that fails carries its error instead of stopping the rest. */
 export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): Promise<RepoStatus> {
   const base = `/repos/${segment(owner)}/${segment(repo.name)}`;
   const branch = repo.defaultBranch;
-  const [pullList, alertState, ciState, releaseState, graphState] = await Promise.all([
+  const [pullList, alertState, ciState, releaseState, graphState, standardState] = await Promise.all([
     part(() => pulls(api, base)),
     part(() => alerts(api, base)),
     part(() => ci(api, base, branch)),
     part(() => release(api, base, branch)),
     part(() => graph(api, base, branch)),
+    part(() => standard(api, base, branch)),
   ]);
   const attention: string[] = [];
   const failed = (name: string, value: unknown) => isError(value) && attention.push(`${name} unreadable`);
@@ -419,6 +447,7 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
   failed("ci", ciState);
   failed("release", releaseState);
   failed("graph", graphState);
+  failed("standard", standardState);
   if (!isError(pullList) && pullList.length > 0) attention.push("open pull requests");
   if (!isError(alertState) && alertState.state === "on" && alertState.total > 0) attention.push("dependabot alerts");
   if (!isError(ciState) && ciState.state === "failure") attention.push("failing ci");
@@ -426,6 +455,7 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
     attention.push("unreleased changes");
   }
   if (!isError(graphState) && graphState.state === "stale") attention.push("stale dependency graph");
+  if (!isError(standardState) && standardState.state === "behind") attention.push("standard behind");
   return {
     repo: repo.name,
     defaultBranch: branch,
@@ -434,6 +464,7 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
     ci: ciState,
     release: releaseState,
     graph: graphState,
+    standard: standardState,
     attention,
   };
 }
