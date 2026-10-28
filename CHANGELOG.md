@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/vannt-dev/repokeeper/compare/v0.14.0...v0.15.0) (2026-10-28)
+
+
+### Features
+
+* **github:** show each repository's standard in github status ([#90](https://github.com/vannt-dev/repokeeper/issues/90)) ([f8d43a2](https://github.com/vannt-dev/repokeeper/commit/f8d43a2e6b33140382d004b16b871dd03a836eba))
+
 ## [0.14.0](https://github.com/vannt-dev/repokeeper/compare/v0.13.1...v0.14.0) (2026-10-26)
 
 
