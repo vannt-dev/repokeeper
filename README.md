@@ -139,16 +139,19 @@ ones that need attention. It runs from any folder and writes nothing:
 
 ```text
 $ repokeeper github status --owner vannt-dev
-repo               prs  alerts    ci    unreleased                    graph
-aspnet             0    0         none  no tags                       stale (2)
-dynamic-field-kit  0    0         ok    6 since v1.12.0 (1 feat/fix)  ok
-web-ban-hang       0    1 medium  none  no tags                       ok
+repo               prs  alerts    ci    unreleased                    graph      standard
+aspnet             0    0         none  no tags                       stale (2)  -
+dynamic-field-kit  0    0         ok    6 since v1.12.0 (1 feat/fix)  ok         1.4.4
+region-snap        0    0         ok    0 since v1.2.0                ok         1.3.0 (1.4.4 out)
+web-ban-hang       0    1 medium  none  no tags                       ok         -
 
 stale dependency graph (GitHub still reads old versions; a commit touching the manifest makes GitHub re-read it):
   aspnet: nuget Microsoft.Owin 3.0.1 in the graph, 4.2.2 in OnlineShop/packages.config
   aspnet: nuget bootstrap 3.0.0 in the graph, 3.4.1 in OnlineShop/packages.config
 
-55 of 58 repositories clean, 3 need attention
+standard behind: region-snap (run `repokeeper update` there)
+
+54 of 58 repositories clean, 4 need attention
 ```
 
 For each repository that is not archived (forks only with `--forks`) it reads:
@@ -167,6 +170,9 @@ For each repository that is not archived (forks only with `--forks`) it reads:
   `pnpm-lock.yaml`, `packages.config`) and reports a package the graph names at a version no lockfile
   contains while a lockfile has it at another one. GitHub then still raises Dependabot alerts for the
   old version, and they never close; any commit that touches the manifest makes GitHub read it again.
+- **standard**: the repokeeper standard named in `.repokeeper.yml` on the default branch; `-` when the
+  repository has none. One older than the standard of the repokeeper you run needs attention
+  (`repokeeper update` there moves it); a newer one is shown but not flagged.
 
 `--all` lists every repository, `--json` prints the whole result for a script, and `--exit-code`
 exits 1 when a repository needs attention, for a scheduled workflow. `--owner` defaults to the user

@@ -45,6 +45,15 @@ function graphCell(status: RepoStatus): string {
   return graph.state;
 }
 
+function standardCell(status: RepoStatus): string {
+  const standard = status.standard;
+  if (isError(standard)) return "error";
+  if (standard.state === "none") return "-";
+  if (standard.state === "behind") return `${standard.version} (${standard.current} out)`;
+  if (standard.state === "ahead") return `${standard.version} (newer than this repokeeper)`;
+  return standard.version;
+}
+
 function table(rows: string[][]): string[] {
   const widths = rows[0]?.map((_, column) => Math.max(...rows.map((row) => (row[column] ?? "").length))) ?? [];
   return rows.map((row) =>
@@ -63,8 +72,16 @@ export function renderStatus(statuses: RepoStatus[], all: boolean): string[] {
   if (shown.length > 0) {
     lines.push(
       ...table([
-        ["repo", "prs", "alerts", "ci", "unreleased", "graph"],
-        ...shown.map((s) => [s.repo, pullsCell(s), alertsCell(s), ciCell(s), releaseCell(s), graphCell(s)]),
+        ["repo", "prs", "alerts", "ci", "unreleased", "graph", "standard"],
+        ...shown.map((s) => [
+          s.repo,
+          pullsCell(s),
+          alertsCell(s),
+          ciCell(s),
+          releaseCell(s),
+          graphCell(s),
+          standardCell(s),
+        ]),
       ]),
     );
   }
@@ -89,11 +106,13 @@ export function renderStatus(statuses: RepoStatus[], all: boolean): string[] {
   if (stale.length > 0) {
     lines.push("", `stale dependency graph (GitHub still reads old versions; ${REREAD_HINT}):`, ...stale);
   }
+  const behind = shown.filter((s) => !isError(s.standard) && s.standard.state === "behind").map((s) => s.repo);
+  if (behind.length > 0) lines.push("", `standard behind: ${behind.join(", ")} (run \`repokeeper update\` there)`);
   const unchecked = shown.flatMap((s) =>
     !isError(s.graph) && s.graph.state === "unchecked" ? [`  ${s.repo}: graph unchecked, ${s.graph.reason}`] : [],
   );
   const errors = shown.flatMap((s) =>
-    (["pulls", "alerts", "ci", "release", "graph"] as const).flatMap((key) => {
+    (["pulls", "alerts", "ci", "release", "graph", "standard"] as const).flatMap((key) => {
       const value = s[key];
       return isError(value) ? [`  ${s.repo}: ${key}: ${value.error}`] : [];
     }),

@@ -3,6 +3,7 @@ import { run } from "../src/cli.js";
 import type { ApiResponse, GitHubApi } from "../src/github/api.js";
 import { readLockfile, sbomPackages, stalePackages, type VersionIndex } from "../src/github/lockfiles.js";
 import { isReleasable } from "../src/github/status.js";
+import { STANDARD_VERSION } from "../src/version.js";
 import { capture } from "./helpers.js";
 
 type Routes = Record<string, ApiResponse | ((query: string) => ApiResponse)>;
@@ -87,9 +88,37 @@ describe("repokeeper github status", () => {
       [repo("a"), repo("copy", { fork: true })],
       ["--forks", "--all"],
     );
-    expect(result.out).toMatch(/^repo\s+prs\s+alerts\s+ci\s+unreleased\s+graph$/m);
-    expect(result.out).toMatch(/^copy\s+0\s+0\s+ok\s+0 since v1\.0\.0\s+-$/m);
+    expect(result.out).toMatch(/^repo\s+prs\s+alerts\s+ci\s+unreleased\s+graph\s+standard$/m);
+    expect(result.out).toMatch(/^copy\s+0\s+0\s+ok\s+0 since v1\.0\.0\s+-\s+-$/m);
     expect(result.out).toContain("all 2 repositories clean");
+  });
+
+  it("shows the standard each repository is on and flags one behind this repokeeper's", async () => {
+    const config = (standard: string) =>
+      ok({ content: Buffer.from(`standard: "${standard}"\nstacks: [node]\n`).toString("base64"), encoding: "base64" });
+    const routes: Routes = {
+      ...cleanRepo("a"),
+      ...cleanRepo("b"),
+      ...cleanRepo("c"),
+      ...cleanRepo("d"),
+      "/repos/me/a/contents/.repokeeper.yml": config(STANDARD_VERSION),
+      "/repos/me/b/contents/.repokeeper.yml": config("1.0.0"),
+      "/repos/me/d/contents/.repokeeper.yml": config("99.0.0"),
+    };
+    const result = await status(routes, [repo("a"), repo("b"), repo("c"), repo("d")], ["--all"]);
+    expect(result.out).toMatch(/^repo\s+prs\s+alerts\s+ci\s+unreleased\s+graph\s+standard$/m);
+    expect(result.out).toMatch(new RegExp(`^a\\s.*\\s-\\s+${STANDARD_VERSION.replaceAll(".", "\\.")}$`, "m"));
+    expect(result.out).toMatch(
+      new RegExp(`^b\\s.*\\s1\\.0\\.0 \\(${STANDARD_VERSION.replaceAll(".", "\\.")} out\\)$`, "m"),
+    );
+    expect(result.out).toMatch(/^c\s.*\s-\s+-$/m);
+    expect(result.out).toMatch(/^d\s.*\s99\.0\.0 \(newer than this repokeeper\)$/m);
+    expect(result.out).toContain("3 of 4 repositories clean, 1 need attention");
+    expect(result.out).toContain("standard behind: b (run `repokeeper update` there)");
+
+    const json = JSON.parse((await status(routes, [repo("b")], ["--json"])).out);
+    expect(json.repositories[0].standard).toEqual({ state: "behind", version: "1.0.0", current: STANDARD_VERSION });
+    expect(json.repositories[0].attention).toEqual(["standard behind"]);
   });
 
   it("reports pull requests with their checks, alerts by severity and failing workflows", async () => {
@@ -144,7 +173,7 @@ describe("repokeeper github status", () => {
       ["--exit-code"],
     );
     expect(result.code).toBe(1);
-    expect(result.out).toMatch(/^a\s+1\s+1 critical, 2 low\s+failed\s+0 since v1\.0\.0\s+-$/m);
+    expect(result.out).toMatch(/^a\s+1\s+1 critical, 2 low\s+failed\s+0 since v1\.0\.0\s+-\s+-$/m);
     expect(result.out).toContain("  a#7  dependabot[bot]  checks failure  chore(deps): bump vite");
     expect(result.out).toContain("  a: CI failure on 2026-10-01 https://x/1");
     expect(result.out).toContain("0 of 1 repositories clean, 1 need attention");
@@ -168,7 +197,7 @@ describe("repokeeper github status", () => {
       [repo("a")],
       ["--all"],
     );
-    expect(result.out).toMatch(/^a\s+0\s+off\s+none\s+0 since v1\.0\.0\s+-$/m);
+    expect(result.out).toMatch(/^a\s+0\s+off\s+none\s+0 since v1\.0\.0\s+-\s+-$/m);
     expect(result.out).not.toContain("running");
   });
 
