@@ -30,7 +30,9 @@ export function parseConfig(text: string): RepokeeperConfig {
   }
   const data: unknown = doc.toJS() ?? {};
   if (!validate(data)) {
-    const error = validate.errors?.[0] as ErrorObject;
+    // under anyOf (health: false or a mapping) the error inside the mapping says more than "not false"
+    const errors = validate.errors ?? [];
+    const error = errors.reduce((a, b) => (pathOf(b).length > pathOf(a).length ? b : a)) as ErrorObject;
     const path = pathOf(error);
     throw new ConfigError(`${CONFIG_FILE}:${lineOf(doc, lineCounter, path)}: ${describe(error, path)}`);
   }

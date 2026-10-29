@@ -9,6 +9,7 @@ import {
   matchingPreset,
   PLACEHOLDERS,
   PLATFORM_STACKS,
+  LICENSES as PLAYGROUND_LICENSES,
   type PlaygroundInput,
   PRESETS,
   presetInput,
@@ -28,6 +29,7 @@ import {
 } from "../src/commands/presets.js";
 import { parseConfig, renderConfig as realRenderConfig } from "../src/config/load.js";
 import { defaultConfig, type PlatformId, STACK_IDS, type StackId } from "../src/config/types.js";
+import { LICENSES } from "../src/licenses.js";
 import { platformFor } from "../src/platforms/index.js";
 import { STANDARD_VERSION } from "../src/version.js";
 import { capture, tempDir } from "./helpers.js";
@@ -40,7 +42,7 @@ function filled(preset: string, platform: PlatformId = "github", stacks: Playgro
     ...presetInput(preset, platform),
     stacks,
     health: {
-      license: true,
+      license: "MIT" as PlaygroundInput["health"]["license"],
       copyright: "2026 Demo User",
       contact: "https://github.com/demo-owner",
       codeowners: "@demo-owner",
@@ -198,7 +200,7 @@ describe("playground", () => {
     for (const text of awkward) {
       const input = {
         ...filled("standard"),
-        health: { license: false, copyright: text, contact: text, codeowners: "@a, @org/team\n@b" },
+        health: { license: false as const, copyright: text, contact: text, codeowners: "@a, @org/team\n@b" },
       };
       const health = parseConfig(renderConfig(buildConfig(input))).modules.health;
       expect(health).toEqual({
@@ -232,7 +234,7 @@ describe("playground", () => {
     ]);
     const wrong = {
       ...filled("strict"),
-      health: { license: true, copyright: "2026 Demo", contact: "demo@example.com", codeowners: "demo" },
+      health: { license: "MIT", copyright: "2026 Demo", contact: "demo@example.com", codeowners: "demo" },
       workflows: { mode: "mirror" as const, ref: "has space", source: "not-a-repository" },
       protect: { enabled: true, approvals: "11" },
     };
@@ -242,6 +244,24 @@ describe("playground", () => {
       "Workflow repository: write it as owner/name.",
       "Required approvals: a whole number from 0 to 10.",
     ]);
+  });
+
+  it("offers every bundled license, and names the repokeeper one other than MIT needs", async () => {
+    expect(PLAYGROUND_LICENSES).toEqual(LICENSES);
+    const page = await readFile(join(import.meta.dirname, "../playground/index.html"), "utf8");
+    const select = page.slice(
+      page.indexOf('<select name="license">'),
+      page.indexOf("</select>", page.indexOf('"license"')),
+    );
+    expect([...select.matchAll(/<option value="([^"]+)"/g)].map((m) => m[1])).toEqual([...LICENSES, "none"]);
+    const apache = filled("standard");
+    apache.health.license = "Apache-2.0";
+    expect(parseConfig(renderConfig(buildConfig(apache))).modules.health).toMatchObject({ license: "Apache-2.0" });
+    expect(problems(apache)).toEqual(["A licence other than MIT needs repokeeper 0.16.0 or newer."]);
+    // `init` without a file writes MIT, so it is not the command for this form
+    expect(matchingPreset(apache)).toBeNull();
+    expect(shortcutCommand(apache)).toBeNull();
+    expect(fileCommands(apache)).toEqual(["npx repokeeper init"]);
   });
 
   it("names the repokeeper a stack newer than the standard needs", () => {

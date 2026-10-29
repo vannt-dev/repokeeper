@@ -88,7 +88,7 @@ function readForm() {
       .map((box) => ({ id: box.value, directory: fields[`folder-${box.value}`].value })),
     modules: Object.fromEntries(boxes("module").map((box) => [box.value, box.checked])),
     health: {
-      license: fields.license.value === "mit",
+      license: fields.license.value === "none" ? false : fields.license.value,
       copyright: fields.copyright.value,
       contact: fields.contact.value,
       codeowners: fields.codeowners.value,
@@ -139,7 +139,7 @@ function render() {
 
   // which preset the switches amount to, whatever else the form says
   const switches = { ...readForm(), workflows: { mode: "default", ref: "", source: "" } };
-  switches.health = { ...switches.health, license: true };
+  switches.health = { ...switches.health, license: "MIT" };
   const preset = matchingPreset(switches);
   for (const radio of boxes("preset")) radio.checked = radio.value === preset;
   byId("custom-note").hidden = preset !== null;

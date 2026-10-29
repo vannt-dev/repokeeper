@@ -107,6 +107,38 @@ describe("repokeeper end to end", () => {
     expect(await readFile(join(dir, "LICENSE"), "utf8")).toBe("All rights reserved.\n");
   });
 
+  it("moves a LICENSE it wrote to the license the config names, and keeps one edited by hand", async () => {
+    const switchTo = async (dir: string, license: string) => {
+      const path = join(dir, ".repokeeper.yml");
+      await writeFile(path, (await readFile(path, "utf8")).replace("license: MIT", `license: ${license}`));
+      commitAll(dir);
+    };
+    const untouched = await nodeRepo();
+    await repokeeper(untouched, "init");
+    commitAll(untouched);
+    await switchTo(untouched, "Apache-2.0");
+    expect((await repokeeper(untouched, "check")).code).toBe(1);
+    expect((await repokeeper(untouched, "update")).code).toBe(0);
+    expect(await readFile(join(untouched, "LICENSE"), "utf8")).toMatch(
+      /^ +Apache License\n +Version 2\.0, January 2004\n/,
+    );
+    commitAll(untouched);
+    expect((await repokeeper(untouched, "check")).code).toBe(0);
+
+    const edited = await nodeRepo();
+    await repokeeper(edited, "init");
+    await writeFile(join(edited, "LICENSE"), "Copyright 2026 Demo User. All rights reserved.\n");
+    commitAll(edited);
+    await switchTo(edited, "MPL-2.0");
+    const update = await repokeeper(edited, "update");
+    expect(update.code).toBe(1);
+    expect(update.out).toContain("conflict");
+    expect(await readFile(join(edited, "LICENSE"), "utf8")).toBe("Copyright 2026 Demo User. All rights reserved.\n");
+    expect(await readFile(join(edited, "LICENSE.repokeeper-new"), "utf8")).toMatch(
+      /^Mozilla Public License Version 2\.0\n/,
+    );
+  });
+
   it("refuses to init twice, reports a missing config and a corrupt lock", async () => {
     const dir = await nodeRepo();
     await repokeeper(dir, "init");

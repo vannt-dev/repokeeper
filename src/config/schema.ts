@@ -1,4 +1,5 @@
 import { ACCESS_LEVELS } from "../gitlab/settings.js";
+import { LICENSES } from "../licenses.js";
 import { STACK_IDS } from "./types.js";
 
 const flag = { type: "boolean" } as const;
@@ -38,7 +39,7 @@ export const configSchema = {
               additionalProperties: false,
               required: ["license", "copyright", "contact", "codeowners"],
               properties: {
-                license: { anyOf: [{ const: false }, { type: "string", minLength: 1 }] },
+                license: { enum: [false, ...LICENSES] },
                 copyright: { type: "string", minLength: 1 },
                 contact: { type: "string", minLength: 1 },
                 codeowners: { type: "array", items: { type: "string", pattern: "^@" } },
