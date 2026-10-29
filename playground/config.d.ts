@@ -3,7 +3,8 @@ export interface PlaygroundInput {
   stacks: Array<{ id: string; directory?: string }>;
   /** One switch per module; `health` is on or off, its details are in `health`. */
   modules: Record<string, boolean>;
-  health: { license: boolean; copyright: string; contact: string; codeowners: string };
+  /** An SPDX id from LICENSES, or false to leave licensing alone. */
+  health: { license: string | false; copyright: string; contact: string; codeowners: string };
   defaultBranch: string;
   workflows: { mode: "default" | "exact" | "ref" | "mirror" | "local"; ref: string; source: string };
   protect: { enabled: boolean; approvals: number | string };
@@ -17,6 +18,8 @@ export const SECURITY_NEEDS_VERSION: string;
 export const CACHE_CLEANUP_NEEDS_VERSION: string;
 export const AUTOMERGE_NEEDS_VERSION: string;
 export const PUBLISH_NEEDS_VERSION: string;
+export const LICENSE_NEEDS_VERSION: string;
+export const LICENSES: string[];
 export const STACK_NEEDS_VERSION: Record<string, string>;
 export const STACKS: Array<{ id: string; label: string }>;
 export const PLATFORM_STACKS: Record<"github" | "gitlab", string[]>;

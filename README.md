@@ -108,6 +108,16 @@ These switches are in no preset:
   npm adds provenance. The registry needs a one-time trusted publisher entry (GitHub only; see
   [CI and releases](docs/ci-and-releases.md#publishing-to-npm-and-pypi)).
 
+`init` writes an MIT `LICENSE` with the copyright line it reads from git (`modules.health.copyright`,
+such as `2026 Van Nguyen`). Set `modules.health.license` to another SPDX id for that licence instead:
+`Apache-2.0`, `BSD-3-Clause`, `GPL-3.0-only`, `GPL-3.0-or-later`, `ISC`, `MPL-2.0` or `Unlicense`.
+The full texts ship with repokeeper, as [choosealicense.com](https://choosealicense.com/) publishes
+them. BSD-3-Clause and ISC take the copyright line; the others have no holder line to fill, and the
+two GPL ids share one text (the notice in each file says which applies). `false` leaves licensing
+alone. `update` moves a `LICENSE` it wrote to the licence you name, but keeps one you edited and
+writes the new text beside it as `LICENSE.repokeeper-new`. The `license` field of `package.json` or
+`pyproject.toml` is yours: change it to match.
+
 You can also start from the file instead of from detection: put a `.repokeeper.yml` you wrote
 yourself in the repository and run `repokeeper init`. When the file is there and repokeeper has not
 applied anything yet, `init` applies it as it is written. Nothing is detected, `--stack`,

@@ -22,6 +22,20 @@ export const CACHE_CLEANUP_NEEDS_VERSION = "0.11.0";
 export const AUTOMERGE_NEEDS_VERSION = "0.11.0";
 /** The same for publishing. */
 export const PUBLISH_NEEDS_VERSION = "0.11.0";
+/** The same for a LICENSE other than MIT. */
+export const LICENSE_NEEDS_VERSION = "0.16.0";
+
+/** The licenses repokeeper can write, by SPDX id; a test holds this to src/licenses.ts. */
+export const LICENSES = [
+  "MIT",
+  "Apache-2.0",
+  "BSD-3-Clause",
+  "GPL-3.0-only",
+  "GPL-3.0-or-later",
+  "ISC",
+  "MPL-2.0",
+  "Unlicense",
+];
 
 /** The same for the stacks added after the standard the file names: an earlier repokeeper does not know them. */
 export const STACK_NEEDS_VERSION = { docker: "0.9.0" };
@@ -138,7 +152,7 @@ export function presetInput(preset, platform = "github") {
     platform,
     stacks: [{ id: "node", directory: "" }],
     modules: presetModules(preset),
-    health: { license: true, copyright: "", contact: "", codeowners: "" },
+    health: { license: "MIT", copyright: "", contact: "", codeowners: "" },
     defaultBranch: "main",
     workflows: { mode: "default", ref: "", source: "" },
     protect: { enabled: strict, approvals: 1 },
@@ -200,7 +214,7 @@ export function buildConfig(input) {
       ...(modules.publish ? { publish: true } : {}),
       health: modules.health
         ? {
-            license: health.license ? "MIT" : false,
+            license: health.license,
             copyright: health.copyright.trim() || PLACEHOLDERS.copyright,
             contact: health.contact.trim() || PLACEHOLDERS.contact,
             codeowners: owners.length > 0 ? owners : [PLACEHOLDERS.codeowners],
@@ -256,6 +270,9 @@ export function problems(input) {
     const owners = splitOwners(health.codeowners);
     if (owners.length === 0) found.push("Code owners: still the placeholder.");
     if (owners.some((owner) => !owner.startsWith("@"))) found.push("Code owners each start with @.");
+    if (health.license !== false && health.license !== "MIT") {
+      found.push(`A licence other than MIT needs repokeeper ${LICENSE_NEEDS_VERSION} or newer.`);
+    }
   }
   if (input.modules.autoupdate) {
     found.push(
@@ -321,7 +338,8 @@ export function matchingPreset(input) {
       (input.security === preset.security &&
         (!input.protect.enabled || Number(input.protect.approvals) === preset.protect.approvals));
     const settings = github && input.protect.enabled === preset.protect.enabled;
-    if (settings && same(input.modules, preset.modules) && (!input.modules.health || input.health.license)) return id;
+    if (settings && same(input.modules, preset.modules) && (!input.modules.health || input.health.license === "MIT"))
+      return id;
   }
   return null;
 }

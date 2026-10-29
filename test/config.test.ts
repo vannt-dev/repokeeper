@@ -60,6 +60,16 @@ describe("parseConfig", () => {
     expect(errorOf(text)).toBe(".repokeeper.yml:7: modules.hoks is not a known key");
   });
 
+  it("accepts a bundled license and names the bundled ones for any other", () => {
+    const health = (license: string) =>
+      "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health:\n" +
+      `    license: ${license}\n    copyright: 2026 A\n    contact: a@example.com\n    codeowners: []\n`;
+    expect(parseConfig(health("Apache-2.0")).modules.health).toMatchObject({ license: "Apache-2.0" });
+    const allowed = "false, MIT, Apache-2.0, BSD-3-Clause, GPL-3.0-only, GPL-3.0-or-later, ISC, MPL-2.0, Unlicense";
+    expect(errorOf(health("GPL-3.0"))).toBe(`.repokeeper.yml:7: modules.health.license must be one of: ${allowed}`);
+    expect(errorOf(health("apache-2.0"))).toBe(`.repokeeper.yml:7: modules.health.license must be one of: ${allowed}`);
+  });
+
   it("refuses a required check on a stack job that docs-only pull requests skip", () => {
     const base = "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n";
     const github =

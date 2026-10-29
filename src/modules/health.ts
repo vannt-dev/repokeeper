@@ -1,31 +1,9 @@
 import { defaultBranch } from "../config/types.js";
 import { UsageError } from "../errors.js";
+import { isLicense, LICENSES, licenseText } from "../licenses.js";
 import { inDirectory, MANAGED_HEADER, type Module, nodeAtRoot, type Output } from "../model.js";
 import { readTemplate } from "../templates.js";
 import { TOOL_VERSIONS } from "../version.js";
-
-const MIT = (holder: string) => `MIT License
-
-Copyright (c) ${holder}
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-`;
 
 const md = (path: string, content: string): Output => ({ kind: "file", module: "health", path, content });
 
@@ -38,12 +16,12 @@ export const healthModule: Module = {
     const outputs: Output[] = [];
 
     if (health.license !== false) {
-      if (health.license !== "MIT") {
+      if (!isLicense(health.license)) {
         throw new UsageError(
-          `license ${health.license} is not bundled with this version of repokeeper; use MIT, or set modules.health.license to false`,
+          `license ${health.license} is not bundled with this version of repokeeper; use one of ${LICENSES.join(", ")}, or set modules.health.license to false`,
         );
       }
-      outputs.push(md("LICENSE", MIT(health.copyright)));
+      outputs.push(md("LICENSE", licenseText(health.license, health.copyright)));
     }
 
     const report = ctx.platform.securityReport(ctx.repo);
