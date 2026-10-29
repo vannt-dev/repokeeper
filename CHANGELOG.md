@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/vannt-dev/repokeeper/compare/v0.15.0...v0.16.0) (2026-10-29)
+
+
+### Features
+
+* write the LICENSE for more licenses than MIT ([#92](https://github.com/vannt-dev/repokeeper/issues/92)) ([21269ef](https://github.com/vannt-dev/repokeeper/commit/21269eff8206e633ba778cf4f2a04272395781fa))
+
 ## [0.15.0](https://github.com/vannt-dev/repokeeper/compare/v0.14.0...v0.15.0) (2026-10-28)
 
 
