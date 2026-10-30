@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parseDocument } from "yaml";
 import { run } from "../src/cli.js";
+import { PACKAGE_VERSION } from "../src/version.js";
 import { capture, tempDir } from "./helpers.js";
 
 /**
@@ -12,11 +13,14 @@ import { capture, tempDir } from "./helpers.js";
  * it has a fixture of. workflow-tests.yml runs the workflow lint on it, so a change that makes repokeeper
  * write something actionlint or zizmor objects to fails there. This test keeps the folder current:
  * REPOKEEPER_UPDATE_FIXTURE=1 npx vitest run test/workflow-lint-fixture.test.ts writes it again.
+ *
+ * The node stack is at the root, where the publish job is written. repokeeper's own version, which the
+ * drift check names, is written as 0.0.0, so a release does not change the folder.
  */
 const FIXTURES = fileURLToPath(new URL("../fixtures/", import.meta.url));
 const TARGET = join(FIXTURES, "workflow-lint");
 const STACKS = [
-  "node:node",
+  "node",
   "python:python",
   "dart:dart",
   "script:script",
@@ -47,12 +51,18 @@ async function files(root: string, dir = root): Promise<string[]> {
 async function generate(): Promise<Map<string, string>> {
   const dir = await tempDir();
   for (const stack of STACKS) {
-    const folder = stack.split(":")[1] as string;
-    await cp(join(FIXTURES, folder), join(dir, folder), { recursive: true });
+    const folder = stack.split(":")[1];
+    await cp(join(FIXTURES, folder ?? stack), folder ? join(dir, folder) : dir, { recursive: true });
   }
   git(dir, "init", "-q", "-b", "main");
+  // init reads the copyright holder from git; a CI runner has no identity of its own
+  git(dir, "config", "user.name", "Demo User");
+  git(dir, "config", "user.email", "demo@example.com");
   git(dir, "config", "core.autocrlf", "false");
   git(dir, "remote", "add", "origin", "https://github.com/demo-owner/demo.git");
+  // init leaves files with changes alone, package.json at the root among them
+  git(dir, "add", "-A");
+  git(dir, "commit", "-qm", "chore: fixtures");
   const quiet = () => capture(dir).io;
   expect(await run(["init", "--preset", "strict", ...STACKS.flatMap((s) => ["--stack", s])], quiet())).toBe(0);
   const doc = parseDocument(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
@@ -62,7 +72,8 @@ async function generate(): Promise<Map<string, string>> {
 
   const out = new Map<string, string>();
   for (const path of await files(join(dir, ".github"))) {
-    out.set(path, (await readFile(join(dir, ".github", path), "utf8")).replaceAll("\r\n", "\n"));
+    const text = (await readFile(join(dir, ".github", path), "utf8")).replaceAll("\r\n", "\n");
+    out.set(path, text.replaceAll(`version: ${PACKAGE_VERSION}\n`, "version: 0.0.0\n"));
   }
   return out;
 }
@@ -78,9 +89,12 @@ describe("the workflow lint fixture", () => {
         "workflows/ci.yml",
         "workflows/release.yml",
         "workflows/cache-cleanup.yml",
+        "workflows/automerge.yml",
         "workflows/workflow-lint.yml",
       ]),
     );
+    // the publish job, written for a node package at the root
+    expect(generated.get("workflows/release.yml")).toContain("  publish:\n");
     if (process.env.REPOKEEPER_UPDATE_FIXTURE === "1") {
       await rm(TARGET, { recursive: true, force: true });
       for (const [path, content] of generated) {

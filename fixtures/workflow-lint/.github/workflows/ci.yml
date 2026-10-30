@@ -70,7 +70,6 @@ jobs:
       install-command: npm ci
       cache: npm
       scripts: '["test"]'
-      working-directory: node
   php:
     uses: vannt-dev/repokeeper/.github/workflows/stack-php.yml@v0
     with:
@@ -91,7 +90,7 @@ jobs:
   repokeeper:
     uses: vannt-dev/repokeeper/.github/workflows/repokeeper-check.yml@v0
     with:
-      version: 0.16.0
+      version: 0.0.0
   ruby:
     uses: vannt-dev/repokeeper/.github/workflows/stack-ruby.yml@v0
     with:

@@ -487,15 +487,16 @@ export const githubPlatform: PlatformAdapter = {
   workflowLint(ctx: ModuleContext): Output[] {
     // not the name of the reusable workflow it calls: a repository that keeps its own copies has both
     const path = ".github/workflows/workflow-lint.yml";
-    // workflows, Dependabot's file, zizmor's own settings and composite actions
-    const paths = [".github/**", "**/action.yml", "**/action.yaml"];
+    // workflows, Dependabot's file, zizmor's own settings and composite actions; a list of its own for each
+    // trigger, or the YAML would share one through an anchor
+    const paths = () => [".github/**", "**/action.yml", "**/action.yaml"];
     const origin = workflowOrigin(ctx);
     return [
       ...localWorkflows(ctx, "workflow_lint", ["workflow-lint.yml"]),
       workflowKey("workflow_lint", path, ["name"], "workflow lint"),
       workflowKey("workflow_lint", path, ["on"], {
-        pull_request: { paths },
-        push: { branches: [defaultBranch(ctx.config)], paths },
+        pull_request: { paths: paths() },
+        push: { branches: [defaultBranch(ctx.config)], paths: paths() },
         // weekly as well: zizmor's online audits learn of new advisories for actions already in use
         schedule: [{ cron: "17 5 * * 1" }],
       }),

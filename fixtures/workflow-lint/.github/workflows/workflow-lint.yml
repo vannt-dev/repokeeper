@@ -3,14 +3,17 @@
 name: workflow lint
 on:
   pull_request:
-    paths: &a1
+    paths:
       - .github/**
       - "**/action.yml"
       - "**/action.yaml"
   push:
     branches:
       - main
-    paths: *a1
+    paths:
+      - .github/**
+      - "**/action.yml"
+      - "**/action.yaml"
   schedule:
     - cron: 17 5 * * 1
 permissions:
