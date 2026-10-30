@@ -91,8 +91,17 @@ const workflowKey = (module: string, path: string, keyPath: string[], value: unk
   order: WORKFLOW_KEYS,
 });
 
+/** A key of zizmor's settings, which it reads from .github/zizmor.yml. */
+const zizmorKey = (keyPath: string[], value: unknown): Output => ({
+  kind: "yaml",
+  module: "workflow_lint",
+  path: ".github/zizmor.yml",
+  keyPath,
+  value,
+});
+
 /** Waits briefly for the held runs to appear, since GitHub creates them just after the pull request event. */
-const APPROVE_HELD_PR_RUNS = `for attempt in 1 2 3 4 5 6; do
+const APPROVE_HELD_PR_RUNS = `for _ in 1 2 3 4 5 6; do
   ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=$BRANCH&event=pull_request&status=action_required" --jq '.workflow_runs[].id')
   [ -n "$ids" ] && break
   sleep 10
@@ -114,6 +123,7 @@ if [ -n "$PR_NUMBER" ]; then
   filter='map(select(.ref == "refs/pull/'"$PR_NUMBER"'/merge"))'
 else
   open=$(gh pr list --state open --limit 500 --json number --jq '[.[] | "refs/pull/\(.number)/merge"]')
+  # shellcheck disable=SC2016 # a jq program: its $ names are jq's, not the shell's
   filter='
     def t: .last_accessed_at[0:19] + "Z" | fromdateiso8601;
     def kind: .key | sub("[-_|][0-9a-f]{12,}.*$"; "");
@@ -471,6 +481,55 @@ export const githubPlatform: PlatformAdapter = {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
         secrets: { token: "${{ secrets.AUTOMERGE_TOKEN }}" },
       }),
+    ];
+  },
+
+  workflowLint(ctx: ModuleContext): Output[] {
+    // not the name of the reusable workflow it calls: a repository that keeps its own copies has both
+    const path = ".github/workflows/workflow-lint.yml";
+    // workflows, Dependabot's file, zizmor's own settings and composite actions
+    const paths = [".github/**", "**/action.yml", "**/action.yaml"];
+    const origin = workflowOrigin(ctx);
+    return [
+      ...localWorkflows(ctx, "workflow_lint", ["workflow-lint.yml"]),
+      workflowKey("workflow_lint", path, ["name"], "workflow lint"),
+      workflowKey("workflow_lint", path, ["on"], {
+        pull_request: { paths },
+        push: { branches: [defaultBranch(ctx.config)], paths },
+        // weekly as well: zizmor's online audits learn of new advisories for actions already in use
+        schedule: [{ cron: "17 5 * * 1" }],
+      }),
+      workflowKey("workflow_lint", path, ["permissions"], { contents: "read" }),
+      workflowKey("workflow_lint", path, ["concurrency"], {
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+        group: "${{ github.workflow }}-${{ github.ref }}",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: GitHub Actions expressions
+        "cancel-in-progress": "${{ github.event_name == 'pull_request' }}",
+      }),
+      workflowKey("workflow_lint", path, ["jobs", "lint"], {
+        uses: workflowRef(ctx, "workflow-lint.yml"),
+        permissions: { contents: "read" },
+      }),
+      // What zizmor would report in the files repokeeper writes itself, each kept on purpose
+      ...(origin.local
+        ? []
+        : [
+            // the callers follow a tag of the workflow repository (v0), which a release moves on purpose
+            zizmorKey(["rules", "unpinned-uses", "config", "policies", `${origin.repo}/*`], "ref-pin"),
+          ]),
+      ...(ctx.config.modules.cache_cleanup
+        ? [
+            // pull_request_target with nothing checked out: the job reads only the pull request number
+            zizmorKey(["rules", "dangerous-triggers", "ignore"], ["cache-cleanup.yml"]),
+          ]
+        : []),
+      ...(ctx.config.modules.deps
+        ? [
+            // repokeeper writes the whole file; a cooldown would hold back every version update, a choice
+            // it leaves to the repository (security updates are never held back either way)
+            zizmorKey(["rules", "dependabot-cooldown", "ignore"], ["dependabot.yml"]),
+          ]
+        : []),
     ];
   },
 

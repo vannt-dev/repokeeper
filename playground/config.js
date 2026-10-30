@@ -5,10 +5,10 @@
  */
 
 /** The standard the generated file names; the test holds it to STANDARD_VERSION. */
-export const STANDARD = "1.4.4";
+export const STANDARD = "1.4.5";
 
 /** The first repokeeper that knows the standard the generated file names. */
-export const NEEDS_VERSION = "0.8.2";
+export const NEEDS_VERSION = "0.17.0";
 
 /** The first repokeeper that knows the update pull requests; earlier ones refuse the line that asks for them. */
 export const AUTOUPDATE_NEEDS_VERSION = "0.9.0";
@@ -24,6 +24,8 @@ export const AUTOMERGE_NEEDS_VERSION = "0.11.0";
 export const PUBLISH_NEEDS_VERSION = "0.11.0";
 /** The same for a LICENSE other than MIT. */
 export const LICENSE_NEEDS_VERSION = "0.16.0";
+/** The same for the workflow lint. */
+export const WORKFLOW_LINT_NEEDS_VERSION = "0.17.0";
 
 /** The licenses repokeeper can write, by SPDX id; a test holds this to src/licenses.ts. */
 export const LICENSES = [
@@ -111,6 +113,11 @@ export const MODULES = [
     label: "Publishing",
     hint: "a release job that publishes to npm or PyPI with trusted publishing, no token (GitHub)",
   },
+  {
+    id: "workflow_lint",
+    label: "Workflow lint",
+    hint: "a workflow that checks the workflows themselves with actionlint and zizmor (GitHub)",
+  },
 ];
 
 /** What stands in for a detail the form was left empty on; `problems` reports each one still in use. */
@@ -132,10 +139,11 @@ const ESSENTIAL_OFF = [
   "cache_cleanup",
   "automerge",
   "publish",
+  "workflow_lint",
 ];
 
 /** The switches no preset turns on. */
-const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup", "automerge", "publish"];
+const IN_NO_PRESET = ["drift", "autoupdate", "security", "cache_cleanup", "automerge", "publish", "workflow_lint"];
 
 /** The module switches of a preset, `health` as a plain on or off. */
 export function presetModules(preset) {
@@ -212,6 +220,7 @@ export function buildConfig(input) {
       ...(modules.cache_cleanup ? { cache_cleanup: true } : {}),
       ...(modules.automerge ? { automerge: true } : {}),
       ...(modules.publish ? { publish: true } : {}),
+      ...(modules.workflow_lint ? { workflow_lint: true } : {}),
       health: modules.health
         ? {
             license: health.license,
@@ -307,6 +316,13 @@ export function problems(input) {
       input.platform === "github"
         ? `Publishing needs repokeeper ${PUBLISH_NEEDS_VERSION} or newer, a node or python stack at the root, and a trusted publisher on npmjs.com or pypi.org.`
         : "Publishing is written for GitHub only: on GitLab the switch writes nothing.",
+    );
+  }
+  if (input.modules.workflow_lint) {
+    found.push(
+      input.platform === "github"
+        ? `The workflow lint needs repokeeper ${WORKFLOW_LINT_NEEDS_VERSION} or newer. It fails until the findings in workflows of your own are fixed.`
+        : "The workflow lint is written for GitHub only: on GitLab the switch writes nothing.",
     );
   }
   if (input.platform === "github") {

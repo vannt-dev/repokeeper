@@ -75,6 +75,7 @@ describe("presets", () => {
       cache_cleanup: false,
       automerge: false,
       publish: false,
+      workflow_lint: false,
       health: false,
     });
     expect(applyPreset(base(), "essential").github).toBeUndefined();
@@ -215,12 +216,14 @@ describe("init --interactive", () => {
     "Apply cache_cleanup?",
     "Apply automerge?",
     "Apply publish?",
+    "Apply workflow_lint?",
     "Write these files?",
   ];
 
   it("names the files of each part, takes the answers, and writes only what was chosen", async () => {
     const dir = await nodeRepo();
-    // editor, ignore, commits, hooks, ci, release, deps, health, drift, update, security, caches, automerge, publish, write
+    // editor, ignore, commits, hooks, ci, release, deps, health, drift, update, security, caches, automerge, publish,
+    // workflow lint, write
     const init = await repokeeper(
       dir,
       ["init", "--interactive"],
@@ -231,6 +234,7 @@ describe("init --interactive", () => {
         false,
         undefined,
         false,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -254,6 +258,7 @@ describe("init --interactive", () => {
     expect(init.out).toContain("cache_cleanup:\n  .github/workflows/cache-cleanup.yml");
     expect(init.out).toContain("automerge:\n  .github/workflows/automerge.yml");
     expect(init.out).toContain("publish:\n  .github/workflows/release.yml");
+    expect(init.out).toContain("workflow_lint:\n  .github/workflows/workflow-lint.yml\n  .github/zizmor.yml");
 
     const config = parse(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
     expect(config.modules).toMatchObject({ commits: true, hooks: false, ci: true, release: false, deps: true });
@@ -274,6 +279,10 @@ describe("init --interactive", () => {
     // and for publishing
     expect(config.modules).not.toHaveProperty("publish");
     expect(existsSync(join(dir, ".github/workflows/release.yml"))).toBe(false);
+    // and for the workflow lint
+    expect(config.modules).not.toHaveProperty("workflow_lint");
+    expect(existsSync(join(dir, ".github/workflows/workflow-lint.yml"))).toBe(false);
+    expect(existsSync(join(dir, ".github/zizmor.yml"))).toBe(false);
     expect(existsSync(join(dir, "lefthook.yml"))).toBe(false);
     expect(existsSync(join(dir, "release-please-config.json"))).toBe(false);
     expect(existsSync(join(dir, "commitlint.config.mjs"))).toBe(true);
@@ -305,6 +314,8 @@ describe("init --interactive", () => {
     answers[12] = true;
     // and publishing, which publishes what the release module releases, off in essential
     answers[13] = true;
+    // and the workflow lint
+    answers[14] = true;
     const taken = await repokeeper(other, ["init", "-i", "--preset", "essential"], answers);
     expect(taken.out).toContain(
       "note: modules.publish writes nothing: it publishes what modules.release releases, which is off",
@@ -319,6 +330,9 @@ describe("init --interactive", () => {
     expect(existsSync(join(other, ".github/workflows/automerge.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.publish).toBe(true);
     expect(existsSync(join(other, ".github/workflows/release.yml"))).toBe(false);
+    expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.workflow_lint).toBe(true);
+    expect(existsSync(join(other, ".github/workflows/workflow-lint.yml"))).toBe(true);
+    expect(existsSync(join(other, ".github/zizmor.yml"))).toBe(true);
     expect(parse(await readFile(join(other, ".repokeeper.yml"), "utf8")).modules.health.license).toBe("MIT");
     expect(existsSync(join(other, "CONTRIBUTING.md"))).toBe(true);
   });

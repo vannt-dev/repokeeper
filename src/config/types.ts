@@ -47,6 +47,8 @@ export interface ModulesConfig {
   automerge: boolean;
   /** A job in the release workflow that publishes each release to npm or PyPI; off unless asked for. */
   publish: boolean;
+  /** A workflow that checks the GitHub Actions workflows with actionlint and zizmor; off unless asked for. */
+  workflow_lint: boolean;
   health: HealthConfig | false;
 }
 
@@ -95,6 +97,7 @@ export function defaultConfig(input: {
       cache_cleanup: false,
       automerge: false,
       publish: false,
+      workflow_lint: false,
       health: { license: "MIT", copyright: input.copyright, contact: input.contact, codeowners: input.codeowners },
     },
     owned: [],

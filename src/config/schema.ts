@@ -31,6 +31,7 @@ export const configSchema = {
         cache_cleanup: flag,
         automerge: flag,
         publish: flag,
+        workflow_lint: flag,
         health: {
           anyOf: [
             { const: false },

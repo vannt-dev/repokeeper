@@ -1,0 +1,85 @@
+name: workflow-lint
+
+# Checks a repository's GitHub Actions workflows: actionlint for mistakes (bad expressions, wrong
+# inputs, shellcheck on `run:` scripts) and zizmor for security problems (unpinned actions,
+# template injection, credentials left on disk, dangerous triggers). zizmor reads its settings
+# from .github/zizmor.yml in the folder it checks.
+on:
+  workflow_call:
+    inputs:
+      working-directory:
+        description: >-
+          Folder whose .github is checked, relative to the repository root. zizmor reads its settings
+          from that folder's .github/zizmor.yml
+        type: string
+        default: "."
+      min-severity:
+        description: Lowest zizmor severity that fails the check ("informational", "low", "medium" or "high")
+        type: string
+        default: low
+      online-audits:
+        description: >-
+          Whether zizmor also asks GitHub about the actions in use (known vulnerable versions, tags that
+          point at a commit outside the action's repository)
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Install actionlint
+        env:
+          VERSION: 1.7.12
+          SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          set -euo pipefail
+          archive="$RUNNER_TEMP/actionlint.tar.gz"
+          curl -fsSL --retry 3 -o "$archive" \
+            "https://github.com/rhysd/actionlint/releases/download/v${VERSION}/actionlint_${VERSION}_linux_amd64.tar.gz"
+          echo "$SHA256  $archive" | sha256sum --check --strict -
+          tar -xzf "$archive" -C "$RUNNER_TEMP" actionlint
+      - name: Run actionlint
+        working-directory: ${{ inputs.working-directory }}
+        # the files are named: from a folder below the repository root, actionlint would otherwise
+        # check the root's workflows. shellcheck comes with the runner image.
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(.github/workflows/*.yml .github/workflows/*.yaml)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "no workflows in .github/workflows"
+            exit 0
+          fi
+          "$RUNNER_TEMP/actionlint" -color "${files[@]}"
+
+  zizmor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: zizmorcore/zizmor-action@53290badfa369cb0bf7ad16342cb62c2fa47ac7b # v0.8.0
+        with:
+          inputs: ${{ inputs.working-directory }}
+          # found by zizmor itself at the root; named for a folder below it
+          config: ${{ inputs.working-directory != '.' && format('{0}/.github/zizmor.yml', inputs.working-directory) || '' }}
+          version: 1.31.1
+          min-severity: ${{ inputs.min-severity }}
+          online-audits: ${{ inputs.online-audits }}
+          # findings as annotations on the pull request, not code scanning alerts: those need
+          # GitHub Code Security on a private repository
+          advanced-security: false
+          annotations: true

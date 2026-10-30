@@ -231,6 +231,11 @@ export const gitlabPlatform: PlatformAdapter = {
     return [];
   },
 
+  // actionlint and zizmor read GitHub Actions workflows; .gitlab-ci.yml is checked by GitLab's own CI lint
+  workflowLint(): Output[] {
+    return [];
+  },
+
   ciWorkflow(ctx: ModuleContext): Output[] {
     const jobs: Output[] = [];
     const node = ctx.stacks.find((stack) => stack.id === "node")?.ci;

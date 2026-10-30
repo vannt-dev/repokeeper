@@ -188,6 +188,11 @@ export async function printWarnings(root: string, ctx: ModuleContext, io: Io): P
       "note: modules.cache_cleanup writes nothing on gitlab; there are no Actions caches there, and runner caches expire on the runner",
     );
   }
+  if (ctx.platform.id === "gitlab" && ctx.config.modules.workflow_lint) {
+    io.out(
+      "note: modules.workflow_lint writes nothing on gitlab; actionlint and zizmor read GitHub Actions workflows, and GitLab checks .gitlab-ci.yml itself",
+    );
+  }
   if (ctx.platform.id === "gitlab" && ctx.config.modules.automerge) {
     io.out("note: modules.automerge writes nothing on gitlab; Renovate's own automerge setting does that work there");
   }

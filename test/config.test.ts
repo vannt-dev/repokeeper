@@ -26,7 +26,7 @@ describe("parseConfig", () => {
     expect(parseConfig(renderConfig(base))).toEqual(base);
   });
 
-  it("defaults boolean modules to true (drift, autoupdate, security, cache_cleanup, automerge and publish to false) and optional lists to empty", () => {
+  it("defaults boolean modules to true (drift, autoupdate, security, cache_cleanup, automerge, publish and workflow_lint to false) and optional lists to empty", () => {
     const config = parseConfig(
       "schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n",
     );
@@ -44,6 +44,7 @@ describe("parseConfig", () => {
       cache_cleanup: false,
       automerge: false,
       publish: false,
+      workflow_lint: false,
       health: false,
     });
     expect(config.owned).toEqual([]);

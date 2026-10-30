@@ -336,6 +336,54 @@ What else to know:
 
 It needs repokeeper 0.11.0 or newer.
 
+## Workflow lint
+
+Set `modules.workflow_lint: true` and repokeeper writes `.github/workflows/workflow-lint.yml`. Its `lint`
+job calls the reusable workflow `workflow-lint.yml`, which checks the repository's GitHub Actions
+workflows with two tools:
+
+- [actionlint](https://github.com/rhysd/actionlint) finds mistakes: an expression that does not parse,
+  an input the called workflow does not have, a step output that does not exist, and, through
+  shellcheck, problems in `run:` scripts.
+- [zizmor](https://docs.zizmor.sh/) finds security problems: actions not pinned to a commit, template
+  injection (`${{ }}` of untrusted text inside a script), credentials left on disk by
+  `actions/checkout`, permissions wider than the job needs, risky triggers. It also asks GitHub about
+  the actions in use, for versions with a known vulnerability.
+
+Findings appear as annotations on the pull request; the check fails on any of severity `low` or above.
+Nothing is uploaded, so the module works on a private repository without GitHub Code Security. The
+workflow runs on pull requests and pushes to the default branch that change `.github/` or an
+`action.yml`, and once a week, because new advisories come out for actions already in use. Both tools
+are pinned: actionlint to a release whose checksum the job verifies, zizmor through
+`zizmorcore/zizmor-action` pinned to a commit and a set zizmor version.
+
+zizmor reads its settings from `.github/zizmor.yml`, and repokeeper writes three of them, each for a
+file it writes itself:
+
+| Setting | Why |
+| --- | --- |
+| `unpinned-uses` policy `vannt-dev/repokeeper/*: ref-pin` | The callers follow the `v0` tag of the workflow repository, which a repokeeper release moves on purpose. A mirror (`github.workflows.source`) gets its own name here; local copies need nothing. |
+| `dangerous-triggers` ignores `cache-cleanup.yml` | Only with `modules.cache_cleanup`. It runs on `pull_request_target` but checks nothing out (see [Cache cleanup](#cache-cleanup)). |
+| `dependabot-cooldown` ignores `dependabot.yml` | Only with `modules.deps`. repokeeper writes the whole file, and a cooldown would hold back every version update, which is the repository's choice. Security updates are not held back either way. |
+
+Add rules of your own next to these: repokeeper manages only its own keys. Every file repokeeper writes
+with every module on passes both tools: `fixtures/workflow-lint` in repokeeper's own repository holds
+those files, and its CI runs the workflow lint on them.
+
+What to know before switching it on:
+
+- **Workflows of your own** are checked as strictly. zizmor 1.31 wants every action, `actions/checkout`
+  included, pinned to a commit (`actions/checkout@<sha> # v7.0.1`); `zizmor --fix` and
+  [pinact](https://github.com/suzuki-shunsuke/pinact) can pin them for you, and Dependabot then keeps the
+  commits up to date. Fix the findings, or ignore one with a reason in `.github/zizmor.yml` or a
+  `# zizmor: ignore[<audit>]` comment, before you make the check required.
+- **Local copies.** With `github.workflows.source: local`, the reusable workflows are files of the
+  repository, and zizmor checks them like any other.
+- No preset turns the module on, since it fails until those findings are fixed.
+- On GitLab the switch writes nothing: both tools read GitHub Actions workflows only.
+
+It needs repokeeper 0.17.0 or newer.
+
 ---
 
 Back to the [README](../README.md).
