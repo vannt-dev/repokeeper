@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.0](https://github.com/vannt-dev/repokeeper/compare/v0.16.0...v0.17.0) (2026-10-30)
+
+
+### Features
+
+* check the workflows with actionlint and zizmor, when asked ([#94](https://github.com/vannt-dev/repokeeper/issues/94)) ([4e71125](https://github.com/vannt-dev/repokeeper/commit/4e711250a2ee4ffeaf0054e89265f1b4f6b831fd))
+
 ## [0.16.0](https://github.com/vannt-dev/repokeeper/compare/v0.15.0...v0.16.0) (2026-10-29)
 
 
