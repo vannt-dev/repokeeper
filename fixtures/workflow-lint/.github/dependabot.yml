@@ -1,0 +1,151 @@
+# Managed by repokeeper (https://github.com/vannt-dev/repokeeper). Edits are reported by `repokeeper check`.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+    ignore:
+      - dependency-name: "@types/node"
+        update-types:
+          - version-update:semver-major
+  - package-ecosystem: pip
+    directory: /python
+    schedule:
+      interval: weekly
+    groups:
+      pip-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: pub
+    directory: /dart
+    schedule:
+      interval: weekly
+    groups:
+      pub-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: gradle
+    directory: /java-gradle
+    schedule:
+      interval: weekly
+    groups:
+      gradle-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: nuget
+    directory: /dotnet
+    schedule:
+      interval: weekly
+    groups:
+      nuget-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: gomod
+    directory: /go
+    schedule:
+      interval: weekly
+    groups:
+      gomod-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: cargo
+    directory: /rust
+    schedule:
+      interval: weekly
+    groups:
+      cargo-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: gradle
+    directory: /kotlin
+    schedule:
+      interval: weekly
+    groups:
+      gradle-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: composer
+    directory: /php
+    schedule:
+      interval: weekly
+    groups:
+      composer-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: bundler
+    directory: /ruby
+    schedule:
+      interval: weekly
+    groups:
+      bundler-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: docker
+    directory: /docker
+    schedule:
+      interval: weekly
+    groups:
+      docker-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope

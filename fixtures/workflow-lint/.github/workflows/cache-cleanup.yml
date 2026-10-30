@@ -1,0 +1,51 @@
+# Managed by repokeeper (https://github.com/vannt-dev/repokeeper). Edits are reported by `repokeeper check`. Keys and jobs you add yourself are left alone.
+
+name: cache cleanup
+on:
+  pull_request_target:
+    types:
+      - closed
+  schedule:
+    - cron: 23 3 * * 0
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: read
+  pull-requests: read
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Delete caches nothing will read again
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          gh api --paginate "repos/$GH_REPO/actions/caches?per_page=100" --jq '.actions_caches[]' > caches.json
+          if [ -n "$PR_NUMBER" ]; then
+            open='[]'
+            filter='map(select(.ref == "refs/pull/'"$PR_NUMBER"'/merge"))'
+          else
+            open=$(gh pr list --state open --limit 500 --json number --jq '[.[] | "refs/pull/\(.number)/merge"]')
+            # shellcheck disable=SC2016 # a jq program: its $ names are jq's, not the shell's
+            filter='
+              def t: .last_accessed_at[0:19] + "Z" | fromdateiso8601;
+              def kind: .key | sub("[-_|][0-9a-f]{12,}.*$"; "");
+              map(select(.ref | startswith("refs/pull/")) | select(.ref as $r | $open | index($r) | not))
+              + (map(select(.ref | startswith("refs/pull/") | not))
+                 | group_by([.ref, kind])
+                 | map((map(t) | max) as $newest | map(select(t < $newest - 86400)))
+                 | add // [])'
+          fi
+          jq -rs --argjson open "$open" "$filter | .[] | [.id, .size_in_bytes, .ref, .key] | @tsv" caches.json > delete.tsv
+          deleted=0; bytes=0
+          while IFS=$'\t' read -r id size ref key; do
+            if gh api -X DELETE "repos/$GH_REPO/actions/caches/$id" > /dev/null; then
+              echo "deleted $ref $key"
+              deleted=$((deleted + 1)); bytes=$((bytes + size))
+            fi
+          done < delete.tsv
+          echo "### Deleted $deleted caches, $((bytes / 1048576)) MB" >> "$GITHUB_STEP_SUMMARY"

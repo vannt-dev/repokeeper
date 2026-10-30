@@ -29,6 +29,7 @@ export const MODULE_IDS: ModuleId[] = [
   "cache_cleanup",
   "automerge",
   "publish",
+  "workflow_lint",
 ];
 
 /**
@@ -41,7 +42,8 @@ export const MODULE_IDS: ModuleId[] = [
  * (`modules.automerge`): merging without a person is a choice the repository's owner makes. Under
  * `strict` it still waits for the review the ruleset requires, since the workflow never approves.
  * Nor is publishing (`modules.publish`): it needs a trusted publisher set up on the registry first, and
- * not every package is meant to be public.
+ * not every package is meant to be public. Nor is the workflow lint (`modules.workflow_lint`): on a repository
+ * with workflows of its own it fails until their findings are fixed, so it is switched on when that work is planned.
  */
 export function applyPreset(config: RepokeeperConfig, preset: Preset): RepokeeperConfig {
   if (preset === "standard") return config;
@@ -60,6 +62,7 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         cache_cleanup: false,
         automerge: false,
         publish: false,
+        workflow_lint: false,
         health: false,
       },
     };
@@ -132,6 +135,7 @@ export async function chooseModules(
       cache_cleanup: true,
       automerge: true,
       publish: true,
+      workflow_lint: true,
       health,
     },
   };

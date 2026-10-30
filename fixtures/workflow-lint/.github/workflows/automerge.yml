@@ -1,0 +1,17 @@
+# Managed by repokeeper (https://github.com/vannt-dev/repokeeper). Edits are reported by `repokeeper check`. Keys and jobs you add yourself are left alone.
+
+name: automerge
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  automerge:
+    uses: vannt-dev/repokeeper/.github/workflows/dependabot-automerge.yml@v0
+    permissions:
+      contents: write
+      pull-requests: write
+    with:
+      merge-method: squash
+    secrets:
+      token: ${{ secrets.AUTOMERGE_TOKEN }}

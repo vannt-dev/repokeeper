@@ -1,6 +1,6 @@
 {
   "lockVersion": 1,
-  "standard": "1.4.4",
+  "standard": "1.4.5",
   "entries": [
     {
       "id": "block:.gitattributes#editorconfig",
@@ -275,7 +275,7 @@
     {
       "id": "yaml:.github/workflows/release.yml#[\"jobs\",\"release-pr-ci\"]",
       "module": "release",
-      "hash": "6947fbe0732aa7cd806b68053d40c62cdc538fe529a119a0f52a7725a1f38d7a",
+      "hash": "1117dc1426767dd5b489d7f4530702c6e3c3cbc0d543253b6fc078a1de94f980",
       "target": {
         "kind": "yaml",
         "path": ".github/workflows/release.yml",

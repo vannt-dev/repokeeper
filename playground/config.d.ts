@@ -19,6 +19,7 @@ export const CACHE_CLEANUP_NEEDS_VERSION: string;
 export const AUTOMERGE_NEEDS_VERSION: string;
 export const PUBLISH_NEEDS_VERSION: string;
 export const LICENSE_NEEDS_VERSION: string;
+export const WORKFLOW_LINT_NEEDS_VERSION: string;
 export const LICENSES: string[];
 export const STACK_NEEDS_VERSION: Record<string, string>;
 export const STACKS: Array<{ id: string; label: string }>;

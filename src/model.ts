@@ -168,6 +168,8 @@ export interface PlatformAdapter {
   dependencyAutomerge(ctx: ModuleContext): Output[];
   /** A job that publishes each release of `stack` to `registry`; empty where the platform has none written. */
   registryPublish(ctx: ModuleContext, stack: ResolvedStack, registry: "npm" | "pypi"): Output[];
+  /** A workflow that checks the CI workflows themselves (actionlint, zizmor); empty where the platform has none. */
+  workflowLint(ctx: ModuleContext): Output[];
   /** release-please configuration, its manifest and the caller release workflow. `directory` is the released stack's folder. */
   releaseAutomation(ctx: ModuleContext, release: ReleaseInfo, directory?: string): Output[];
 }

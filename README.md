@@ -107,6 +107,11 @@ These switches are in no preset:
   package to npm, or of a python package to PyPI, through trusted publishing: no token is stored, and
   npm adds provenance. The registry needs a one-time trusted publisher entry (GitHub only; see
   [CI and releases](docs/ci-and-releases.md#publishing-to-npm-and-pypi)).
+- `modules.workflow_lint: true` adds a workflow that checks the GitHub Actions workflows themselves:
+  [actionlint](https://github.com/rhysd/actionlint) for mistakes and
+  [zizmor](https://docs.zizmor.sh/) for security problems such as unpinned actions or template
+  injection. What repokeeper writes passes both; workflows of your own may need fixes first (GitHub
+  only; see [CI and releases](docs/ci-and-releases.md#workflow-lint)).
 
 `init` writes an MIT `LICENSE` with the copyright line it reads from git (`modules.health.copyright`,
 such as `2026 Van Nguyen`). Set `modules.health.license` to another SPDX id for that licence instead:
@@ -196,7 +201,7 @@ own repository). A repository that cannot be read, or hits the rate limit, is re
 
 | Guide | What it covers |
 | --- | --- |
-| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script and Dockerfile linting, release-please, publishing to npm and PyPI, the drift check, update pull requests, code scanning, cache cleanup, Dependabot auto-merge |
+| [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script and Dockerfile linting, release-please, publishing to npm and PyPI, the drift check, update pull requests, code scanning, cache cleanup, Dependabot auto-merge, workflow lint |
 | [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
 | [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings and auto-merge, security, branch protection |
 | [GitLab](docs/gitlab.md) | What differs on GitLab, the image each stack's job runs in, how releases write the version, the two jobs that need a token, and `repokeeper gitlab apply`: merge settings, branch protection, the Renovate schedule |

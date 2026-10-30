@@ -1,0 +1,35 @@
+# Managed by repokeeper (https://github.com/vannt-dev/repokeeper). Edits are reported by `repokeeper check`. Keys and jobs you add yourself are left alone.
+
+name: repokeeper update
+on:
+  schedule:
+    - cron: 23 5 * * 1
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  update-pr-ci:
+    needs: update
+    if: ${{ needs.update.outputs.pr_branch != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ needs.update.outputs.pr_branch }}
+        run: |
+          for _ in 1 2 3 4 5 6; do
+            ids=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=$BRANCH&event=pull_request&status=action_required" --jq '.workflow_runs[].id')
+            [ -n "$ids" ] && break
+            sleep 10
+          done
+          if [ -z "$ids" ]; then echo "::notice::no held runs for $BRANCH"; fi
+          for id in $ids; do gh api -X POST "repos/$GITHUB_REPOSITORY/actions/runs/$id/approve"; done
+  update:
+    uses: vannt-dev/repokeeper/.github/workflows/repokeeper-update.yml@v0
+    permissions:
+      contents: write
+      pull-requests: write
+    secrets:
+      token: ${{ secrets.REPOKEEPER_TOKEN }}

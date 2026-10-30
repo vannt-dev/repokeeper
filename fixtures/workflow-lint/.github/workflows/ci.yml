@@ -1,0 +1,115 @@
+# Managed by repokeeper (https://github.com/vannt-dev/repokeeper). Edits are reported by `repokeeper check`. Keys and jobs you add yourself are left alone.
+
+name: ci
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  commits:
+    uses: vannt-dev/repokeeper/.github/workflows/commitlint.yml@v0
+  dart:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-dart.yml@v0
+    with:
+      sdk-versions: '["stable"]'
+      os: '["ubuntu-latest"]'
+      flutter: "false"
+      install-command: dart pub get
+      commands: '["dart format --output=none --set-exit-if-changed .","dart analyze","dart test"]'
+      working-directory: dart
+  docker:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-docker.yml@v0
+    with:
+      dockerfiles: '["Dockerfile"]'
+      build: "false"
+      working-directory: docker
+  dotnet:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-dotnet.yml@v0
+    with:
+      dotnet-versions: '["10.0"]'
+      os: '["ubuntu-latest"]'
+      commands: '["dotnet restore","dotnet format --verify-no-changes --no-restore","dotnet build --no-restore","dotnet test --no-build"]'
+      working-directory: dotnet
+  go:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-go.yml@v0
+    with:
+      go-versions: '["stable"]'
+      os: '["ubuntu-latest"]'
+      commands: '["test -z \"$(gofmt -l .)\" || { gofmt -l .; exit 1; }","go vet ./...","go test ./..."]'
+      working-directory: go
+  java:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-java.yml@v0
+    with:
+      java-versions: '["17","21"]'
+      os: '["ubuntu-latest"]'
+      build-tool: gradle
+      gradle-version: current
+      commands: '["gradle check"]'
+      working-directory: java-gradle
+  kotlin:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-java.yml@v0
+    with:
+      java-versions: '["17","21"]'
+      os: '["ubuntu-latest"]'
+      build-tool: gradle
+      gradle-version: current
+      commands: '["gradle check"]'
+      working-directory: kotlin
+  node:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-node.yml@v0
+    with:
+      node-versions: '["22","24"]'
+      os: '["ubuntu-latest"]'
+      package-manager: npm
+      install-command: npm ci
+      cache: npm
+      scripts: '["test"]'
+  php:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-php.yml@v0
+    with:
+      php-versions: '["8.3","8.4"]'
+      os: '["ubuntu-latest"]'
+      install-command: composer install --no-interaction --no-progress
+      commands: '["composer validate --no-check-publish","composer test"]'
+      working-directory: php
+  python:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-python.yml@v0
+    with:
+      python-versions: '["3.11","3.12","3.13"]'
+      os: '["ubuntu-latest"]'
+      manager: pip
+      install-command: python -m pip install -e . && python -m pip install ruff pytest
+      commands: '["ruff format --check .","ruff check .","python -m pytest"]'
+      working-directory: python
+  repokeeper:
+    uses: vannt-dev/repokeeper/.github/workflows/repokeeper-check.yml@v0
+    with:
+      version: 0.0.0
+  ruby:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-ruby.yml@v0
+    with:
+      ruby-versions: '["3.3","3.4"]'
+      os: '["ubuntu-latest"]'
+      install-command: bundle install
+      commands: '["bundle exec rake test"]'
+      working-directory: ruby
+  rust:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-rust.yml@v0
+    with:
+      rust-versions: '["stable"]'
+      os: '["ubuntu-latest"]'
+      commands: '["cargo fmt --all --check","cargo clippy --workspace --all-targets -- -D warnings","cargo test --workspace --all-targets","cargo test --workspace --doc"]'
+      working-directory: rust
+  script:
+    uses: vannt-dev/repokeeper/.github/workflows/stack-script.yml@v0
+    with:
+      shell-scripts: "true"
+      powershell-scripts: "true"
+      test-command: ""
+      working-directory: script
