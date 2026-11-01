@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.1](https://github.com/vannt-dev/repokeeper/compare/v0.17.0...v0.17.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **ci:** use the basic Gradle cache in the Java stack workflow ([#98](https://github.com/vannt-dev/repokeeper/issues/98)) ([736d2c1](https://github.com/vannt-dev/repokeeper/commit/736d2c15df7f3da900915bd6bd77e36ec1daaef7))
+
 ## [0.17.0](https://github.com/vannt-dev/repokeeper/compare/v0.16.0...v0.17.0) (2026-10-30)
 
 
