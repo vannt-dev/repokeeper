@@ -28,6 +28,7 @@
     "format": "biome check --write .",
     "test": "vitest run",
     "standard": "node dist/cli.js check",
+    "diagrams": "cd docs/diagrams && npx -y @mermaid-js/mermaid-cli@latest -i overview.mmd -o overview-light.svg -t default -b transparent -c mermaid.config.json && npx -y @mermaid-js/mermaid-cli@latest -i overview.mmd -o overview-dark.svg -t dark -b transparent -c mermaid.config.json",
     "prepublishOnly": "npm run typecheck && npm run lint && npm test && npm run build"
   },
   "dependencies": {

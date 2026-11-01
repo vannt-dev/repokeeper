@@ -14,19 +14,10 @@ the standard evolves.
 
 ## How it works
 
-```mermaid
-flowchart LR
-  config[".repokeeper.yml<br/>stacks, modules, owned"]
-  tool(["repokeeper<br/>init, update, check"])
-  files["Managed files<br/>.editorconfig, .gitignore, lefthook.yml,<br/>commitlint, CONTRIBUTING, LICENSE,<br/>dependabot.yml, ci.yml, release.yml"]
-  lock[".repokeeper/lock.json<br/>what repokeeper wrote"]
-  workflows["Reusable workflows<br/>vannt-dev/repokeeper at v0,<br/>or pinned, mirrored, local"]
-  config --> tool
-  tool -->|"init, update: write,<br/>keep your edits"| files
-  tool -.->|"check: compare,<br/>exit 1 on drift"| files
-  tool --> lock
-  files -->|"ci.yml, release.yml call"| workflows
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vannt-dev/repokeeper/main/docs/diagrams/overview-dark.svg">
+  <img alt="repokeeper reads .repokeeper.yml and writes the managed files (on GitHub, CI calls its reusable workflows) and a lock of what it wrote; github apply and gitlab apply set repository settings, and github status lists what needs attention across an owner's repositories." src="https://raw.githubusercontent.com/vannt-dev/repokeeper/main/docs/diagrams/overview-light.svg">
+</picture>
 
 One file describes the repository (`.repokeeper.yml`); repokeeper turns it into the managed files and
 remembers what it wrote, so it can tell your edits from its own. `check` only compares; `update`
