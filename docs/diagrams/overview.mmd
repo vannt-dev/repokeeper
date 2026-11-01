@@ -1,0 +1,19 @@
+%% Re-render the SVGs after editing: npm run diagrams
+flowchart LR
+  config[".repokeeper.yml<br/>stacks, modules, owned"]
+  tool(["repokeeper<br/>init, update, check"])
+  files["Managed files<br/>hooks, commitlint, LICENSE, CI, releases<br/>GitHub: dependabot.yml<br/>GitLab: .gitlab-ci.yml, renovate.json"]
+  lock[".repokeeper/lock.json<br/>what repokeeper wrote"]
+  workflows["Reusable workflows<br/>vannt-dev/repokeeper"]
+  apply(["github apply,<br/>gitlab apply"])
+  settings["Repository settings<br/>merge, branch protection"]
+  status(["github status"])
+  report["What needs attention<br/>PRs, alerts, CI, releases"]
+  config --> tool
+  tool -->|"init, update: write,<br/>keep your edits"| files
+  tool -.->|"check: compare,<br/>exit 1 on drift"| files
+  tool --> lock
+  files -->|"GitHub ci.yml,<br/>release.yml call"| workflows
+  config --> apply
+  apply --> settings
+  status -->|"an owner's<br/>repositories"| report
