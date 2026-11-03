@@ -2,6 +2,7 @@ import { parse } from "yaml";
 import { ApiError } from "../errors.js";
 import { compareVersions, STANDARD_VERSION } from "../version.js";
 import type { GitHubApi } from "./api.js";
+import { reportsCheck, workflowChecks } from "./checks.js";
 import {
   type GraphPackage,
   indexKey,
@@ -67,6 +68,18 @@ export type Standard =
   | { state: "current"; version: string }
   | { state: "behind" | "ahead"; version: string; current: string };
 
+/**
+ * The checks a pull request into the default branch must pass, from every ruleset and from classic
+ * branch protection, and those of them that no workflow job on the default branch reports.
+ */
+export interface Protection {
+  required: string[];
+  /** Required, but no job of the workflows reports it: every pull request waits for it. */
+  missing: string[];
+  /** Whether a workflow runs on pull requests; a repository without one has nothing to require. */
+  pullRequests: boolean;
+}
+
 export interface RepoStatus {
   repo: string;
   defaultBranch: string;
@@ -76,6 +89,7 @@ export interface RepoStatus {
   release: Part<Release>;
   graph: Part<Graph>;
   standard: Part<Standard>;
+  protection: Part<Protection>;
   /** Why the repository needs attention; empty when it is clean. */
   attention: string[];
 }
@@ -428,17 +442,68 @@ async function standard(api: GitHubApi, base: string, branch: string): Promise<S
   return { state: order < 0 ? "behind" : "ahead", version, current: STANDARD_VERSION };
 }
 
+const MAX_WORKFLOWS = 30;
+
+/** The text of the workflow files on `branch`. */
+async function workflowFiles(api: GitHubApi, base: string, branch: string): Promise<string[]> {
+  let entries: { name: string; type: string; sha: string }[];
+  try {
+    entries = await get(api, `${base}/contents/.github/workflows?ref=${encodeURIComponent(branch)}`);
+  } catch (error) {
+    if (error instanceof HttpError && error.status === 404) return [];
+    throw error;
+  }
+  if (!Array.isArray(entries)) return [];
+  const files = entries.filter((entry) => entry.type === "file" && /\.ya?ml$/.test(entry.name)).slice(0, MAX_WORKFLOWS);
+  return Promise.all(
+    files.map(async (file) => {
+      const blob = await get<{ content?: string; encoding?: string }>(api, `${base}/git/blobs/${file.sha}`);
+      return Buffer.from(blob.content ?? "", blob.encoding === "base64" ? "base64" : "utf8").toString("utf8");
+    }),
+  );
+}
+
+async function protection(api: GitHubApi, base: string, branch: string): Promise<Protection> {
+  const required = new Set<string>();
+  let rules: { type: string; parameters?: { required_status_checks?: { context: string }[] } }[] = [];
+  try {
+    rules = await get(api, `${base}/rules/branches/${segment(branch)}?per_page=100`);
+  } catch (error) {
+    // no rulesets where the plan has none, such as a private repository on GitHub Free
+    if (!(error instanceof HttpError) || (error.status !== 404 && error.status !== 403)) throw error;
+  }
+  for (const rule of Array.isArray(rules) ? rules : []) {
+    if (rule.type !== "required_status_checks") continue;
+    for (const check of rule.parameters?.required_status_checks ?? []) required.add(check.context);
+  }
+  // classic branch protection, which the branch shows to anyone who can read it
+  const classic = await get<{
+    protection?: { required_status_checks?: { contexts?: string[]; checks?: { context: string }[] } };
+  }>(api, `${base}/branches/${segment(branch)}`);
+  const legacy = classic.protection?.required_status_checks;
+  for (const context of legacy?.contexts ?? []) required.add(context);
+  for (const check of legacy?.checks ?? []) required.add(check.context);
+  const reported = workflowChecks(await workflowFiles(api, base, branch));
+  const list = [...required].sort();
+  return {
+    required: list,
+    missing: list.filter((context) => !reportsCheck(reported, context)),
+    pullRequests: reported.pullRequests,
+  };
+}
+
 /** Collects the status of one repository; a part that fails carries its error instead of stopping the rest. */
 export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): Promise<RepoStatus> {
   const base = `/repos/${segment(owner)}/${segment(repo.name)}`;
   const branch = repo.defaultBranch;
-  const [pullList, alertState, ciState, releaseState, graphState, standardState] = await Promise.all([
+  const [pullList, alertState, ciState, releaseState, graphState, standardState, protectionState] = await Promise.all([
     part(() => pulls(api, base)),
     part(() => alerts(api, base)),
     part(() => ci(api, base, branch)),
     part(() => release(api, base, branch)),
     part(() => graph(api, base, branch)),
     part(() => standard(api, base, branch)),
+    part(() => protection(api, base, branch)),
   ]);
   const attention: string[] = [];
   const failed = (name: string, value: unknown) => isError(value) && attention.push(`${name} unreadable`);
@@ -448,6 +513,7 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
   failed("release", releaseState);
   failed("graph", graphState);
   failed("standard", standardState);
+  failed("required checks", protectionState);
   if (!isError(pullList) && pullList.length > 0) attention.push("open pull requests");
   if (!isError(alertState) && alertState.state === "on" && alertState.total > 0) attention.push("dependabot alerts");
   if (!isError(ciState) && ciState.state === "failure") attention.push("failing ci");
@@ -456,6 +522,11 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
   }
   if (!isError(graphState) && graphState.state === "stale") attention.push("stale dependency graph");
   if (!isError(standardState) && standardState.state === "behind") attention.push("standard behind");
+  if (!isError(protectionState)) {
+    // a red pull request can be merged
+    if (protectionState.required.length === 0 && protectionState.pullRequests) attention.push("no required checks");
+    if (protectionState.missing.length > 0) attention.push("required check never reported");
+  }
   return {
     repo: repo.name,
     defaultBranch: branch,
@@ -465,6 +536,7 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
     release: releaseState,
     graph: graphState,
     standard: standardState,
+    protection: protectionState,
     attention,
   };
 }

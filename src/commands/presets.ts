@@ -1,5 +1,6 @@
 import type { Io } from "../cli.js";
 import type { HealthConfig, ModulesConfig, RepokeeperConfig } from "../config/types.js";
+import { CI_RESULT_CHECK } from "../github/checks.js";
 import type { ModuleContext, Output } from "../model.js";
 
 export const PRESETS = ["essential", "standard", "strict"] as const;
@@ -77,7 +78,8 @@ export function applyPreset(config: RepokeeperConfig, preset: Preset): Repokeepe
         require_pull_request: true,
         required_approvals: 1,
         allow_force_push: false,
-        ...(config.modules.commits ? { required_checks: ["commits / commitlint"] } : {}),
+        // the job of ci.yml that waits for every other one; without ci.yml, no check to require
+        ...(config.modules.ci ? { required_checks: [CI_RESULT_CHECK] } : {}),
       },
     };
   } else {

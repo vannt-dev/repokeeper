@@ -246,7 +246,8 @@ when the default branch requires something: a ruleset with a required check or w
 required approval, or classic branch protection with required status checks. When nothing is required,
 auto-merge would merge before CI has run, so the run leaves it off and shows a warning. Set
 `github.protect.required_checks` (see [GitHub settings](github-settings.md)) to the checks that must
-pass, for example `["node / test (ubuntu-latest, 22)", "commits / commitlint"]`.
+pass; with `modules.ci` on it defaults to `["CI result"]`, the job of `ci.yml` that waits for
+all the others.
 
 Two things to set up, once:
 

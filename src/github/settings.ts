@@ -1,5 +1,6 @@
 import { ApiError } from "../errors.js";
 import type { ApiResponse, GitHubApi } from "./api.js";
+import { GITHUB_ACTIONS_APP_ID, reportsCheck, workflowChecks } from "./checks.js";
 
 /** The `github:` section of .repokeeper.yml. Only the keys present are managed. */
 export interface GithubSettings {
@@ -36,16 +37,29 @@ export interface GithubSettings {
     /** Refuses a push that contains a credential; needs `secret_scanning`. */
     secret_scanning_push_protection?: boolean;
   };
-  /** The `repokeeper` ruleset on the default branch; false removes it. */
+  /** The `repokeeper` ruleset on the default branch, or on `branches`; false removes it. */
   protect?:
     | {
         require_pull_request?: boolean;
         required_approvals?: number;
-        required_checks?: string[];
+        /**
+         * Checks a pull request must pass, by the name it shows. A name is required from GitHub Actions;
+         * `{ context, integration_id: null }` takes it from any app. Left out: `CI result` while
+         * `modules.ci` is on (see `githubSettings`).
+         */
+        required_checks?: RequiredCheck[];
+        /** Whether a pull request must be up to date with its base branch before it merges. */
+        require_up_to_date?: boolean;
+        /** The branches the ruleset covers, by name; left out, the default branch. */
+        branches?: string[];
         allow_force_push?: boolean;
       }
     | false;
 }
+
+export type RequiredCheck = string | { context: string; integration_id: number | null };
+
+export const checkContext = (check: RequiredCheck) => (typeof check === "string" ? check : check.context);
 
 export interface WorkflowSource {
   /**
@@ -98,68 +112,123 @@ const MERGE_FIELDS = {
 interface RuleSummary {
   pullRequest: boolean;
   approvals: number;
+  /** Each check as `context`, with the app it must come from after an `@`: `@any` for any app. */
   checks: string[];
+  upToDate: boolean;
   forcePush: boolean;
+}
+
+interface StatusCheck {
+  context: string;
+  integration_id?: number;
 }
 
 interface Rule {
   type: string;
-  parameters?: {
+  parameters?: Record<string, unknown> & {
     required_approving_review_count?: number;
-    required_status_checks?: { context: string }[];
+    required_status_checks?: StatusCheck[];
+    strict_required_status_checks_policy?: boolean;
   };
 }
+
+/** The rule types this ruleset manages; any other rule in it is kept as it is. */
+const MANAGED_RULES = new Set(["pull_request", "required_status_checks", "non_fast_forward"]);
+
+const checkKey = (check: StatusCheck) => `${check.context}@${check.integration_id ?? "any"}`;
 
 function summarize(rules: Rule[]): RuleSummary {
   const pr = rules.find((r) => r.type === "pull_request");
   const checks = rules.find((r) => r.type === "required_status_checks");
+  const required = checks?.parameters?.required_status_checks ?? [];
   return {
     pullRequest: pr !== undefined,
     approvals: pr?.parameters?.required_approving_review_count ?? 0,
-    checks: (checks?.parameters?.required_status_checks ?? []).map((c) => c.context).sort(),
+    checks: required.map(checkKey).sort(),
+    upToDate: required.length > 0 && checks?.parameters?.strict_required_status_checks_policy === true,
     forcePush: !rules.some((r) => r.type === "non_fast_forward"),
   };
 }
 
-function describeRules(summary: RuleSummary | null): string {
+function describeCheck(key: string): string {
+  const at = key.lastIndexOf("@");
+  const [context, app] = [key.slice(0, at), key.slice(at + 1)];
+  if (app === String(GITHUB_ACTIONS_APP_ID)) return context;
+  return app === "any" ? `${context} (any app)` : `${context} (app ${app})`;
+}
+
+function describeRules(summary: RuleSummary | null, branches?: string[]): string {
   if (summary === null) return "(none)";
   const parts = [
     summary.pullRequest ? `pull request required (${summary.approvals} approvals)` : "no pull request required",
-    summary.checks.length > 0 ? `checks: ${summary.checks.join(", ")}` : "no required checks",
+    summary.checks.length > 0
+      ? `checks: ${summary.checks.map(describeCheck).join(", ")}${summary.upToDate ? " (branch up to date)" : ""}`
+      : "no required checks",
     summary.forcePush ? "force push allowed" : "no force push",
   ];
+  // only when it is not the default branch alone, which is what every earlier repokeeper wrote
+  if (branches?.some((b) => b !== DEFAULT_BRANCH)) {
+    const names = branches.map((b) => (b === DEFAULT_BRANCH ? "the default branch" : b.replace(/^refs\/heads\//, "")));
+    parts.push(`on ${names.join(", ")}`);
+  }
   return parts.join("; ");
 }
 
-function desiredRules(protect: Exclude<GithubSettings["protect"], false | undefined>): Rule[] {
+const DEFAULT_BRANCH = "~DEFAULT_BRANCH";
+
+/** A branch as a ruleset condition names it: `~DEFAULT_BRANCH` and `refs/...` as written, a name under refs/heads. */
+const refOf = (branch: string) =>
+  branch.startsWith("~") || branch.startsWith("refs/") ? branch : `refs/heads/${branch}`;
+
+function desiredRules(
+  protect: Exclude<GithubSettings["protect"], false | undefined>,
+  checks: RequiredCheck[],
+  current: Rule[],
+): Rule[] {
+  const kept = (type: string) => current.find((r) => r.type === type)?.parameters ?? {};
   const rules: Rule[] = [];
   if (protect.require_pull_request ?? true) {
     rules.push({
       type: "pull_request",
       parameters: {
-        required_approving_review_count: protect.required_approvals ?? 0,
         dismiss_stale_reviews_on_push: false,
         require_code_owner_review: false,
         require_last_push_approval: false,
         required_review_thread_resolution: false,
-      } as Rule["parameters"],
+        // what the ruleset says beyond these, such as the allowed merge methods, stays
+        ...kept("pull_request"),
+        required_approving_review_count: protect.required_approvals ?? 0,
+      },
     });
   }
-  const checks = protect.required_checks ?? [];
   if (checks.length > 0) {
     rules.push({
       type: "required_status_checks",
       parameters: {
-        strict_required_status_checks_policy: false,
-        required_status_checks: checks.map((context) => ({ context })),
-      } as Rule["parameters"],
+        ...kept("required_status_checks"),
+        strict_required_status_checks_policy: protect.require_up_to_date ?? false,
+        required_status_checks: checks.map((check) => {
+          const context = checkContext(check);
+          const app = typeof check === "string" ? GITHUB_ACTIONS_APP_ID : check.integration_id;
+          return app === null ? { context } : { context, integration_id: app };
+        }),
+      },
     });
   }
   if (!(protect.allow_force_push ?? false)) rules.push({ type: "non_fast_forward" });
-  return rules;
+  return [...rules, ...current.filter((rule) => !MANAGED_RULES.has(rule.type))];
 }
 
 const sameSummary = (a: RuleSummary, b: RuleSummary) => JSON.stringify(a) === JSON.stringify(b);
+
+export interface PlanOptions {
+  /**
+   * The text of the repository's workflow files. Given, a required check that no job of them reports
+   * is left out of the ruleset, with a warning: a pull request would wait for it forever.
+   */
+  workflows?: string[];
+  warn?: (message: string) => void;
+}
 
 /** Reads the repository's current settings and lists what differs from `settings`. Reads only. */
 export async function planGithub(
@@ -167,6 +236,7 @@ export async function planGithub(
   owner: string,
   name: string,
   settings: GithubSettings,
+  options: PlanOptions = {},
 ): Promise<Change[]> {
   const repo = `${owner}/${name}`;
   const base = `/repos/${owner}/${name}`;
@@ -275,37 +345,53 @@ export async function planGithub(
     const detail = existing
       ? ((await get(`/rulesets/${existing.id}`, "reading the repokeeper ruleset")).data as {
           enforcement?: string;
-          conditions?: { ref_name?: { include?: string[] } };
+          conditions?: { ref_name?: { include?: string[]; exclude?: string[] } };
           rules?: Rule[];
+          bypass_actors?: unknown[];
         })
       : null;
     const have = detail ? summarize(detail.rules ?? []) : null;
+    const haveBranches = detail?.conditions?.ref_name?.include ?? [];
     if (settings.protect === false) {
       if (existing) {
         changes.push({
           setting: "protect",
-          from: describeRules(have),
+          from: describeRules(have, haveBranches),
           to: "(none)",
           apply: () => send("DELETE", `/rulesets/${existing.id}`, "removing the repokeeper ruleset"),
         });
       }
     } else {
-      const rules = desiredRules(settings.protect);
+      let checks = settings.protect.required_checks ?? [];
+      if (options.workflows !== undefined) {
+        const reported = workflowChecks(options.workflows);
+        for (const check of checks.filter((c) => !reportsCheck(reported, checkContext(c)))) {
+          options.warn?.(
+            `protect.required_checks: no workflow job reports "${checkContext(check)}"; left out, ` +
+              "since every pull request would wait for it",
+          );
+        }
+        checks = checks.filter((c) => reportsCheck(reported, checkContext(c)));
+      }
+      const rules = desiredRules(settings.protect, checks, detail?.rules ?? []);
       const want = summarize(rules);
-      const targetsDefault = detail?.conditions?.ref_name?.include?.includes("~DEFAULT_BRANCH") ?? false;
-      const upToDate = have !== null && sameSummary(have, want) && detail?.enforcement === "active" && targetsDefault;
+      const branches = [...new Set((settings.protect.branches ?? [DEFAULT_BRANCH]).map(refOf))];
+      const sameBranches = JSON.stringify([...haveBranches].sort()) === JSON.stringify([...branches].sort());
+      const upToDate = have !== null && sameSummary(have, want) && detail?.enforcement === "active" && sameBranches;
       if (!upToDate) {
         const body = {
           name: RULESET_NAME,
           target: "branch",
           enforcement: "active",
-          conditions: { ref_name: { include: ["~DEFAULT_BRANCH"], exclude: [] } },
+          conditions: { ref_name: { include: branches, exclude: detail?.conditions?.ref_name?.exclude ?? [] } },
           rules,
+          // who may bypass it is the repository's own business
+          ...(detail?.bypass_actors !== undefined ? { bypass_actors: detail.bypass_actors } : {}),
         };
         changes.push({
           setting: "protect",
-          from: describeRules(have),
-          to: describeRules(want),
+          from: describeRules(have, haveBranches),
+          to: describeRules(want, branches),
           apply: () =>
             existing
               ? send("PUT", `/rulesets/${existing.id}`, "updating the repokeeper ruleset", body)

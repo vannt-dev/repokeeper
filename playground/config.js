@@ -5,10 +5,10 @@
  */
 
 /** The standard the generated file names; the test holds it to STANDARD_VERSION. */
-export const STANDARD = "1.4.5";
+export const STANDARD = "1.5.0";
 
 /** The first repokeeper that knows the standard the generated file names. */
-export const NEEDS_VERSION = "0.17.0";
+export const NEEDS_VERSION = "0.18.0";
 
 /** The first repokeeper that knows the update pull requests; earlier ones refuse the line that asks for them. */
 export const AUTOUPDATE_NEEDS_VERSION = "0.9.0";
@@ -247,7 +247,7 @@ export function buildConfig(input) {
         require_pull_request: true,
         required_approvals: Number(input.protect.approvals),
         allow_force_push: false,
-        ...(modules.commits ? { required_checks: ["commits / commitlint"] } : {}),
+        ...(modules.ci ? { required_checks: ["CI result"] } : {}),
       };
     }
   } else if (input.protect.enabled) {

@@ -66,7 +66,7 @@ function buildLists() {
 /** What the settings of the repository amount to on each platform, and the command that sets them. */
 const SETTINGS = {
   github: {
-    protect: "pull requests only, no force push, the commit check required when Conventional Commits is on",
+    protect: "pull requests only, no force push, the CI result check required when CI is on",
     note: "Protection and security are settings of the repository: the file records them, and ",
     after: " puts them in place.",
   },

@@ -36,6 +36,8 @@ function cleanRepo(name: string): Routes {
     [`${base}/releases/latest`]: ok({ tag_name: "v1.0.0" }),
     [`${base}/compare/v1.0.0...main`]: ok({ ahead_by: 0, commits: [] }),
     [`${base}/git/trees/main`]: ok({ tree: [{ path: "README.md", type: "blob", sha: "r" }] }),
+    // no rulesets and no workflow files (both 404), no classic protection
+    [`${base}/branches/main`]: ok({ name: "main", protected: false }),
   };
 }
 
@@ -298,6 +300,46 @@ describe("repokeeper github status", () => {
     expect(report.clean).toBe(0);
     expect(report.repositories[0].alerts).toEqual({ state: "on", total: 2, bySeverity: { high: 2 } });
     expect(report.repositories[0].attention).toEqual(["dependabot alerts"]);
+  });
+
+  it("flags a required check no workflow job reports, and pull requests with nothing required", async () => {
+    const ci = blob(
+      ["on: [push, pull_request]", "jobs:", "  result:", "    name: CI result", "    runs-on: ubuntu-latest", ""].join(
+        "\n",
+      ),
+    );
+    const workflows = (name: string): Routes => ({
+      [`/repos/me/${name}/contents/.github/workflows`]: ok([{ name: "ci.yml", type: "file", sha: `${name}-ci` }]),
+      [`/repos/me/${name}/git/blobs/${name}-ci`]: ci,
+    });
+    const routes: Routes = {
+      ...cleanRepo("a"),
+      ...workflows("a"),
+      // a ruleset asks for a check nothing reports; classic protection asks for one that comes
+      "/repos/me/a/rules/branches/main": ok([
+        { type: "required_status_checks", parameters: { required_status_checks: [{ context: "gone" }] } },
+      ]),
+      "/repos/me/a/branches/main": ok({
+        protection: { required_status_checks: { contexts: ["CI result"], checks: [{ context: "CI result" }] } },
+      }),
+      ...cleanRepo("b"),
+      ...workflows("b"),
+    };
+    const report = JSON.parse((await status(routes, [repo("a"), repo("b")], ["--json"])).out);
+    const [a, b] = report.repositories;
+    expect(a.protection).toEqual({ required: ["CI result", "gone"], missing: ["gone"], pullRequests: true });
+    expect(a.attention).toEqual(["required check never reported"]);
+    expect(b.protection).toEqual({ required: [], missing: [], pullRequests: true });
+    expect(b.attention).toEqual(["no required checks"]);
+
+    const text = (await status(routes, [repo("a"), repo("b")])).out;
+    expect(text).toContain(
+      [
+        "required checks on the default branch:",
+        "  a: gone required, but no workflow job reports it",
+        "  b: nothing required, so a pull request with failing checks can merge",
+      ].join("\n"),
+    );
   });
 
   it("reads another owner's public repositories, and refuses its options on other commands", async () => {

@@ -108,11 +108,21 @@ export function renderStatus(statuses: RepoStatus[], all: boolean): string[] {
   }
   const behind = shown.filter((s) => !isError(s.standard) && s.standard.state === "behind").map((s) => s.repo);
   if (behind.length > 0) lines.push("", `standard behind: ${behind.join(", ")} (run \`repokeeper update\` there)`);
+  const checks = shown.flatMap((s) => {
+    if (isError(s.protection)) return [];
+    if (s.protection.missing.length > 0) {
+      return [`  ${s.repo}: ${s.protection.missing.join(", ")} required, but no workflow job reports it`];
+    }
+    return s.protection.required.length === 0 && s.protection.pullRequests
+      ? [`  ${s.repo}: nothing required, so a pull request with failing checks can merge`]
+      : [];
+  });
+  if (checks.length > 0) lines.push("", "required checks on the default branch:", ...checks);
   const unchecked = shown.flatMap((s) =>
     !isError(s.graph) && s.graph.state === "unchecked" ? [`  ${s.repo}: graph unchecked, ${s.graph.reason}`] : [],
   );
   const errors = shown.flatMap((s) =>
-    (["pulls", "alerts", "ci", "release", "graph", "standard"] as const).flatMap((key) => {
+    (["pulls", "alerts", "ci", "release", "graph", "standard", "protection"] as const).flatMap((key) => {
       const value = s[key];
       return isError(value) ? [`  ${s.repo}: ${key}: ${value.error}`] : [];
     }),
