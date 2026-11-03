@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.0](https://github.com/vannt-dev/repokeeper/compare/v0.17.1...v0.18.0) (2026-11-03)
+
+
+### Features
+
+* **github:** require one "CI result" check and flag checks that never report ([#101](https://github.com/vannt-dev/repokeeper/issues/101)) ([412d89d](https://github.com/vannt-dev/repokeeper/commit/412d89d51cc2dc63420a2a619ef5ee0ecf0af44a))
+
 ## [0.17.1](https://github.com/vannt-dev/repokeeper/compare/v0.17.0...v0.17.1) (2026-11-01)
 
 
