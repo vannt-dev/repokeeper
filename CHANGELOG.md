@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.18.1](https://github.com/vannt-dev/repokeeper/compare/v0.18.0...v0.18.1) (2026-11-03)
+
+
+### Bug Fixes
+
+* **status:** flag "no required checks" only where a check could be required ([#103](https://github.com/vannt-dev/repokeeper/issues/103)) ([58bc3e6](https://github.com/vannt-dev/repokeeper/commit/58bc3e6c38bf5322d28f669f8b8b78ef35931e1e))
+
 ## [0.18.0](https://github.com/vannt-dev/repokeeper/compare/v0.17.1...v0.18.0) (2026-11-03)
 
 
