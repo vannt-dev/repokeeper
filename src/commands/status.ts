@@ -113,7 +113,7 @@ export function renderStatus(statuses: RepoStatus[], all: boolean): string[] {
     if (s.protection.missing.length > 0) {
       return [`  ${s.repo}: ${s.protection.missing.join(", ")} required, but no workflow job reports it`];
     }
-    return s.protection.required.length === 0 && s.protection.pullRequests
+    return s.protection.required.length === 0 && s.protection.pullRequests && s.protection.rulesets
       ? [`  ${s.repo}: nothing required, so a pull request with failing checks can merge`]
       : [];
   });

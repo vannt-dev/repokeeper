@@ -14,7 +14,11 @@ export interface WorkflowChecks {
   patterns: RegExp[];
   /** Jobs that call a reusable workflow: their checks are `<job> / <job inside>`, which only a run shows. */
   callers: RegExp[];
-  /** Whether a workflow runs on pull requests at all; without one there is nothing to require. */
+  /**
+   * Whether a workflow runs on every pull request as it opens or changes; without one there is no
+   * check a ruleset could require. A `paths` or `paths-ignore` filter, or `types` such as `closed`
+   * alone, leaves some pull requests without a run, so such a workflow does not count.
+   */
   pullRequests: boolean;
 }
 
@@ -31,6 +35,22 @@ const namePattern = (name: string, caller = false) =>
       .map(escapeRegex)
       .join(".*")}( \\(.*\\))?${caller ? "( / .+)?" : ""}$`,
   );
+
+const PULL_REQUEST_EVENTS = ["pull_request", "pull_request_target"];
+/** The activity types that start a run when a pull request opens or gets a new commit. */
+const CHANGE_TYPES = ["opened", "synchronize", "reopened"];
+
+/** Whether `event`, as `on:` configures it, runs for every pull request that opens or changes. */
+function runsOnEveryPullRequest(on: unknown, event: string): boolean {
+  if (typeof on !== "object" || on === null || Array.isArray(on)) return true;
+  const config = (on as Record<string, unknown>)[event];
+  if (typeof config !== "object" || config === null) return true;
+  const { paths, "paths-ignore": pathsIgnore, types } = config as Record<string, unknown>;
+  if (paths !== undefined || pathsIgnore !== undefined) return false;
+  if (types === undefined) return true;
+  const list = Array.isArray(types) ? types.map(String) : [String(types)];
+  return list.some((type) => CHANGE_TYPES.includes(type));
+}
 
 function triggers(on: unknown): string[] {
   if (typeof on === "string") return [on];
@@ -57,7 +77,7 @@ export function workflowChecks(files: Iterable<string>): WorkflowChecks {
     const { on, jobs } = workflow as { on?: unknown; jobs?: unknown };
     const events = triggers(on);
     if (events.length === 0 || events.every((event) => event === "workflow_call")) continue;
-    if (events.some((event) => event === "pull_request" || event === "pull_request_target")) {
+    if (events.some((event) => PULL_REQUEST_EVENTS.includes(event) && runsOnEveryPullRequest(on, event))) {
       checks.pullRequests = true;
     }
     if (typeof jobs !== "object" || jobs === null) continue;
