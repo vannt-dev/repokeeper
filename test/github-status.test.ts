@@ -324,15 +324,27 @@ describe("repokeeper github status", () => {
       }),
       ...cleanRepo("b"),
       ...workflows("b"),
+      // a private repository on GitHub Free: no rulesets to set, so nothing to flag
+      ...cleanRepo("c"),
+      ...workflows("c"),
+      "/repos/me/c/rules/branches/main": { status: 403, data: { message: "Upgrade to GitHub Pro" } },
     };
-    const report = JSON.parse((await status(routes, [repo("a"), repo("b")], ["--json"])).out);
-    const [a, b] = report.repositories;
-    expect(a.protection).toEqual({ required: ["CI result", "gone"], missing: ["gone"], pullRequests: true });
+    const repos = [repo("a"), repo("b"), repo("c")];
+    const report = JSON.parse((await status(routes, repos, ["--json"])).out);
+    const [a, b, c] = report.repositories;
+    expect(a.protection).toEqual({
+      required: ["CI result", "gone"],
+      missing: ["gone"],
+      pullRequests: true,
+      rulesets: true,
+    });
     expect(a.attention).toEqual(["required check never reported"]);
-    expect(b.protection).toEqual({ required: [], missing: [], pullRequests: true });
+    expect(b.protection).toEqual({ required: [], missing: [], pullRequests: true, rulesets: true });
     expect(b.attention).toEqual(["no required checks"]);
+    expect(c.protection).toEqual({ required: [], missing: [], pullRequests: true, rulesets: false });
+    expect(c.attention).toEqual([]);
 
-    const text = (await status(routes, [repo("a"), repo("b")])).out;
+    const text = (await status(routes, repos)).out;
     expect(text).toContain(
       [
         "required checks on the default branch:",

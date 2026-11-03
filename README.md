@@ -181,7 +181,8 @@ For each repository that is not archived (forks only with `--forks`) it reads:
   (`repokeeper update` there moves it); a newer one is shown but not flagged.
 - **required checks**: the checks rulesets and branch protection require on the default branch. A
   check no workflow job reports needs attention (every pull request waits for it), and so does a
-  repository whose workflows run on pull requests while nothing is required. Listed below the table.
+  repository with a workflow that runs on every pull request (no `paths` filter) while nothing is
+  required. Listed below the table.
 
 `--all` lists every repository, `--json` prints the whole result for a script, and `--exit-code`
 exits 1 when a repository needs attention, for a scheduled workflow. `--owner` defaults to the user

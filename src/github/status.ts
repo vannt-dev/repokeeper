@@ -76,8 +76,10 @@ export interface Protection {
   required: string[];
   /** Required, but no job of the workflows reports it: every pull request waits for it. */
   missing: string[];
-  /** Whether a workflow runs on pull requests; a repository without one has nothing to require. */
+  /** Whether a workflow runs on every pull request; a repository without one has nothing to require. */
   pullRequests: boolean;
+  /** False when GitHub's plan has no rulesets for the repository, such as a private one on GitHub Free. */
+  rulesets: boolean;
 }
 
 export interface RepoStatus {
@@ -466,11 +468,13 @@ async function workflowFiles(api: GitHubApi, base: string, branch: string): Prom
 async function protection(api: GitHubApi, base: string, branch: string): Promise<Protection> {
   const required = new Set<string>();
   let rules: { type: string; parameters?: { required_status_checks?: { context: string }[] } }[] = [];
+  let rulesets = true;
   try {
     rules = await get(api, `${base}/rules/branches/${segment(branch)}?per_page=100`);
   } catch (error) {
     // no rulesets where the plan has none, such as a private repository on GitHub Free
     if (!(error instanceof HttpError) || (error.status !== 404 && error.status !== 403)) throw error;
+    rulesets = error.status !== 403;
   }
   for (const rule of Array.isArray(rules) ? rules : []) {
     if (rule.type !== "required_status_checks") continue;
@@ -489,6 +493,7 @@ async function protection(api: GitHubApi, base: string, branch: string): Promise
     required: list,
     missing: list.filter((context) => !reportsCheck(reported, context)),
     pullRequests: reported.pullRequests,
+    rulesets,
   };
 }
 
@@ -524,7 +529,9 @@ export async function repoStatus(api: GitHubApi, owner: string, repo: RepoRef): 
   if (!isError(standardState) && standardState.state === "behind") attention.push("standard behind");
   if (!isError(protectionState)) {
     // a red pull request can be merged
-    if (protectionState.required.length === 0 && protectionState.pullRequests) attention.push("no required checks");
+    if (protectionState.required.length === 0 && protectionState.pullRequests && protectionState.rulesets) {
+      attention.push("no required checks");
+    }
     if (protectionState.missing.length > 0) attention.push("required check never reported");
   }
   return {

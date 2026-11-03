@@ -51,6 +51,21 @@ describe("workflowChecks", () => {
     expect(reportsCheck(checks, "nodes / test")).toBe(false);
   });
 
+  it("counts pull request runs only from a workflow that runs on every pull request", () => {
+    const job = ["jobs:", "  lint:", "    runs-on: ubuntu-latest"];
+    const filtered = yaml("on:", "  pull_request:", "    paths: [.github/**]", ...job);
+    const docsSkipped = yaml("on:", "  pull_request:", "    paths-ignore: ['*.md']", ...job);
+    const onClose = yaml("on:", "  pull_request_target:", "    types: [closed]", ...job);
+    expect(workflowChecks([filtered, docsSkipped, onClose]).pullRequests).toBe(false);
+    // the job still reports its check when it runs, so a required "lint" is not flagged as missing
+    expect(reportsCheck(workflowChecks([filtered]), "lint")).toBe(true);
+
+    const onOpen = yaml("on:", "  pull_request:", "    types: [opened, synchronize]", ...job);
+    const toMain = yaml("on:", "  pull_request:", "    branches: [main]", ...job);
+    expect(workflowChecks([onOpen]).pullRequests).toBe(true);
+    expect(workflowChecks([toMain]).pullRequests).toBe(true);
+  });
+
   it("leaves out workflows that only another calls, and files that are not YAML", () => {
     const called = yaml("on: workflow_call", "jobs:", "  inner:", "    name: Inner", "    runs-on: ubuntu-latest");
     const pushOnly = yaml("on: push", "jobs:", "  deploy:", "    runs-on: ubuntu-latest");
