@@ -2,6 +2,7 @@ import { stringify } from "yaml";
 import { CONFIG_FILE } from "../config/load.js";
 import { defaultBranch, STACK_IDS, type StackId } from "../config/types.js";
 import { ConfigError } from "../errors.js";
+import { CI_RESULT_CHECK } from "../github/checks.js";
 import { globsToRegex } from "../glob.js";
 import {
   type DependencyUpdate,
@@ -340,6 +341,12 @@ export const githubPlatform: PlatformAdapter = {
       );
     }
     if (jobs.length === 0) return [];
+    const needed = [
+      ...ctx.stacks.flatMap((stack) => (stack.ci ? [stack.id] : [])),
+      ...(ctx.config.modules.commits ? ["commits"] : []),
+      ...(ctx.config.modules.drift ? ["repokeeper"] : []),
+    ];
+    jobs.push(workflowKey("ci", path, ["jobs", "result"], ciResultJob(needed)));
     const called = [
       ...ctx.stacks.flatMap((stack) => (stack.ci ? [stack.ci.workflow] : [])),
       ...(ctx.config.modules.commits ? ["commitlint.yml"] : []),
@@ -658,6 +665,36 @@ function publishJob(stack: ResolvedStack, registry: Registry): Record<string, un
       { name: "Install dependencies", run: stack.ci?.with["install-command"] ?? "npm ci" },
       // npm itself, whatever the package manager: it is the client that signs in through OIDC
       { name: "Publish to npm", run: "npm publish --access public" },
+    ],
+  };
+}
+
+/**
+ * The one check a ruleset needs to require: it waits for every job of the run and fails when one failed
+ * or was cancelled. A skipped job passes, as a docs-only pull request skips the stack jobs. It runs
+ * even then (`always()`): a required check that never reports keeps the pull request waiting. The
+ * `changes` job is not among `needs`, since its failure never skips a test.
+ */
+function ciResultJob(needs: string[]): Record<string, unknown> {
+  return {
+    name: CI_RESULT_CHECK,
+    if: "always()",
+    needs,
+    "runs-on": "ubuntu-latest",
+    "timeout-minutes": 5,
+    steps: [
+      {
+        name: "Every job passed or was skipped",
+        // biome-ignore lint/suspicious/noTemplateCurlyInString: a GitHub Actions expression, not a JS template
+        env: { RESULTS: "${{ join(needs.*.result, ' ') }}" },
+        run: [
+          'echo "job results: $RESULTS"',
+          'case " $RESULTS " in',
+          '  *" failure "*|*" cancelled "*) exit 1 ;;',
+          "esac",
+          "",
+        ].join("\n"),
+      },
     ],
   };
 }

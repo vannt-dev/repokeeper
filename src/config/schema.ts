@@ -112,7 +112,28 @@ export const configSchema = {
               properties: {
                 require_pull_request: flag,
                 required_approvals: { type: "integer", minimum: 0, maximum: 10 },
-                required_checks: { type: "array", uniqueItems: true, items: { type: "string", minLength: 1 } },
+                // a name is required from GitHub Actions; { context, integration_id: null } from any app
+                required_checks: {
+                  type: "array",
+                  uniqueItems: true,
+                  items: {
+                    anyOf: [
+                      { type: "string", minLength: 1 },
+                      {
+                        type: "object",
+                        additionalProperties: false,
+                        required: ["context", "integration_id"],
+                        properties: {
+                          context: { type: "string", minLength: 1 },
+                          integration_id: { anyOf: [{ type: "integer", minimum: 1 }, { type: "null" }] },
+                        },
+                      },
+                    ],
+                  },
+                },
+                require_up_to_date: flag,
+                // branch names, or ~DEFAULT_BRANCH; left out, the default branch
+                branches: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", minLength: 1 } },
                 allow_force_push: flag,
               },
             },

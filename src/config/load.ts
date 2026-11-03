@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { Ajv, type ErrorObject } from "ajv";
 import { type Document, isNode, LineCounter, parseDocument, stringify } from "yaml";
 import { ConfigError } from "../errors.js";
+import { checkContext } from "../github/settings.js";
 import { configSchema } from "./schema.js";
 import type { ModulesConfig, RepokeeperConfig } from "./types.js";
 
@@ -48,9 +49,9 @@ export function parseConfig(text: string): RepokeeperConfig {
   const protect = typed.github?.protect;
   if (skipped && protect) {
     // a skipped job that calls a reusable workflow reports only its own name, never the checks inside it
-    const gated = protect.required_checks?.find((check) =>
-      typed.stacks.some((stack) => check === stack || check.startsWith(`${stack} / `)),
-    );
+    const gated = protect.required_checks
+      ?.map(checkContext)
+      .find((check) => typed.stacks.some((stack) => check === stack || check.startsWith(`${stack} / `)));
     if (gated) {
       throw new ConfigError(
         `${CONFIG_FILE}:${lineOf(doc, lineCounter, ["github", "protect", "required_checks"])}: required_checks names ` +

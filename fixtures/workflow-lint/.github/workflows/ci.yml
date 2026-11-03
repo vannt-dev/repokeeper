@@ -91,6 +91,35 @@ jobs:
     uses: vannt-dev/repokeeper/.github/workflows/repokeeper-check.yml@v0
     with:
       version: 0.0.0
+  result:
+    name: CI result
+    if: always()
+    needs:
+      - node
+      - python
+      - dart
+      - script
+      - java
+      - dotnet
+      - go
+      - rust
+      - kotlin
+      - php
+      - ruby
+      - docker
+      - commits
+      - repokeeper
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed or was skipped
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "*|*" cancelled "*) exit 1 ;;
+          esac
   ruby:
     uses: vannt-dev/repokeeper/.github/workflows/stack-ruby.yml@v0
     with:

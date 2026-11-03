@@ -7,6 +7,7 @@ import { parse } from "yaml";
 import { run } from "../src/cli.js";
 import { applyPreset } from "../src/commands/presets.js";
 import { defaultConfig } from "../src/config/types.js";
+import { reportsCheck, workflowChecks } from "../src/github/checks.js";
 import { capture, tempDir } from "./helpers.js";
 
 const sh = (cwd: string, ...args: string[]) => execFileSync("git", args, { cwd, stdio: "pipe" });
@@ -91,7 +92,7 @@ describe("presets", () => {
         require_pull_request: true,
         required_approvals: 1,
         allow_force_push: false,
-        required_checks: ["commits / commitlint"],
+        required_checks: ["CI result"],
       },
     });
   });
@@ -136,7 +137,7 @@ describe("init --preset", () => {
       expect(existsSync(join(dir, file)), file).toBe(false);
     }
     const ci = parse(await readFile(join(dir, ".github/workflows/ci.yml"), "utf8"));
-    expect(Object.keys(ci.jobs)).toEqual(["node"]);
+    expect(Object.keys(ci.jobs)).toEqual(["node", "result"]);
     // nothing of repokeeper's tools in package.json when hooks and commit linting are off
     expect(JSON.parse(await readFile(join(dir, "package.json"), "utf8")).devDependencies).toEqual({
       prettier: "^3.0.0",
@@ -158,8 +159,14 @@ describe("init --preset", () => {
     const config = parse(await readFile(join(dir, ".repokeeper.yml"), "utf8"));
     expect(config.modules.drift).toBe(true);
     expect(config.github.protect.required_approvals).toBe(1);
-    const ci = parse(await readFile(join(dir, ".github/workflows/ci.yml"), "utf8"));
-    expect(Object.keys(ci.jobs).sort()).toEqual(["commits", "node", "repokeeper"]);
+    const ciText = await readFile(join(dir, ".github/workflows/ci.yml"), "utf8");
+    const ci = parse(ciText);
+    expect(Object.keys(ci.jobs).sort()).toEqual(["commits", "node", "repokeeper", "result"]);
+    expect(ci.jobs.result.name).toBe("CI result");
+    expect(ci.jobs.result.needs).toEqual(["node", "commits", "repokeeper"]);
+    // `github apply` drops a required check no job reports; this one must survive
+    expect(reportsCheck(workflowChecks([ciText]), "CI result")).toBe(true);
+    expect(config.github.protect.required_checks).toEqual(["CI result"]);
   });
 
   it("strict on GitLab writes the protection and names gitlab apply", async () => {
