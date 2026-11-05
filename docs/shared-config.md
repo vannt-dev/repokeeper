@@ -57,7 +57,9 @@ repository's own file last, so a later file overrides an earlier one:
 
 A shared file need not be a complete configuration; only the merged result is checked. An error
 names the file, and the line, the key was taken from: `../shared/web-team.yml:4: modules.hoks is not
-a known key`. A required key missing from every file is reported against `.repokeeper.yml`.
+a known key`. A required key missing from every file is reported against `.repokeeper.yml`; one
+missing inside a mapping that several files build, such as `modules.health`, at the last file that
+sets that mapping, which need not be the file you meant to put it in.
 
 `standard` is the one key a shared file may not set: each repository names the standard it is on
 in its own file, and `repokeeper update` moves that line there. `update`, `init` and `eject` write
