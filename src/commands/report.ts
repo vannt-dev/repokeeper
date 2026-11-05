@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { parse } from "yaml";
 import type { Io } from "../cli.js";
+import { depsSettings } from "../config/types.js";
 import { duplicateTestRuns } from "../duplicates.js";
 import { crlfTrackedFiles } from "../git.js";
 import { describeOutput, type ModuleContext, nodeAtRoot, type Output } from "../model.js";
@@ -142,6 +143,14 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
     steps.push(
       "run `repokeeper github apply` to allow auto-merge; Dependabot's updates then merge once the checks and reviews the default branch requires have passed, and not at all while it requires none",
     );
+  }
+  if (ctx.platform.id === "github" && depsSettings(ctx.config)?.tool === "renovate") {
+    // on GitHub, Renovate runs as the Mend app; repokeeper writes its settings, not the app
+    if (result.decisions.some((d) => d.output.path === "renovate.json" && ["create", "adopt"].includes(d.action))) {
+      steps.push(
+        "install the Mend Renovate GitHub App (https://github.com/apps/renovate) on this repository; it reads renovate.json and opens the dependency updates",
+      );
+    }
   }
   const publish = result.decisions.find(
     (d) => d.output.module === "publish" && d.output.kind === "yaml" && d.action === "create",

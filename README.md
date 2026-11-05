@@ -3,7 +3,7 @@
 [![Official vannt-dev build](https://vannt-dev.github.io/badges/official.svg)](https://vannt-dev.github.io/official.html)
 
 Keep every repository on one maintained standard: Conventional Commits, git hooks, community health
-files, editor and gitignore settings, Dependabot, CI and releases — applied once and kept in sync as
+files, editor and gitignore settings, Dependabot or Renovate, CI and releases — applied once and kept in sync as
 the standard evolves.
 
 > Status: early development. Supported stacks: Node.js (including NestJS), Python, Dart and
@@ -97,7 +97,8 @@ These switches are in no preset:
   [CI and releases](docs/ci-and-releases.md#cache-cleanup)).
 - `modules.automerge: true` adds a workflow that turns on auto-merge for Dependabot's patch and minor
   updates, so they merge once the checks and reviews the default branch requires have passed; majors
-  stay manual (GitHub only; see [CI and releases](docs/ci-and-releases.md#dependabot-auto-merge)).
+  stay manual. With Renovate it sets Renovate's own `automerge` instead (GitHub only; see
+  [CI and releases](docs/ci-and-releases.md#dependabot-auto-merge)).
 - `modules.publish: true` adds a job to the release workflow that publishes each release of a node
   package to npm, or of a python package to PyPI, through trusted publishing: no token is stored, and
   npm adds provenance. The registry needs a one-time trusted publisher entry (GitHub only; see
@@ -107,6 +108,12 @@ These switches are in no preset:
   [zizmor](https://docs.zizmor.sh/) for security problems such as unpinned actions or template
   injection. What repokeeper writes passes both; workflows of your own may need fixes first (GitHub
   only; see [CI and releases](docs/ci-and-releases.md#workflow-lint)).
+
+`modules.deps` writes `.github/dependabot.yml` on GitHub. Write it as
+`deps: { tool: renovate, extends: ["github>my-org/renovate-config"] }` for a `renovate.json` instead,
+for the [Mend Renovate GitHub App](https://github.com/apps/renovate), with your presets added after
+repokeeper's (`extends` is optional); see
+[CI and releases](docs/ci-and-releases.md#dependency-updates). GitLab always uses Renovate.
 
 `init` writes an MIT `LICENSE` with the copyright line it reads from git (`modules.health.copyright`,
 such as `2026 Van Nguyen`). Set `modules.health.license` to another SPDX id for that licence instead:

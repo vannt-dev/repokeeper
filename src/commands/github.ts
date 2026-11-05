@@ -2,7 +2,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Io } from "../cli.js";
 import { loadConfig } from "../config/load.js";
-import type { RepokeeperConfig } from "../config/types.js";
+import { depsSettings, type RepokeeperConfig } from "../config/types.js";
 import { UsageError } from "../errors.js";
 import { repoInfo } from "../git.js";
 import { resolveToken, restApi } from "../github/api.js";
@@ -12,12 +12,15 @@ import type { CommandOptions } from "./report.js";
 
 /**
  * The settings `github apply` puts in place: the `github:` section, plus what a module needs of the
- * repository. `modules.automerge` turns auto-merge on unless `github.merge.auto_merge` says otherwise.
+ * repository. `modules.automerge` turns auto-merge on unless `github.merge.auto_merge` says otherwise
+ * (with Dependabot: Renovate merges by itself).
  * With `modules.ci` on, `protect` requires the `CI result` check unless `required_checks` names others.
  */
 export function githubSettings(config: RepokeeperConfig): GithubSettings {
   let settings = config.github ?? {};
-  if (config.modules.automerge && settings.merge?.auto_merge === undefined) {
+  // Dependabot's workflow turns GitHub's auto-merge on; Renovate merges by itself and needs no setting
+  const dependabot = depsSettings(config)?.tool !== "renovate";
+  if (config.modules.automerge && dependabot && settings.merge?.auto_merge === undefined) {
     settings = { ...settings, merge: { ...settings.merge, auto_merge: true } };
   }
   if (config.modules.ci && settings.protect && settings.protect.required_checks === undefined) {

@@ -1,6 +1,6 @@
 import { stringify } from "yaml";
 import { CONFIG_FILE } from "../config/load.js";
-import { defaultBranch, STACK_IDS, type StackId } from "../config/types.js";
+import { defaultBranch, depsSettings, STACK_IDS, type StackId } from "../config/types.js";
 import { ConfigError } from "../errors.js";
 import { CI_RESULT_CHECK } from "../github/checks.js";
 import { globsToRegex } from "../glob.js";
@@ -23,6 +23,7 @@ import {
   TOOL_VERSIONS,
   WORKFLOW_REF,
 } from "../version.js";
+import { renovateJson } from "./renovate.js";
 
 const pinned = (pin: (typeof ACTION_PINS)[keyof typeof ACTION_PINS]) => `${pin.action}@${pin.sha}`;
 
@@ -284,9 +285,32 @@ export const githubPlatform: PlatformAdapter = {
 
   dependencyUpdates(requested: DependencyUpdate[], ctx: ModuleContext): Output[] {
     // a pinned reference is moved by `repokeeper update` or by its owner in .repokeeper.yml; a
-    // Dependabot bump of it would edit a key repokeeper manages and show up as drift every time
+    // Dependabot or Renovate bump of it would edit a key repokeeper manages and show up as drift every time
     const origin = workflowOrigin(ctx);
-    const pinnedWorkflows = !origin.local && origin.pinned ? [{ "dependency-name": `${origin.repo}*` }] : [];
+    const pinnedRepo = !origin.local && origin.pinned ? origin.repo : null;
+    const deps = depsSettings(ctx.config);
+    if (deps?.tool === "renovate") {
+      // Renovate finds the package managers itself, so the Dependabot ecosystem names are not needed. It
+      // runs as the Mend Renovate GitHub App, which the repository installs; there is no workflow to write.
+      return [
+        renovateJson({
+          presets: deps.extends,
+          // a regular expression, so it covers the reusable workflows whether Renovate names them by the
+          // repository or by the path of the file in it
+          managed: pinnedRepo
+            ? [
+                {
+                  matchManagers: ["github-actions"],
+                  matchPackageNames: [`/^${pinnedRepo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(/|$)/`],
+                  enabled: false,
+                },
+              ]
+            : [],
+          automerge: ctx.config.modules.automerge,
+        }),
+      ];
+    }
+    const pinnedWorkflows = pinnedRepo ? [{ "dependency-name": `${pinnedRepo}*` }] : [];
     // workflows always live at the root, whatever folders the stacks are in
     const all = [...requested, { ecosystem: "github-actions", directory: "/" }];
     const unique = all.filter(
@@ -472,6 +496,8 @@ export const githubPlatform: PlatformAdapter = {
   },
 
   dependencyAutomerge(ctx: ModuleContext): Output[] {
+    // Renovate merges its own pull requests: the deps module writes `automerge` into renovate.json instead
+    if (depsSettings(ctx.config)?.tool === "renovate") return [];
     // not the name of the reusable workflow it calls: a repository that keeps its own copies has both
     const path = ".github/workflows/automerge.yml";
     return [
@@ -531,7 +557,7 @@ export const githubPlatform: PlatformAdapter = {
             zizmorKey(["rules", "dangerous-triggers", "ignore"], ["cache-cleanup.yml"]),
           ]
         : []),
-      ...(ctx.config.modules.deps
+      ...(depsSettings(ctx.config)?.tool === "dependabot"
         ? [
             // repokeeper writes the whole file; a cooldown would hold back every version update, a choice
             // it leaves to the repository (security updates are never held back either way)

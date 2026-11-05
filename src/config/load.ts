@@ -63,8 +63,24 @@ function finishConfig(sources: ConfigSource[]): RepokeeperConfig {
       );
     }
   }
-  if (typed.modules?.automerge === true && typed.github?.merge?.auto_merge === false) {
-    // the workflow would fail on every Dependabot pull request
+  const deps = typed.modules?.deps;
+  if (typeof deps === "object") {
+    const at = (key: string) => locate(sources, ["modules", "deps", key]);
+    if (typed.platform === "gitlab" && deps.tool === "dependabot") {
+      throw new ConfigError(`${at("tool")}: modules.deps.tool: Dependabot runs on GitHub only; GitLab uses renovate`);
+    }
+    if (
+      (deps.tool ?? (typed.platform === "gitlab" ? "renovate" : "dependabot")) === "dependabot" &&
+      deps.extends?.length
+    ) {
+      throw new ConfigError(
+        `${at("extends")}: modules.deps.extends lists Renovate presets; add tool: renovate to use them`,
+      );
+    }
+  }
+  const renovate = typeof deps === "object" && deps.tool === "renovate";
+  if (typed.modules?.automerge === true && typed.github?.merge?.auto_merge === false && !renovate) {
+    // the workflow would fail on every Dependabot pull request; Renovate merges by itself
     throw new ConfigError(
       `${locate(sources, ["github", "merge", "auto_merge"])}: github.merge.auto_merge is false, ` +
         "but modules.automerge needs auto-merge allowed; remove the line, or switch the module off",
