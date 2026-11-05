@@ -157,7 +157,7 @@ async function initFromConfig(root: string, options: CommandOptions, io: Io): Pr
   if (options.interactive && confirm === undefined) {
     throw new UsageError("--interactive needs a terminal to ask its questions in");
   }
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.githubApi);
   assertSupportedStandard(config.standard);
   io.out(`using the ${CONFIG_FILE} that is already here`);
   const ctx = await buildContext(root, { ...config, standard: STANDARD_VERSION });
@@ -189,7 +189,7 @@ async function initFromConfig(root: string, options: CommandOptions, io: Io): Pr
 
 /** Records the current content of every planned output as repokeeper's own, rebuilding a lost or corrupt lock. */
 async function relock(root: string, options: CommandOptions, io: Io): Promise<number> {
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.githubApi);
   const ctx = await buildContext(root, config);
   const lock: Lock = { lockVersion: 1, standard: config.standard, entries: [] };
   for (const output of planOutputs(ctx)) {

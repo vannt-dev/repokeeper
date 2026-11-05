@@ -41,7 +41,7 @@ async function readWorkflows(root: string): Promise<string[]> {
 
 /** `repokeeper github apply`: diff the repository's GitHub settings against `github:` and apply on confirmation. */
 export async function githubApplyCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.githubApi);
   if (config.platform !== "github") throw new UsageError(`this repository uses the ${config.platform} platform`);
   const repo = await repoInfo(root);
   if (!repo.owner) throw new UsageError("the origin remote is not a GitHub repository");

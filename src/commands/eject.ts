@@ -32,7 +32,7 @@ export function setLocalWorkflows(text: string): string {
 export async function ejectCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
   if (options.to !== undefined) return ejectTo(resolve(root, options.to), options, io);
 
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.githubApi);
   if (config.platform !== "github") {
     throw new UsageError("eject is for GitHub: on GitLab every job is already generated into .gitlab-ci.yml");
   }

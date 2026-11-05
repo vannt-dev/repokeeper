@@ -22,7 +22,7 @@ export async function bumpCommand(
   if (version === undefined || !VERSION.test(version)) {
     throw new UsageError("usage: repokeeper bump <version> [--dry-run], with a version such as 1.4.0");
   }
-  const ctx = await buildContext(root, await loadConfig(root));
+  const ctx = await buildContext(root, await loadConfig(root, io.githubApi));
   const stack = pickReleaseStack(ctx.stacks);
   if (stack === undefined) throw new UsageError("no stack to release");
   const folder = stack.directory ? join(root, stack.directory) : root;

@@ -28,7 +28,8 @@ export async function resolveToken(env: NodeJS.ProcessEnv = process.env): Promis
   throw new ApiError("no GitHub token: set GITHUB_TOKEN or sign in with `gh auth login`");
 }
 
-export function restApi(token: string, base = "https://api.github.com"): GitHubApi {
+/** A client of the REST API; without a token it reads public repositories only, at a lower rate limit. */
+export function restApi(token: string | undefined, base = "https://api.github.com"): GitHubApi {
   return {
     async request(method, path, body) {
       let response: Response;
@@ -37,7 +38,7 @@ export function restApi(token: string, base = "https://api.github.com"): GitHubA
           method,
           headers: {
             accept: "application/vnd.github+json",
-            authorization: `Bearer ${token}`,
+            ...(token ? { authorization: `Bearer ${token}` } : {}),
             "x-github-api-version": "2022-11-28",
             ...(body === undefined ? {} : { "content-type": "application/json" }),
           },

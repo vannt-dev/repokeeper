@@ -8,7 +8,7 @@ import type { CommandOptions } from "./report.js";
 
 /** `repokeeper gitlab apply`: diff the project's GitLab settings against `gitlab:` and apply on confirmation. */
 export async function gitlabApplyCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.githubApi);
   if (config.platform !== "gitlab") throw new UsageError(`this repository uses the ${config.platform} platform`);
   const repo = await repoInfo(root, "gitlab");
   if (!repo.owner) throw new UsageError("the origin remote is not a GitLab project");

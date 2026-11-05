@@ -18,7 +18,7 @@ export function assertSupportedStandard(standard: string): void {
 }
 
 export async function checkCommand(root: string, options: CommandOptions, io: Io): Promise<number> {
-  const config = await loadConfig(root);
+  const config = await loadConfig(root, io.githubApi);
   assertSupportedStandard(config.standard);
   const lock = await readLock(root);
   if (!lock) {
