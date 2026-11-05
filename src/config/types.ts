@@ -27,13 +27,26 @@ export interface HealthConfig {
   codeowners: string[];
 }
 
+/** The two tools `modules.deps` can write the dependency updates for. */
+export const DEPS_TOOLS = ["dependabot", "renovate"] as const;
+export type DepsTool = (typeof DEPS_TOOLS)[number];
+
+/** `modules.deps` as a mapping: which tool, and the Renovate presets added after repokeeper's own. */
+export interface DepsConfig {
+  /** Left out: Dependabot on GitHub, Renovate on GitLab (where there is no Dependabot). */
+  tool?: DepsTool;
+  /** Renovate presets appended to `extends` in renovate.json, such as `github>my-org/renovate-config`. */
+  extends?: string[];
+}
+
 export interface ModulesConfig {
   editorconfig: boolean;
   commits: boolean;
   hooks: boolean;
   ci: boolean;
   release: boolean;
-  deps: boolean;
+  /** true, or a mapping that picks the tool; read it through `depsSettings`. */
+  deps: boolean | DepsConfig;
   gitignore: boolean;
   /** A ci job that runs `repokeeper check`; off unless asked for. */
   drift: boolean;
@@ -43,7 +56,10 @@ export interface ModulesConfig {
   security: boolean;
   /** A workflow that deletes the Actions caches nothing will read again; off unless asked for. */
   cache_cleanup: boolean;
-  /** A workflow that turns on auto-merge for Dependabot's patch and minor updates; off unless asked for. */
+  /**
+   * Auto-merge for patch and minor dependency updates; off unless asked for. With Dependabot a workflow
+   * turns it on, with Renovate its own `automerge` in renovate.json.
+   */
   automerge: boolean;
   /** A job in the release workflow that publishes each release to npm or PyPI; off unless asked for. */
   publish: boolean;
@@ -62,6 +78,15 @@ export interface RepokeeperConfig {
   stack_options: Record<string, Record<string, unknown>>;
   github?: GithubSettings;
   gitlab?: GitlabSettings;
+}
+
+/** `modules.deps` resolved: the tool the platform runs, and the extra Renovate presets; null when off. */
+export function depsSettings(config: RepokeeperConfig): { tool: DepsTool; extends: string[] } | null {
+  const deps = config.modules.deps;
+  if (deps === false) return null;
+  const fallback: DepsTool = config.platform === "gitlab" ? "renovate" : "dependabot";
+  if (deps === true) return { tool: fallback, extends: [] };
+  return { tool: deps.tool ?? fallback, extends: deps.extends ?? [] };
 }
 
 /** The branch CI runs on and contributors branch from: `default_branch` of the configured platform, or `main`. */

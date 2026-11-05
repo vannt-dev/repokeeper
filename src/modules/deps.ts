@@ -1,8 +1,9 @@
+import { depsSettings } from "../config/types.js";
 import type { Module } from "../model.js";
 
 export const depsModule: Module = {
   id: "deps",
-  enabled: (config) => config.modules.deps,
+  enabled: (config) => depsSettings(config) !== null,
   outputs: (ctx) =>
     ctx.platform.dependencyUpdates(
       ctx.stacks.flatMap((stack) =>

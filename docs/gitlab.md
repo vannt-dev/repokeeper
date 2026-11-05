@@ -9,7 +9,7 @@ What differs from GitHub:
 | --- | --- | --- |
 | Templates, CODEOWNERS | `.github/` | `.gitlab/` |
 | CI | caller workflows of reusable workflows | every job generated into `.gitlab-ci.yml` |
-| Dependency updates | Dependabot | Renovate (`renovate.json`) |
+| Dependency updates | Dependabot, or Renovate as the Mend app (`modules.deps.tool`) | Renovate (`renovate.json`), from a CI job |
 | Releases | release-please, through a release pull request | semantic-release, on every push to the default branch |
 
 Jobs you add to `.gitlab-ci.yml` are kept; repokeeper manages only its own top-level keys
@@ -87,6 +87,11 @@ Two jobs stay inactive until you set them up in the project's CI/CD settings:
   - Changelogs in its merge requests come from github.com, which answers few requests without a
     token. A CI/CD variable `GITHUB_COM_TOKEN` (a GitHub token with no scopes at all) lifts that
     limit; without it Renovate works and says in the dashboard that release notes were skipped.
+  - `modules.deps: { extends: [...] }` adds Renovate presets of your own after repokeeper's, as on
+    GitHub (see [Dependency updates](ci-and-releases.md#dependency-updates)); nothing else about the
+    job changes. A preset hosted on github.com (`github>my-org/renovate-config`) may need the same
+    `GITHUB_COM_TOKEN` to be fetched; one in a GitLab project (`gitlab>my-group/renovate-config`)
+    needs only `RENOVATE_TOKEN`. `tool: dependabot` is refused on GitLab.
 
 ## Project settings: `repokeeper gitlab apply`
 

@@ -27,7 +27,7 @@ github:
   the repository it is in; a commit SHA cannot, so write one as `ref` when that matters, and change
   it yourself when you want a newer version.
 - With a `ref`, the generated `dependabot.yml` tells Dependabot to leave these workflow references
-  alone: one owner moves them, not two.
+  alone: one owner moves them, not two. With Renovate, `renovate.json` has the same rule.
 - **`source: your-org/ci-workflows`** calls a copy you host. `repokeeper eject --to <folder>` writes
   every reusable workflow into `<folder>/.github/workflows/` of a clone of that repository; commit
   them there and allow the organisation's repositories to use its workflows. `ref` defaults to `main`.
@@ -229,6 +229,48 @@ The switch is off unless you ask for it, and no preset turns it on: it deletes t
 It is for GitHub only. On GitLab it writes nothing, because GitLab has no Actions caches: a runner keeps
 its own cache and expires it there. It needs repokeeper 0.11.0 or newer.
 
+## Dependency updates
+
+`modules.deps` (on in the `standard` and `strict` presets) keeps the dependencies up to date. On
+GitHub it writes `.github/dependabot.yml`: a weekly check for each ecosystem of your stacks and for
+GitHub Actions, minor and patch updates grouped into one pull request, a `chore` commit prefix that
+commitlint accepts, and no `@types/node` majors (the Node.js line is the project's choice).
+
+To use [Renovate](https://docs.renovatebot.com/) on GitHub instead, write the switch as a mapping:
+
+```yaml
+modules:
+  deps:
+    tool: renovate                               # dependabot (the default) or renovate
+    extends: ["github>my-org/renovate-config"]   # optional: your own presets
+```
+
+repokeeper then writes `renovate.json` and no `dependabot.yml`. Its rules are the ones it writes on
+GitLab, built by the same code, so the two platforms cannot drift apart: `config:recommended`, `chore`
+commits, one group for minor and patch updates, and no `@types/node` majors. `extends` adds your
+presets after repokeeper's own, so an organisation can keep its policy (schedules, labels, extra
+rules) in one place; a preset that sets the same option wins. Change the rules through a preset
+rather than in `renovate.json`, which repokeeper owns and `check` reports when edited.
+
+On GitHub, Renovate runs as the [Mend Renovate GitHub App](https://github.com/apps/renovate):
+install it on the repository, or on the organisation for the repositories you choose. There is no
+workflow and no token to set up. Because `renovate.json` is already there, the app skips its
+onboarding pull request and starts with the updates. `deps: true` still means Dependabot, and its file
+stays exactly as before.
+
+- **Versions repokeeper owns.** With a `github.workflows.ref`, `renovate.json` keeps Renovate away
+  from the reusable workflows, as `dependabot.yml` keeps Dependabot away: `repokeeper update` moves
+  them (see [Pinning, mirroring and local copies](#pinning-mirroring-and-local-copies)).
+- **Switching tools.** The next `repokeeper update` deletes the `dependabot.yml` it wrote, and
+  `.github/workflows/automerge.yml` with it (see [below](#dependabot-auto-merge)). A copy you edited is
+  kept and reported as no longer generated; delete it yourself, or both tools open pull requests.
+  Switching back removes `renovate.json` the same way.
+- **Security updates.** Dependabot alerts and security updates (`github.security`, see
+  [GitHub settings](github-settings.md)) are settings of the repository and stay as you set them. With
+  Dependabot security updates on next to Renovate, a security fix may arrive in two pull requests.
+
+On GitLab Renovate is the only choice; `extends` works there the same way (see [GitLab](gitlab.md)).
+
 ## Dependabot auto-merge
 
 Set `modules.automerge: true` and repokeeper writes `.github/workflows/automerge.yml`. On each of
@@ -268,6 +310,14 @@ The merge method is the first one `github.merge` allows, in this order: squash, 
 still asks for one approving review on every pull request. Auto-merge then waits for a person to
 approve, because the workflow never approves anything itself. Under `strict`, the module saves you the
 merge click and nothing more.
+
+**With Renovate** (`modules.deps.tool: renovate`), repokeeper writes no workflow. It sets Renovate's
+own [`automerge`](https://docs.renovatebot.com/configuration-options/#automerge) on the group of minor
+and patch updates in `renovate.json`; majors stay manual, as above. Renovate merges only once the checks
+have passed, and on GitHub it uses the repository's auto-merge for that, so it also waits for what the
+default branch requires, a review included. `repokeeper github apply` still allows auto-merge in the
+repository. No `AUTOMERGE_TOKEN` is needed: a merge made by the app starts the workflows of the
+default branch as any other push does. Renovate picks a merge method the repository allows.
 
 On GitLab the switch writes nothing: Renovate opens the updates there and has its own `automerge`
 setting. It needs repokeeper 0.11.0 or newer.
@@ -365,7 +415,7 @@ file it writes itself:
 | --- | --- |
 | `unpinned-uses` policy `vannt-dev/repokeeper/*: ref-pin` | The callers follow the `v0` tag of the workflow repository, which a repokeeper release moves on purpose. A mirror (`github.workflows.source`) gets its own name here; local copies need nothing. |
 | `dangerous-triggers` ignores `cache-cleanup.yml` | Only with `modules.cache_cleanup`. It runs on `pull_request_target` but checks nothing out (see [Cache cleanup](#cache-cleanup)). |
-| `dependabot-cooldown` ignores `dependabot.yml` | Only with `modules.deps`. repokeeper writes the whole file, and a cooldown would hold back every version update, which is the repository's choice. Security updates are not held back either way. |
+| `dependabot-cooldown` ignores `dependabot.yml` | Only with `modules.deps` and Dependabot. repokeeper writes the whole file, and a cooldown would hold back every version update, which is the repository's choice. Security updates are not held back either way. |
 
 Add rules of your own next to these: repokeeper manages only its own keys. Every file repokeeper writes
 with every module on passes both tools: `fixtures/workflow-lint` in repokeeper's own repository holds

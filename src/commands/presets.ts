@@ -39,9 +39,10 @@ export const MODULE_IDS: ModuleId[] = [
  * A preset only switches on what works in every repository. Code scanning (`modules.security`) is in no
  * preset: it is free on a public repository and needs GitHub Code Security on a private one, where a
  * preset would otherwise leave a failing workflow behind. The cache cleanup (`modules.cache_cleanup`) is in
- * none either: it deletes things, so it is yours to ask for. Nor is Dependabot auto-merge
+ * none either: it deletes things, so it is yours to ask for. Nor is auto-merge of dependency updates
  * (`modules.automerge`): merging without a person is a choice the repository's owner makes. Under
- * `strict` it still waits for the review the ruleset requires, since the workflow never approves.
+ * `strict` it still waits for the review the ruleset requires, since neither the workflow nor Renovate
+ * approves.
  * Nor is publishing (`modules.publish`): it needs a trusted publisher set up on the registry first, and
  * not every package is meant to be public. Nor is the workflow lint (`modules.workflow_lint`): on a repository
  * with workflows of its own it fails until their findings are fixed, so it is switched on when that work is planned.

@@ -1,6 +1,6 @@
 import { ACCESS_LEVELS } from "../gitlab/settings.js";
 import { LICENSES } from "../licenses.js";
-import { STACK_IDS } from "./types.js";
+import { DEPS_TOOLS, STACK_IDS } from "./types.js";
 
 const flag = { type: "boolean" } as const;
 const ACCESS = Object.keys(ACCESS_LEVELS);
@@ -23,7 +23,20 @@ export const configSchema = {
         hooks: flag,
         ci: flag,
         release: flag,
-        deps: flag,
+        deps: {
+          anyOf: [
+            flag,
+            {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                tool: { enum: [...DEPS_TOOLS] },
+                // Renovate presets, appended after repokeeper's own
+                extends: { type: "array", uniqueItems: true, items: { type: "string", minLength: 1 } },
+              },
+            },
+          ],
+        },
         gitignore: flag,
         drift: flag,
         autoupdate: flag,

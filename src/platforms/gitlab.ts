@@ -1,5 +1,6 @@
-import { defaultBranch, STACK_IDS } from "../config/types.js";
+import { defaultBranch, depsSettings, STACK_IDS } from "../config/types.js";
 import {
+  type DependencyUpdate,
   MANAGED_HEADER,
   type ModuleContext,
   type Output,
@@ -10,6 +11,7 @@ import {
 import { releaseFiles } from "../release/bump.js";
 import { PACKAGE_VERSION, TOOL_VERSIONS } from "../version.js";
 import { FOR_CHANGES, NOT_SCHEDULED, NOT_THE_RELEASE_COMMIT, STACK_JOB_KEYS, stackJobs } from "./gitlab-jobs.js";
+import { renovateJson } from "./renovate.js";
 
 const md = (path: string, body: string): Output => ({
   kind: "file",
@@ -162,33 +164,24 @@ export const gitlabPlatform: PlatformAdapter = {
   },
 
   // Renovate finds the package managers itself, so the Dependabot ecosystem names are not needed
-  dependencyUpdates(): Output[] {
+  dependencyUpdates(_updates: DependencyUpdate[], ctx: ModuleContext): Output[] {
     return [
-      {
-        kind: "file",
-        module: "deps",
-        path: "renovate.json",
-        content: json({
-          $schema: "https://docs.renovatebot.com/renovate-schema.json",
-          // chore commits pass commitlint, as the Dependabot prefix does on GitHub. No schedule preset: the
-          // pipeline schedule sets the cadence, and a Renovate schedule would skip runs outside its own window
-          extends: ["config:recommended", ":semanticCommits", ":semanticCommitTypeAll(chore)"],
-          packageRules: [
-            { matchUpdateTypes: ["minor", "patch"], groupName: "minor and patch updates" },
-            // @types/node majors track the Node.js line a project runs on, which the project chooses
-            { matchPackageNames: ["@types/node"], matchUpdateTypes: ["major"], enabled: false },
-            // The images of repokeeper's own jobs are the standard's to move, with `repokeeper update`. A merge
-            // request that bumps one edits a managed key: `repokeeper check` reports it, the next update takes it
-            // back, and Renovate (pinned to the patch) would open one every week.
-            {
-              matchManagers: ["gitlabci"],
-              matchFileNames: [CI_FILE],
-              matchPackageNames: [...MANAGED_IMAGES],
-              enabled: false,
-            },
-          ],
-        }),
-      },
+      renovateJson({
+        presets: depsSettings(ctx.config)?.extends ?? [],
+        // The images of repokeeper's own jobs are the standard's to move, with `repokeeper update`. A merge
+        // request that bumps one edits a managed key: `repokeeper check` reports it, the next update takes it
+        // back, and Renovate (pinned to the patch) would open one every week.
+        managed: [
+          {
+            matchManagers: ["gitlabci"],
+            matchFileNames: [CI_FILE],
+            matchPackageNames: [...MANAGED_IMAGES],
+            enabled: false,
+          },
+        ],
+        // Renovate's automerge is not written on GitLab yet (see dependencyAutomerge)
+        automerge: false,
+      }),
       // runs from a pipeline schedule of the repository; without the token or a schedule it never starts
       ciKey("deps", "renovate", {
         stage: "test",

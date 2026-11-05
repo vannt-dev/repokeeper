@@ -1,5 +1,6 @@
 import type { Io } from "../cli.js";
 import { loadConfig } from "../config/load.js";
+import { depsSettings } from "../config/types.js";
 import { UsageError } from "../errors.js";
 import { repoInfo } from "../git.js";
 import { gitlabRestApi, resolveGitlabToken } from "../gitlab/api.js";
@@ -18,7 +19,7 @@ export async function gitlabApplyCommand(root: string, options: CommandOptions, 
   // the jobs that wait for a secret: reported when it is missing, never created
   const secrets = [
     ...(config.modules.release ? [{ key: "GITLAB_TOKEN", job: "release" }] : []),
-    ...(config.modules.deps ? [{ key: "RENOVATE_TOKEN", job: "renovate" }] : []),
+    ...(depsSettings(config) ? [{ key: "RENOVATE_TOKEN", job: "renovate" }] : []),
   ];
   const { changes, notes } = await planGitlab(api, path, config.gitlab ?? {}, secrets);
   if (changes.length === 0) io.out(`GitLab settings of ${path} match .repokeeper.yml`);
