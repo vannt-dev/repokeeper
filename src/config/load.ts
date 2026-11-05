@@ -113,11 +113,17 @@ function orderedModules<T extends Pick<ModulesConfig, "health">>(modules: T): T 
   return { ...flags, health } as T;
 }
 
-/** Rewrites `standard:` in place, keeping every comment and the rest of the layout. */
+/**
+ * Rewrites `standard:` in place, keeping every comment and the rest of the layout. The value is
+ * edited as text: a round trip through the yaml library re-renders the rest of the file
+ * (`[a, b]` becomes `[ a, b ]`).
+ */
 export function setStandard(text: string, version: string): string {
+  const line = /^(standard:[ \t]*)(["']?)[^\s"'#]+\2(?=[ \t]*(?:#.*)?\r?$)/m;
+  if (line.test(text)) return text.replace(line, `$1$2${version}$2`);
   const doc = parseDocument(text);
   doc.set("standard", version);
-  return doc.toString();
+  return doc.toString({ flowCollectionPadding: false });
 }
 
 function withDefaults(

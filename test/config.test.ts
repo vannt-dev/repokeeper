@@ -116,4 +116,21 @@ describe("setStandard", () => {
     const text = "# keep me\nschema: 1\nstandard: 1.0.0 # applied\nplatform: github\n";
     expect(setStandard(text, "1.1.0")).toBe("# keep me\nschema: 1\nstandard: 1.1.0 # applied\nplatform: github\n");
   });
+
+  it("leaves flow lists, quotes and CRLF line ends as they are", () => {
+    const text =
+      'schema: 1\r\nstandard: "1.0.0"\r\nstack_options:\r\n  node:\r\n    os: [ubuntu-latest, windows-latest]\r\n';
+    expect(setStandard(text, "1.1.0")).toBe(
+      'schema: 1\r\nstandard: "1.1.0"\r\nstack_options:\r\n  node:\r\n    os: [ubuntu-latest, windows-latest]\r\n',
+    );
+  });
+
+  it("does not touch a nested key of the same name", () => {
+    const text = "schema: 1\nstandard: 1.0.0\nother:\n  standard: keep\n";
+    expect(setStandard(text, "1.1.0")).toBe("schema: 1\nstandard: 1.1.0\nother:\n  standard: keep\n");
+  });
+
+  it("adds the key when the file has none, without padding flow lists", () => {
+    expect(setStandard("schema: 1\nstacks: [node]\n", "1.1.0")).toBe("schema: 1\nstacks: [node]\nstandard: 1.1.0\n");
+  });
 });
