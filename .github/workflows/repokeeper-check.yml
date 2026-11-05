@@ -27,4 +27,6 @@ jobs:
       - name: Check the repository against its standard
         env:
           VERSION: ${{ inputs.version }}
+          # reads a github: source named by extends in .repokeeper.yml at the higher rate limit of a token
+          GITHUB_TOKEN: ${{ github.token }}
         run: npx --yes "repokeeper@$VERSION" check

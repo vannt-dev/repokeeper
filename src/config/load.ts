@@ -1,9 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { Ajv, type ErrorObject } from "ajv";
-import { type Document, isNode, LineCounter, parseDocument, stringify } from "yaml";
+import { parseDocument, stringify } from "yaml";
 import { ConfigError } from "../errors.js";
+import type { GitHubApi } from "../github/api.js";
 import { checkContext } from "../github/settings.js";
+import { type ConfigSource, locate, mergeData, readSource, resolveSources } from "./extends.js";
 import { configSchema } from "./schema.js";
 import type { ModulesConfig, RepokeeperConfig } from "./types.js";
 
@@ -11,39 +13,40 @@ export const CONFIG_FILE = ".repokeeper.yml";
 
 const validate = new Ajv({ allErrors: false }).compile(configSchema);
 
-export async function loadConfig(root: string): Promise<RepokeeperConfig> {
+export async function loadConfig(root: string, api?: GitHubApi): Promise<RepokeeperConfig> {
   let text: string;
   try {
     text = await readFile(join(root, CONFIG_FILE), "utf8");
   } catch {
     throw new ConfigError(`${CONFIG_FILE} not found; run \`repokeeper init\` first`);
   }
-  return parseConfig(text);
+  return finishConfig(await resolveSources(root, readSource(text, CONFIG_FILE), api));
 }
 
+/** A `.repokeeper.yml` on its own; one with `extends` is read by `loadConfig`, which can find the files it names. */
 export function parseConfig(text: string): RepokeeperConfig {
-  const lineCounter = new LineCounter();
-  const doc = parseDocument(text, { lineCounter });
-  const syntax = doc.errors[0];
-  if (syntax) {
-    const line = syntax.linePos?.[0]?.line ?? 1;
-    throw new ConfigError(`${CONFIG_FILE}:${line}: ${syntax.message.split("\n")[0]}`);
+  const source = readSource(text, CONFIG_FILE);
+  if (source.extends.length > 0) {
+    throw new ConfigError(`${locate([source], ["extends"])}: extends is resolved only when the file is read from disk`);
   }
-  const data: unknown = doc.toJS() ?? {};
+  return finishConfig([source]);
+}
+
+/** Merges the files, the repository's own last, and validates the result. */
+function finishConfig(sources: ConfigSource[]): RepokeeperConfig {
+  const data = sources.map((source) => source.data).reduce((merged, next) => mergeData(merged, next));
   if (!validate(data)) {
     // under anyOf (health: false or a mapping) the error inside the mapping says more than "not false"
     const errors = validate.errors ?? [];
     const error = errors.reduce((a, b) => (pathOf(b).length > pathOf(a).length ? b : a)) as ErrorObject;
     const path = pathOf(error);
-    throw new ConfigError(`${CONFIG_FILE}:${lineOf(doc, lineCounter, path)}: ${describe(error, path)}`);
+    throw new ConfigError(`${locate(sources, path)}: ${describe(error, path)}`);
   }
   const typed = data as Partial<RepokeeperConfig> &
     Pick<RepokeeperConfig, "schema" | "standard" | "platform" | "stacks">;
   const other = typed.platform === "gitlab" ? "github" : "gitlab";
   if (typed[other] !== undefined) {
-    throw new ConfigError(
-      `${CONFIG_FILE}:${lineOf(doc, lineCounter, [other])}: ${other} is not used on the ${typed.platform} platform`,
-    );
+    throw new ConfigError(`${locate(sources, [other])}: ${other} is not used on the ${typed.platform} platform`);
   }
   const skipped = typed.github?.ci?.skip_when_only;
   const protect = typed.github?.protect;
@@ -54,7 +57,7 @@ export function parseConfig(text: string): RepokeeperConfig {
       .find((check) => typed.stacks.some((stack) => check === stack || check.startsWith(`${stack} / `)));
     if (gated) {
       throw new ConfigError(
-        `${CONFIG_FILE}:${lineOf(doc, lineCounter, ["github", "protect", "required_checks"])}: required_checks names ` +
+        `${locate(sources, ["github", "protect", "required_checks"])}: required_checks names ` +
           `"${gated}", a stack job that github.ci.skip_when_only skips on docs-only pull requests; ` +
           "such a pull request would wait for it forever",
       );
@@ -63,7 +66,7 @@ export function parseConfig(text: string): RepokeeperConfig {
   if (typed.modules?.automerge === true && typed.github?.merge?.auto_merge === false) {
     // the workflow would fail on every Dependabot pull request
     throw new ConfigError(
-      `${CONFIG_FILE}:${lineOf(doc, lineCounter, ["github", "merge", "auto_merge"])}: github.merge.auto_merge is false, ` +
+      `${locate(sources, ["github", "merge", "auto_merge"])}: github.merge.auto_merge is false, ` +
         "but modules.automerge needs auto-merge allowed; remove the line, or switch the module off",
     );
   }
@@ -160,12 +163,4 @@ function describe(error: ErrorObject, path: (string | number)[]): string {
     return `${name} must be one of: ${allowed.join(", ")}`;
   }
   return `${name} ${error.message ?? "is invalid"}`;
-}
-
-function lineOf(doc: Document, lineCounter: LineCounter, path: (string | number)[]): number {
-  for (let length = path.length; length > 0; length--) {
-    const node = doc.getIn(path.slice(0, length), true);
-    if (isNode(node) && node.range) return lineCounter.linePos(node.range[0]).line;
-  }
-  return 1;
 }

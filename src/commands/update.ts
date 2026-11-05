@@ -28,7 +28,7 @@ export async function updateCommand(
   io: Io,
   change?: ConfigChange,
 ): Promise<number> {
-  const config = change?.config ?? (await loadConfig(root));
+  const config = change?.config ?? (await loadConfig(root, io.githubApi));
   assertSupportedStandard(config.standard);
   const lock = await readLock(root);
   if (!lock) throw new UsageError(".repokeeper/lock.json is missing; run `repokeeper init --relock` first");
