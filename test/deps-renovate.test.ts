@@ -234,13 +234,23 @@ describe("deps: Renovate on GitHub", () => {
 describe("deps: auto-merge with Renovate", () => {
   it("writes Renovate's own automerge for the minor and patch group instead of the workflow", () => {
     const ctx = renovate({ modules: { automerge: true } });
-    expect(renovateConfig(ctx).packageRules).toEqual([{ ...BASE_RULES[0], automerge: true }, BASE_RULES[1]]);
+    // Renovate merges by itself once the checks are green; GitHub's auto-merge would not wait for CI on a
+    // branch that requires nothing, which the Dependabot workflow guards against
+    expect(renovateConfig(ctx).packageRules).toEqual([
+      { ...BASE_RULES[0], automerge: true, platformAutomerge: false },
+      BASE_RULES[1],
+    ]);
     expect(automergeModule.outputs(ctx)).toEqual([]);
     // nor a copy of the Dependabot workflow, for a repository that keeps its own
     const local = renovate({ modules: { automerge: true }, config: { github: { workflows: { source: "local" } } } });
     expect(planOutputs(local).some((output) => output.path.includes("automerge"))).toBe(false);
-    // github apply still allows auto-merge, which Renovate turns on for its pull requests
-    expect(githubSettings(ctx.config).merge?.auto_merge).toBe(true);
+    // so github apply leaves the repository's auto-merge setting alone, and false is no conflict
+    expect(githubSettings(ctx.config).merge?.auto_merge).toBeUndefined();
+    expect(githubSettings(makeContext({ modules: { automerge: true } }).config).merge?.auto_merge).toBe(true);
+    const yaml = (deps: string) =>
+      `schema: 1\nstandard: 1.0.0\nplatform: github\nstacks: [node]\nmodules:\n  health: false\n  automerge: true\n  deps: ${deps}\ngithub:\n  merge:\n    auto_merge: false\n`;
+    expect(parseConfig(yaml("{ tool: renovate }")).modules.automerge).toBe(true);
+    expect(() => parseConfig(yaml("true"))).toThrow(/modules.automerge needs auto-merge allowed/);
   });
 
   it("leaves Dependabot's workflow and GitLab's renovate.json as they were", () => {
@@ -249,7 +259,7 @@ describe("deps: auto-merge with Renovate", () => {
     expect(renovateConfig(gitlabContext({ modules: { automerge: true } }))).toEqual(renovateConfig(gitlabContext()));
   });
 
-  it("says to install the Renovate app, and to allow auto-merge when the module is on", async () => {
+  it("says to install the Renovate app when renovate.json is new", async () => {
     const result = (action: string) =>
       ({
         decisions: [{ output: { kind: "file", path: "renovate.json" }, action }],
@@ -257,16 +267,12 @@ describe("deps: auto-merge with Renovate", () => {
       }) as unknown as SyncResult;
     const app =
       "install the Mend Renovate GitHub App (https://github.com/apps/renovate) on this repository; it reads renovate.json and opens the dependency updates";
-    const allow =
-      "run `repokeeper github apply` to allow auto-merge; Renovate then merges its patch and minor updates once their checks have passed";
-    const automerge = renovate({ modules: { automerge: true } });
     // the formatter step of the node stack is not what this is about
     const steps = async (...args: Parameters<typeof nextSteps>) =>
       (await nextSteps(...args)).filter((step) => step.includes("Renovate"));
     expect(await steps(".", renovate(), result("create"))).toEqual([app]);
-    expect(await steps(".", automerge, result("create"))).toEqual([app, allow]);
-    // switched on later: renovate.json is rewritten, and the app is already there
-    expect(await steps(".", automerge, result("write"))).toEqual([allow]);
+    // rewritten, as when auto-merge is switched on later: the app is already there
+    expect(await steps(".", renovate({ modules: { automerge: true } }), result("write"))).toEqual([]);
     expect(await steps(".", renovate(), result("unchanged"))).toEqual([]);
     // GitLab runs Renovate from its own job
     expect(await steps(".", gitlabContext(), result("create"))).toEqual([]);

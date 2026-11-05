@@ -20,8 +20,10 @@ export function renovateJson(options: { presets: string[]; managed: PackageRule[
       {
         matchUpdateTypes: ["minor", "patch"],
         groupName: "minor and patch updates",
-        // Renovate's own auto-merge; a major is never in the group, so it stays manual
-        ...(options.automerge ? { automerge: true } : {}),
+        // Renovate's own auto-merge; a major is never in the group, so it stays manual. Renovate merges
+        // once the checks are green, and not at all without checks. GitHub's auto-merge (platformAutomerge)
+        // would merge at once on a branch that requires nothing, before CI has run.
+        ...(options.automerge ? { automerge: true, platformAutomerge: false } : {}),
       },
       // @types/node majors track the Node.js line a project runs on, which the project chooses
       { matchPackageNames: ["@types/node"], matchUpdateTypes: ["major"], enabled: false },

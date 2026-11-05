@@ -151,11 +151,6 @@ export async function nextSteps(root: string, ctx: ModuleContext, result: SyncRe
         "install the Mend Renovate GitHub App (https://github.com/apps/renovate) on this repository; it reads renovate.json and opens the dependency updates",
       );
     }
-    if (ctx.config.modules.automerge && wrote("renovate.json")) {
-      steps.push(
-        "run `repokeeper github apply` to allow auto-merge; Renovate then merges its patch and minor updates once their checks have passed",
-      );
-    }
   }
   const publish = result.decisions.find(
     (d) => d.output.module === "publish" && d.output.kind === "yaml" && d.action === "create",

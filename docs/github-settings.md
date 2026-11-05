@@ -45,8 +45,8 @@ and `github apply` reports its answer. Code scanning is not a setting here but a
 `modules.security` in [CI and releases](ci-and-releases.md#code-scanning).
 
 `merge.auto_merge` is the repository's "Allow auto-merge" setting. With `modules.automerge` on,
-`github apply` turns it on even when the line is not written, for Dependabot's workflow and for
-Renovate alike; see [Dependabot auto-merge](ci-and-releases.md#dependabot-auto-merge).
+`github apply` turns it on even when the line is not written (with Dependabot; Renovate merges by
+itself); see [Dependabot auto-merge](ci-and-releases.md#dependabot-auto-merge).
 
 ---
 

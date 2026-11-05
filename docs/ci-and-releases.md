@@ -313,11 +313,14 @@ merge click and nothing more.
 
 **With Renovate** (`modules.deps.tool: renovate`), repokeeper writes no workflow. It sets Renovate's
 own [`automerge`](https://docs.renovatebot.com/configuration-options/#automerge) on the group of minor
-and patch updates in `renovate.json`; majors stay manual, as above. Renovate merges only once the checks
-have passed, and on GitHub it uses the repository's auto-merge for that, so it also waits for what the
-default branch requires, a review included. `repokeeper github apply` still allows auto-merge in the
-repository. No `AUTOMERGE_TOKEN` is needed: a merge made by the app starts the workflows of the
-default branch as any other push does. Renovate picks a merge method the repository allows.
+and patch updates in `renovate.json`; majors stay manual, as above. Renovate merges the pull request
+itself, on one of its runs after every check on it has passed, and not at all while it has no checks.
+GitHub's own auto-merge is left out (`platformAutomerge: false`): on a default branch that requires
+nothing it would merge at once, before CI has run, which is what the workflow above guards against. A
+review or check the default branch requires still holds the merge back. So `repokeeper github apply`
+does not need to allow auto-merge for Renovate, and `github.merge.auto_merge: false` is no conflict.
+No `AUTOMERGE_TOKEN` is needed: a merge made by the app starts the workflows of the default branch as
+any other push does. Renovate picks a merge method the repository allows.
 
 On GitLab the switch writes nothing: Renovate opens the updates there and has its own `automerge`
 setting. It needs repokeeper 0.11.0 or newer.

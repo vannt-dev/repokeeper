@@ -71,15 +71,18 @@ function finishConfig(sources: ConfigSource[]): RepokeeperConfig {
         `${CONFIG_FILE}:${at("tool")}: modules.deps.tool: Dependabot runs on GitHub only; GitLab uses renovate`,
       );
     }
-    const tool = deps.tool ?? (typed.platform === "gitlab" ? "renovate" : "dependabot");
-    if (tool === "dependabot" && (deps.extends?.length ?? 0) > 0) {
+    if (
+      (deps.tool ?? (typed.platform === "gitlab" ? "renovate" : "dependabot")) === "dependabot" &&
+      deps.extends?.length
+    ) {
       throw new ConfigError(
         `${CONFIG_FILE}:${at("extends")}: modules.deps.extends lists Renovate presets; add tool: renovate to use them`,
       );
     }
   }
-  if (typed.modules?.automerge === true && typed.github?.merge?.auto_merge === false) {
-    // the workflow would fail on every Dependabot pull request, and Renovate could not turn auto-merge on
+  const renovate = typeof deps === "object" && deps.tool === "renovate";
+  if (typed.modules?.automerge === true && typed.github?.merge?.auto_merge === false && !renovate) {
+    // the workflow would fail on every Dependabot pull request; Renovate merges by itself
     throw new ConfigError(
       `${locate(sources, ["github", "merge", "auto_merge"])}: github.merge.auto_merge is false, ` +
         "but modules.automerge needs auto-merge allowed; remove the line, or switch the module off",
