@@ -10,7 +10,7 @@ extends:
   - github:acme/standards/repokeeper/org.yml@v3   # the organisation
   - ../shared/web-team.yml                        # the group
 schema: 1
-standard: 1.5.0
+standard: 1.6.0
 stacks: [node]
 ```
 
