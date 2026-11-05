@@ -65,18 +65,16 @@ function finishConfig(sources: ConfigSource[]): RepokeeperConfig {
   }
   const deps = typed.modules?.deps;
   if (typeof deps === "object") {
-    const at = (key: string) => lineOf(doc, lineCounter, ["modules", "deps", key]);
+    const at = (key: string) => locate(sources, ["modules", "deps", key]);
     if (typed.platform === "gitlab" && deps.tool === "dependabot") {
-      throw new ConfigError(
-        `${CONFIG_FILE}:${at("tool")}: modules.deps.tool: Dependabot runs on GitHub only; GitLab uses renovate`,
-      );
+      throw new ConfigError(`${at("tool")}: modules.deps.tool: Dependabot runs on GitHub only; GitLab uses renovate`);
     }
     if (
       (deps.tool ?? (typed.platform === "gitlab" ? "renovate" : "dependabot")) === "dependabot" &&
       deps.extends?.length
     ) {
       throw new ConfigError(
-        `${CONFIG_FILE}:${at("extends")}: modules.deps.extends lists Renovate presets; add tool: renovate to use them`,
+        `${at("extends")}: modules.deps.extends lists Renovate presets; add tool: renovate to use them`,
       );
     }
   }
