@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.19.0](https://github.com/vannt-dev/repokeeper/compare/v0.18.1...v0.19.0) (2026-11-05)
+
+
+### Features
+
+* **config:** inherit settings with extends ([#105](https://github.com/vannt-dev/repokeeper/issues/105)) ([2a9ec3d](https://github.com/vannt-dev/repokeeper/commit/2a9ec3d98996d44afd7c8c43a29f9c073f42551b))
+* **deps:** offer Renovate on GitHub as an opt-in dependency tool ([#106](https://github.com/vannt-dev/repokeeper/issues/106)) ([b071ea9](https://github.com/vannt-dev/repokeeper/commit/b071ea90897ab99878700f9e67f28c8557f9b830))
+
+
+### Bug Fixes
+
+* **config:** move the standard without reformatting .repokeeper.yml ([#108](https://github.com/vannt-dev/repokeeper/issues/108)) ([75a8efe](https://github.com/vannt-dev/repokeeper/commit/75a8efeb6fa03bad14ccb3367dbc76bafd8513f2))
+
 ## [0.18.1](https://github.com/vannt-dev/repokeeper/compare/v0.18.0...v0.18.1) (2026-11-03)
 
 
