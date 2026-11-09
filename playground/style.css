@@ -1,28 +1,82 @@
+/* The fonts are served from ./fonts (SIL OFL 1.1), so the page loads nothing remote. */
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-400.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-500.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-600.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-700.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-800.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(./fonts/jetbrains-mono-latin.woff2) format("woff2");
+}
+
 :root {
   color-scheme: light dark;
-  --bg: #f6f7f9;
+  --bg: #f7f8fc;
   --panel: #ffffff;
-  --text: #1b1f24;
-  --muted: #5b6470;
-  --line: #d9dee5;
+  --text: #0f172a;
+  --muted: #55607a;
+  --line: #dde2ee;
   --accent: #0b6bcb;
+  --accent-2: #0d9488;
   --accent-soft: #e6f0fb;
-  --code-bg: #10151c;
-  --code-text: #e6edf3;
+  --code-bg: #0f172a;
+  --code-text: #e2e8f0;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 8px 24px rgba(15, 23, 42, 0.06);
   --warn: #8a5a00;
   --warn-bg: #fff4d6;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1116;
-    --panel: #171b22;
-    --text: #e6edf3;
-    --muted: #9aa5b1;
-    --line: #2b323c;
+    --bg: #0b1020;
+    --panel: #121a2e;
+    --text: #e7ecf6;
+    --muted: #9aa6c2;
+    --line: #26324d;
     --accent: #6cb2ff;
+    --accent-2: #2dd4bf;
     --accent-soft: #14273d;
-    --code-bg: #0a0d12;
+    --code-bg: #070b16;
+    --code-text: #dbe4f5;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
     --warn: #f2cc60;
     --warn-bg: #2d2408;
   }
@@ -36,8 +90,11 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  accent-color: var(--accent);
   font:
-    15px / 1.5 system-ui,
+    15px / 1.55 "Be Vietnam Pro",
+    system-ui,
     -apple-system,
     "Segoe UI",
     Roboto,
@@ -46,29 +103,88 @@ body {
 
 code,
 pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-ligatures: none;
   font-size: 13px;
 }
 
-.top {
+a {
+  color: var(--accent);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--line);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: saturate(160%) blur(10px);
+}
+
+.topbar .bar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 12px 32px;
-  align-items: flex-end;
-  justify-content: space-between;
+  gap: 16px;
+  align-items: center;
+  max-width: 1180px;
+  min-height: 60px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: var(--text);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.logo {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--accent);
+}
+
+.navlinks {
+  display: flex;
+  gap: 18px;
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.navlinks a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.navlinks a:hover {
+  color: var(--text);
+}
+
+.top {
   max-width: 1180px;
   margin: 0 auto;
-  padding: 28px 16px 8px;
+  padding: 32px 16px 8px;
 }
 
 .top h1 {
-  margin: 0 0 4px;
-  font-size: 24px;
+  margin: 0 0 8px;
+  font-size: clamp(26px, 4vw, 34px);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 
-.top .sub {
-  color: var(--muted);
-  font-weight: 400;
+.grad {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .top p {
@@ -77,22 +193,13 @@ pre {
   color: var(--muted);
 }
 
-.top nav {
-  display: flex;
-  gap: 16px;
-}
-
-a {
-  color: var(--accent);
-}
-
 input[type="text"],
 input[type="number"],
 select {
   width: 100%;
-  padding: 6px 8px;
+  padding: 7px 10px;
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--bg);
   color: var(--text);
   font: inherit;
@@ -110,18 +217,20 @@ button:focus-visible {
 }
 
 button {
-  padding: 4px 10px;
-  border: 1px solid #3a4452;
-  border-radius: 6px;
-  background: #1f2732;
-  color: #e6edf3;
+  padding: 5px 12px;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  background: #1e293b;
+  color: #e2e8f0;
   font: inherit;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 }
 
 button:hover {
-  background: #2a3442;
+  border-color: var(--accent);
+  background: #273449;
 }
 
 main {
@@ -143,15 +252,16 @@ main {
 fieldset {
   min-width: 0;
   margin: 0 0 16px;
-  padding: 14px 16px 16px;
+  padding: 16px 18px 18px;
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 14px;
   background: var(--panel);
+  box-shadow: var(--shadow);
 }
 
 legend {
   padding: 0 6px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .hint {
@@ -177,7 +287,7 @@ fieldset > .hint:first-of-type {
   align-items: flex-start;
   padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
 }
 
@@ -277,7 +387,7 @@ fieldset > .hint:first-of-type {
 
 .result {
   position: sticky;
-  top: 16px;
+  top: 76px;
   min-width: 0;
 }
 
@@ -289,7 +399,9 @@ fieldset > .hint:first-of-type {
 
 .result h2 {
   margin: 18px 0 8px;
-  font-size: 16px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 .result > div:first-child h2,
@@ -301,8 +413,10 @@ fieldset > .hint:first-of-type {
   display: flex;
   flex-direction: column;
   color-scheme: dark;
-  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--code-text) 14%, transparent);
+  border-radius: 14px;
   background: var(--code-bg);
+  box-shadow: var(--shadow);
 }
 
 .code pre {
@@ -325,7 +439,7 @@ fieldset > .hint:first-of-type {
 .problems {
   margin: 0 0 8px;
   padding: 10px 14px 10px 30px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--warn-bg);
   color: var(--warn);
   font-size: 13px;
