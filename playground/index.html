@@ -9,22 +9,46 @@
       content="Choose stacks and how much of the standard you want, and get the .repokeeper.yml and the command to apply it."
     />
     <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./style.css" />
     <script type="module" src="./app.js"></script>
   </head>
   <body>
-    <header class="top">
+    <nav class="topbar" aria-label="Main">
+      <div class="bar">
+        <a class="brand" href="#top">
+          <span class="logo" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3Z"
+                fill="none"
+                stroke="#fff"
+                stroke-width="2.2"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          repokeeper
+        </a>
+        <div class="navlinks">
+          <a href="https://github.com/vannt-dev/repokeeper#readme">Docs ↗</a>
+          <a href="https://www.npmjs.com/package/repokeeper">npm ↗</a>
+        </div>
+      </div>
+    </nav>
+    <header class="top" id="top">
       <div>
-        <h1>repokeeper <span class="sub">playground</span></h1>
+        <h1>repokeeper <span class="sub grad">playground</span></h1>
         <p>
           Say what the repository is and how much of the standard you want. You get the
           <code>.repokeeper.yml</code> and the command that applies it. Nothing leaves this page.
         </p>
       </div>
-      <nav>
-        <a href="https://github.com/vannt-dev/repokeeper#readme">Docs</a>
-        <a href="https://www.npmjs.com/package/repokeeper">npm</a>
-      </nav>
     </header>
 
     <main>
