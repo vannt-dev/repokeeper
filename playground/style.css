@@ -1,3 +1,52 @@
+/* The fonts are served from ./fonts (SIL OFL 1.1), so the page loads nothing remote. */
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-400.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-500.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-600.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-700.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+  src: url(./fonts/be-vietnam-pro-latin-800.woff2) format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(./fonts/jetbrains-mono-latin.woff2) format("woff2");
+}
+
 :root {
   color-scheme: light dark;
   --bg: #f7f8fc;
