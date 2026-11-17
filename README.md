@@ -66,8 +66,8 @@ repository, `init` and `update` name the new files to exclude in `biome.json` or
 
 - `repokeeper init --preset essential` writes only the editor settings, `.gitignore` and the CI
   workflow. `standard` is the default. `strict` adds the drift check to CI and, on GitHub, writes
-  branch protection (pull requests with one approval, no force push, the commit check required) and
-  Dependabot security updates into `.repokeeper.yml`; `repokeeper github apply` then puts them in
+  branch protection (pull requests with one approval, no force push, the "CI result" check required)
+  and Dependabot security updates into `.repokeeper.yml`; `repokeeper github apply` then puts them in
   place. On GitLab it writes the protection of the default branch (Maintainers push and merge, no
   force push) and a merge request that needs a passing pipeline, for `repokeeper gitlab apply`; a
   required review is not part of it, because approval rules are a paid-tier setting there. No preset
@@ -158,8 +158,8 @@ ones that need attention. It runs from any folder and writes nothing:
 $ repokeeper github status --owner vannt-dev
 repo               prs  alerts    ci    unreleased                    graph      standard
 aspnet             0    0         none  no tags                       stale (2)  -
-dynamic-field-kit  0    0         ok    6 since v1.12.0 (1 feat/fix)  ok         1.4.4
-region-snap        0    0         ok    0 since v1.2.0                ok         1.3.0 (1.4.4 out)
+dynamic-field-kit  0    0         ok    6 since v1.12.0 (1 feat/fix)  ok         1.6.0
+region-snap        0    0         ok    0 since v1.2.0                ok         1.3.0 (1.6.0 out)
 web-ban-hang       0    1 medium  none  no tags                       ok         -
 
 stale dependency graph (GitHub still reads old versions; a commit touching the manifest makes GitHub re-read it):

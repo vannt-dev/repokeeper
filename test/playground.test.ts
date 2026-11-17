@@ -257,18 +257,28 @@ describe("playground", () => {
     const apache = filled("standard");
     apache.health.license = "Apache-2.0";
     expect(parseConfig(renderConfig(buildConfig(apache))).modules.health).toMatchObject({ license: "Apache-2.0" });
-    expect(problems(apache)).toEqual(["A licence other than MIT needs repokeeper 0.16.0 or newer."]);
+    // 0.16.0 is older than the repokeeper the file needs as a whole, so no note
+    expect(problems(apache)).toEqual([]);
     // `init` without a file writes MIT, so it is not the command for this form
     expect(matchingPreset(apache)).toBeNull();
     expect(shortcutCommand(apache)).toBeNull();
     expect(fileCommands(apache)).toEqual(["npx repokeeper init"]);
   });
 
-  it("names the repokeeper a stack newer than the standard needs", () => {
-    const note = "The Dockerfile stack needs repokeeper 0.9.0 or newer.";
-    expect(problems(filled("standard", "github", [{ id: "docker" }]))).toEqual([note]);
-    expect(problems(filled("standard", "gitlab", [{ id: "node" }, { id: "docker" }]))).toEqual([note]);
-    expect(problems(filled("standard", "github", [{ id: "node" }]))).toEqual([]);
+  it("names no repokeeper older than the one the file needs as a whole", () => {
+    // the Dockerfile stack needs 0.9.0, below NEEDS_VERSION
+    expect(problems(filled("standard", "github", [{ id: "docker" }]))).toEqual([]);
+    expect(problems(filled("standard", "gitlab", [{ id: "node" }, { id: "docker" }]))).toEqual([]);
+    const github = filled("standard");
+    Object.assign(github.modules, { autoupdate: true, cache_cleanup: true, automerge: true, workflow_lint: true });
+    expect(problems(github)).toEqual([
+      "The workflow lint fails until the findings in workflows of your own are fixed.",
+    ]);
+    const gitlab = filled("standard", "gitlab");
+    gitlab.modules.autoupdate = true;
+    expect(problems(gitlab)).toEqual([
+      "Update pull requests are written for GitHub only: on GitLab the switch writes nothing.",
+    ]);
   });
 
   it("offers the command only while a preset says everything the form says", () => {
