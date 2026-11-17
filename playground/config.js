@@ -42,6 +42,16 @@ export const LICENSES = [
 /** The same for the stacks added after the standard the file names: an earlier repokeeper does not know them. */
 export const STACK_NEEDS_VERSION = { docker: "0.9.0" };
 
+/**
+ * Whether a feature needs a newer repokeeper than the file as a whole (NEEDS_VERSION); a note for
+ * an older one says nothing the line under the preview does not already say.
+ */
+function newerThanFile(version) {
+  const [a, b] = [version, NEEDS_VERSION].map((v) => v.split(".").map(Number));
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i];
+  return false;
+}
+
 export const STACKS = [
   { id: "node", label: "Node.js" },
   { id: "python", label: "Python" },
@@ -81,7 +91,11 @@ export const MODULES = [
     label: "Releases",
     hint: "release-please: a release PR with the changelog (semantic-release on GitLab)",
   },
-  { id: "deps", label: "Dependency updates", hint: "Dependabot (Renovate on GitLab)" },
+  {
+    id: "deps",
+    label: "Dependency updates",
+    hint: "Dependabot on GitHub, or Renovate with deps.tool: renovate in the file; Renovate on GitLab",
+  },
   { id: "health", label: "Community files", hint: "LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CODEOWNERS" },
   {
     id: "drift",
@@ -267,7 +281,7 @@ export function problems(input) {
     if (/^\/|(^|\/)\.\.(\/|$)/.test(stack.directory)) {
       found.push(`The folder of ${stack.id} has to be a path inside the repository.`);
     }
-    if (STACK_NEEDS_VERSION[stack.id]) {
+    if (STACK_NEEDS_VERSION[stack.id] && newerThanFile(STACK_NEEDS_VERSION[stack.id])) {
       const { label } = STACKS.find((known) => known.id === stack.id);
       found.push(`The ${label} stack needs repokeeper ${STACK_NEEDS_VERSION[stack.id]} or newer.`);
     }
@@ -279,50 +293,54 @@ export function problems(input) {
     const owners = splitOwners(health.codeowners);
     if (owners.length === 0) found.push("Code owners: still the placeholder.");
     if (owners.some((owner) => !owner.startsWith("@"))) found.push("Code owners each start with @.");
-    if (health.license !== false && health.license !== "MIT") {
+    if (health.license !== false && health.license !== "MIT" && newerThanFile(LICENSE_NEEDS_VERSION)) {
       found.push(`A licence other than MIT needs repokeeper ${LICENSE_NEEDS_VERSION} or newer.`);
     }
   }
+  const github = input.platform === "github";
   if (input.modules.autoupdate) {
-    found.push(
-      input.platform === "github"
-        ? `Update pull requests need repokeeper ${AUTOUPDATE_NEEDS_VERSION} or newer.`
-        : "Update pull requests are written for GitHub only: on GitLab the switch writes nothing.",
-    );
+    if (!github) found.push("Update pull requests are written for GitHub only: on GitLab the switch writes nothing.");
+    else if (newerThanFile(AUTOUPDATE_NEEDS_VERSION)) {
+      found.push(`Update pull requests need repokeeper ${AUTOUPDATE_NEEDS_VERSION} or newer.`);
+    }
   }
   if (input.modules.security) {
     found.push(
-      input.platform === "github"
-        ? `Code scanning needs repokeeper ${SECURITY_NEEDS_VERSION} or newer, and on a private repository GitHub Code Security.`
-        : "Code scanning is written for GitHub only: on GitLab the switch writes nothing.",
+      !github
+        ? "Code scanning is written for GitHub only: on GitLab the switch writes nothing."
+        : newerThanFile(SECURITY_NEEDS_VERSION)
+          ? `Code scanning needs repokeeper ${SECURITY_NEEDS_VERSION} or newer, and on a private repository GitHub Code Security.`
+          : "Code scanning on a private repository needs GitHub Code Security.",
     );
   }
   if (input.modules.cache_cleanup) {
-    found.push(
-      input.platform === "github"
-        ? `The cache cleanup needs repokeeper ${CACHE_CLEANUP_NEEDS_VERSION} or newer.`
-        : "The cache cleanup is written for GitHub only: on GitLab the switch writes nothing.",
-    );
+    if (!github) found.push("The cache cleanup is written for GitHub only: on GitLab the switch writes nothing.");
+    else if (newerThanFile(CACHE_CLEANUP_NEEDS_VERSION)) {
+      found.push(`The cache cleanup needs repokeeper ${CACHE_CLEANUP_NEEDS_VERSION} or newer.`);
+    }
   }
   if (input.modules.automerge) {
-    found.push(
-      input.platform === "github"
-        ? `Dependabot auto-merge needs repokeeper ${AUTOMERGE_NEEDS_VERSION} or newer.`
-        : "Dependabot auto-merge is written for GitHub only: on GitLab the switch writes nothing.",
-    );
+    if (!github) found.push("Dependabot auto-merge is written for GitHub only: on GitLab the switch writes nothing.");
+    else if (newerThanFile(AUTOMERGE_NEEDS_VERSION)) {
+      found.push(`Dependabot auto-merge needs repokeeper ${AUTOMERGE_NEEDS_VERSION} or newer.`);
+    }
   }
   if (input.modules.publish) {
     found.push(
-      input.platform === "github"
-        ? `Publishing needs repokeeper ${PUBLISH_NEEDS_VERSION} or newer, a node or python stack at the root, and a trusted publisher on npmjs.com or pypi.org.`
-        : "Publishing is written for GitHub only: on GitLab the switch writes nothing.",
+      !github
+        ? "Publishing is written for GitHub only: on GitLab the switch writes nothing."
+        : newerThanFile(PUBLISH_NEEDS_VERSION)
+          ? `Publishing needs repokeeper ${PUBLISH_NEEDS_VERSION} or newer, a node or python stack at the root, and a trusted publisher on npmjs.com or pypi.org.`
+          : "Publishing needs a node or python stack at the root, and a trusted publisher on npmjs.com or pypi.org.",
     );
   }
   if (input.modules.workflow_lint) {
     found.push(
-      input.platform === "github"
-        ? `The workflow lint needs repokeeper ${WORKFLOW_LINT_NEEDS_VERSION} or newer. It fails until the findings in workflows of your own are fixed.`
-        : "The workflow lint is written for GitHub only: on GitLab the switch writes nothing.",
+      !github
+        ? "The workflow lint is written for GitHub only: on GitLab the switch writes nothing."
+        : newerThanFile(WORKFLOW_LINT_NEEDS_VERSION)
+          ? `The workflow lint needs repokeeper ${WORKFLOW_LINT_NEEDS_VERSION} or newer. It fails until the findings in workflows of your own are fixed.`
+          : "The workflow lint fails until the findings in workflows of your own are fixed.",
     );
   }
   if (input.platform === "github") {
