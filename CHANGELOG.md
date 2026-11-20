@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.0](https://github.com/vannt-dev/repokeeper/compare/v0.19.0...v0.20.0) (2026-11-20)
+
+
+### Features
+
+* **editorconfig:** no CRLF rule in .gitattributes ([#116](https://github.com/vannt-dev/repokeeper/issues/116)) ([36d4ae2](https://github.com/vannt-dev/repokeeper/commit/36d4ae2e56e71423526da3f3e46701b25f62bb21))
+
 ## [0.19.0](https://github.com/vannt-dev/repokeeper/compare/v0.18.1...v0.19.0) (2026-11-05)
 
 
