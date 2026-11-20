@@ -14,7 +14,7 @@ indent_size = 2
 [*.{cs,csx,vb,fs,fsx,fsi,py}]
 indent_size = 4
 
-[*.{ps1,psm1,bat,cmd}]
+[*.{bat,cmd}]
 end_of_line = crlf
 
 [*.md]
@@ -24,12 +24,17 @@ trim_trailing_whitespace = false
 indent_style = tab
 `;
 
-// gitattributes patterns have no brace expansion, so every extension gets its own line
-const CRLF = ["ps1", "psm1", "bat", "cmd"];
+// gitattributes patterns have no brace expansion, so every extension gets its own line.
+// No rule converts to CRLF: the Claude plugin directory refuses a repository whose .gitattributes
+// does (installed files could differ from the scanned ones). PowerShell runs LF files; .bat and .cmd
+// need CRLF to run, so git keeps them byte for byte (-text) as the editor wrote them.
+const LF_SCRIPTS = ["ps1", "psm1"];
+const KEEP_BYTES = ["bat", "cmd"];
 const BINARY = ["png", "jpg", "jpeg", "gif", "ico", "webp", "pdf", "zip", "gz", "woff", "woff2"];
 const GITATTRIBUTES = [
   "* text=auto eol=lf",
-  ...CRLF.map((ext) => `*.${ext} text eol=crlf`),
+  ...LF_SCRIPTS.map((ext) => `*.${ext} text eol=lf`),
+  ...KEEP_BYTES.map((ext) => `*.${ext} -text`),
   ...BINARY.map((ext) => `*.${ext} binary`),
 ].join("\n");
 
