@@ -15,14 +15,17 @@ import { makeContext, nodeResolved, tempDir } from "./helpers.js";
 const execFileAsync = promisify(execFile);
 
 describe("editorconfig", () => {
-  it("writes .editorconfig and a .gitattributes block that keeps CRLF for Windows scripts", () => {
+  it("writes .editorconfig and a .gitattributes block with no CRLF rule (the Claude plugin directory refuses one)", () => {
     const [config, attributes] = editorconfigModule.outputs(makeContext()) as [FileOutput, BlockOutput];
     expect(config.path).toBe(".editorconfig");
     expect(config.content).toContain("root = true");
     expect(config.content).toContain("end_of_line = lf");
     expect(attributes).toMatchObject({ kind: "block", path: ".gitattributes", id: "editorconfig", comment: "hash" });
     expect(attributes.body).toContain("* text=auto eol=lf");
-    expect(attributes.body).toContain("*.ps1 text eol=crlf");
+    expect(attributes.body).toContain("*.ps1 text eol=lf");
+    expect(attributes.body).toContain("*.bat -text");
+    expect(attributes.body).not.toContain("crlf");
+    expect(config.content).toContain("[*.{bat,cmd}]\nend_of_line = crlf");
   });
 
   it("uses only patterns git understands, since gitattributes has no brace expansion", async () => {
@@ -31,10 +34,15 @@ describe("editorconfig", () => {
     const root = await tempDir();
     await execFileAsync("git", ["init", "-q"], { cwd: root });
     await writeFile(join(root, ".gitattributes"), `${attributes.body}\n`);
-    const { stdout } = await execFileAsync("git", ["check-attr", "eol", "binary", "--", "a.ps1", "a.png", "a.md"], {
-      cwd: root,
-    });
-    expect(stdout).toContain("a.ps1: eol: crlf");
+    const { stdout } = await execFileAsync(
+      "git",
+      ["check-attr", "eol", "text", "binary", "--", "a.ps1", "a.bat", "a.png", "a.md"],
+      {
+        cwd: root,
+      },
+    );
+    expect(stdout).toContain("a.ps1: eol: lf");
+    expect(stdout).toContain("a.bat: text: unset");
     expect(stdout).toContain("a.png: binary: set");
     expect(stdout).toContain("a.md: eol: lf");
   });
