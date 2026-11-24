@@ -13,6 +13,10 @@ github:
     dependabot_security_updates: true
     secret_scanning: true                     # GitHub's scan for committed credentials
     secret_scanning_push_protection: true     # refuse a push that contains one; needs secret_scanning
+    immutable_releases: true                  # lock a release's assets and tag once published; see below
+  autolinks:                # the whole set: one not listed is removed
+    - { key_prefix: TICKET-, url_template: "https://tickets.example.com/<num>" }
+    - { key_prefix: PR-, url_template: "https://example.com/pr/<num>", is_alphanumeric: false }
   protect:                  # a ruleset named "repokeeper"; false removes it
     require_pull_request: true
     required_approvals: 0
@@ -43,6 +47,35 @@ Secret scanning and push protection are free on a public repository, where GitHu
 on already. A private repository needs GitHub Secret Protection; without it GitHub refuses the change
 and `github apply` reports its answer. Code scanning is not a setting here but a workflow: see
 `modules.security` in [CI and releases](ci-and-releases.md#code-scanning).
+
+## Immutable releases
+
+`security.immutable_releases: true` turns on GitHub's
+[immutable releases](https://docs.github.com/en/code-security/supply-chain-security/understanding-your-software-supply-chain/immutable-releases):
+once a release is published, its assets cannot be changed or deleted, and its tag cannot be moved
+or deleted. The title and notes stay editable. It applies only to releases published after you turn
+it on; `false` turns it off. It is off unless you write the line. An organisation can enforce it
+for its repositories; GitHub may then refuse to turn it off, and `github apply` reports its answer.
+
+> [!WARNING]
+> With immutable releases on, a release takes no new assets once it is published. A workflow that
+> creates the release and then uploads assets to it (APKs, zips, binaries) breaks: the upload is
+> refused. Create the release as a draft, upload every asset to the draft, and publish it last.
+> This includes a job that runs after release-please (`release_created`) and uploads files to the
+> release it just published. The release-please workflow repokeeper writes uploads nothing, so on
+> its own it is unaffected. Change such a workflow before you turn this on.
+
+## Autolinks
+
+`autolinks` lists the repository's
+[autolink references](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/managing-repository-settings/configuring-autolinks-to-reference-external-resources):
+`TICKET-123` in an issue, pull request or commit becomes a link to `url_template` with `<num>`
+replaced by `123`. `is_alphanumeric` says whether `<num>` takes letters as well as digits; left out,
+it is true, as on GitHub. Like `topics`, the list is the whole set: `github apply` adds a missing
+autolink, replaces one whose template or `is_alphanumeric` changed (GitHub cannot edit one, so it is
+removed and added again), and removes one the list does not name. `autolinks: []` removes every
+autolink; leave the key out to keep the repository's autolinks as they are. Each prefix is a line
+of its own in the preview, removals included, so check them before you confirm.
 
 `merge.auto_merge` is the repository's "Allow auto-merge" setting. With `modules.automerge` on,
 `github apply` turns it on even when the line is not written (with Dependabot; Renovate merges by
