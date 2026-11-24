@@ -62,8 +62,9 @@ for its repositories; GitHub may then refuse to turn it off, and `github apply` 
 > creates the release and then uploads assets to it (APKs, zips, binaries) breaks: the upload is
 > refused. Create the release as a draft, upload every asset to the draft, and publish it last.
 > This includes a job that runs after release-please (`release_created`) and uploads files to the
-> release it just published. The release-please workflow repokeeper writes uploads nothing, so on
-> its own it is unaffected. Change such a workflow before you turn this on.
+> release it just published. The release workflow repokeeper writes attaches nothing to the
+> release, `modules.publish` included (it publishes to npm or PyPI), so on its own it is unaffected.
+> Change such a workflow before you turn this on.
 
 ## Autolinks
 
