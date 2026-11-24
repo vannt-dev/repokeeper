@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.0](https://github.com/vannt-dev/repokeeper/compare/v0.20.0...v0.21.0) (2026-11-24)
+
+
+### Features
+
+* **github:** immutable releases and autolinks settings ([#120](https://github.com/vannt-dev/repokeeper/issues/120)) ([2e69294](https://github.com/vannt-dev/repokeeper/commit/2e69294f79f6b0b44dd43a6ae295008b0ad2577b))
+
 ## [0.20.0](https://github.com/vannt-dev/repokeeper/compare/v0.19.0...v0.20.0) (2026-11-20)
 
 
