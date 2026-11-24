@@ -210,7 +210,7 @@ own repository). A repository that cannot be read, or hits the rate limit, is re
 | [CI and releases](docs/ci-and-releases.md) | The workflows repokeeper writes, pinning or mirroring the reusable workflows, `repokeeper eject`, script and Dockerfile linting, release-please, publishing to npm and PyPI, the drift check, update pull requests, code scanning, cache cleanup, Dependabot auto-merge, workflow lint |
 | [Shared settings](docs/shared-config.md) | `extends`: inheriting settings from an organisation and a group file, by path or from GitHub; how the files merge |
 | [Monorepos](docs/monorepos.md) | Stacks in folders: `stack_options.<stack>.directory`, what runs where, the limits |
-| [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings and auto-merge, security, branch protection |
+| [GitHub settings](docs/github-settings.md) | `repokeeper github apply`: description, topics, merge settings and auto-merge, security, immutable releases, autolinks, branch protection |
 | [GitLab](docs/gitlab.md) | What differs on GitLab, the image each stack's job runs in, how releases write the version, the two jobs that need a token, and `repokeeper gitlab apply`: merge settings, branch protection, the Renovate schedule |
 
 ## Pilots

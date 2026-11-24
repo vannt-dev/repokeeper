@@ -36,7 +36,17 @@ export interface GithubSettings {
     secret_scanning?: boolean;
     /** Refuses a push that contains a credential; needs `secret_scanning`. */
     secret_scanning_push_protection?: boolean;
+    /**
+     * Locks the assets and tag of a release once it is published; only future releases. A workflow
+     * that uploads assets to a published release breaks: create a draft, upload, then publish.
+     */
+    immutable_releases?: boolean;
   };
+  /**
+   * The repository's autolink references, the whole set: one not listed is removed, and an empty
+   * list removes them all. Left out, the repository's autolinks stay as they are.
+   */
+  autolinks?: Autolink[];
   /** The `repokeeper` ruleset on the default branch, or on `branches`; false removes it. */
   protect?:
     | {
@@ -55,6 +65,15 @@ export interface GithubSettings {
         allow_force_push?: boolean;
       }
     | false;
+}
+
+export interface Autolink {
+  /** The text that starts a reference, such as `TICKET-`. */
+  key_prefix: string;
+  /** Where a reference links to; `<num>` stands for what follows the prefix. */
+  url_template: string;
+  /** Whether `<num>` takes letters as well as digits; left out, true (GitHub's default). */
+  is_alphanumeric?: boolean;
 }
 
 export type RequiredCheck = string | { context: string; integration_id: number | null };
@@ -100,6 +119,13 @@ const show = (value: unknown) =>
     : Array.isArray(value)
       ? value.join(", ") || "(none)"
       : String(value);
+
+interface AutolinkRecord extends Required<Autolink> {
+  id: number;
+}
+
+const describeAutolink = (link: Required<Autolink>) =>
+  link.is_alphanumeric ? link.url_template : `${link.url_template} (numbers only)`;
 
 const MERGE_FIELDS = {
   squash: "allow_squash_merge",
@@ -334,6 +360,66 @@ export async function planGithub(
         expect2xx(response, `setting security.${key}`, repo);
       },
     });
+  }
+
+  const immutable = settings.security?.immutable_releases;
+  if (immutable !== undefined) {
+    // GitHub documents 404 for "not enabled", and also answers 200 with enabled: false
+    const response = await get("/immutable-releases", "reading immutable releases", true);
+    const have = response.status !== 404 && (response.data as { enabled?: boolean } | null)?.enabled === true;
+    if (have !== immutable) {
+      changes.push({
+        setting: "security.immutable_releases",
+        from: show(have),
+        to: show(immutable),
+        apply: async () => {
+          const response = await api.request(immutable ? "PUT" : "DELETE", `${base}/immutable-releases`);
+          if (response.status === 409) {
+            const message = (response.data as { message?: string } | null)?.message ?? "HTTP 409";
+            throw new ApiError(
+              `setting security.immutable_releases failed: ${message} (GitHub refused the change; ` +
+                "it may be enforced by the owner of the repository)",
+            );
+          }
+          expect2xx(response, "setting security.immutable_releases", repo);
+        },
+      });
+    }
+  }
+
+  if (settings.autolinks !== undefined) {
+    const have = (await get("/autolinks", "reading autolinks")).data as AutolinkRecord[];
+    const want = settings.autolinks.map((link) => ({ ...link, is_alphanumeric: link.is_alphanumeric ?? true }));
+    const create = (link: Required<Autolink>) =>
+      send("POST", "/autolinks", `adding autolink ${link.key_prefix}`, {
+        key_prefix: link.key_prefix,
+        url_template: link.url_template,
+        is_alphanumeric: link.is_alphanumeric,
+      });
+    const remove = (link: AutolinkRecord) =>
+      send("DELETE", `/autolinks/${link.id}`, `removing autolink ${link.key_prefix}`);
+    for (const link of want) {
+      const existing = have.find((h) => h.key_prefix === link.key_prefix);
+      if (existing && describeAutolink(existing) === describeAutolink(link)) continue;
+      changes.push({
+        setting: `autolinks.${link.key_prefix}`,
+        from: existing ? describeAutolink(existing) : "(none)",
+        to: describeAutolink(link),
+        // GitHub has no update for an autolink: a changed one is removed and added again
+        apply: async () => {
+          if (existing) await remove(existing);
+          await create(link);
+        },
+      });
+    }
+    for (const existing of have.filter((h) => !want.some((w) => w.key_prefix === h.key_prefix))) {
+      changes.push({
+        setting: `autolinks.${existing.key_prefix}`,
+        from: describeAutolink(existing),
+        to: "(none)",
+        apply: () => remove(existing),
+      });
+    }
   }
 
   if (settings.protect !== undefined) {

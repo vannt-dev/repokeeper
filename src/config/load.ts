@@ -63,6 +63,14 @@ function finishConfig(sources: ConfigSource[]): RepokeeperConfig {
       );
     }
   }
+  const prefixes = (typed.github?.autolinks ?? []).map((link) => link.key_prefix);
+  const repeated = prefixes.find((prefix, i) => prefixes.indexOf(prefix) !== i);
+  if (repeated !== undefined) {
+    throw new ConfigError(
+      `${locate(sources, ["github", "autolinks"])}: autolinks names the key_prefix "${repeated}" twice; ` +
+        "a repository has one autolink for each",
+    );
+  }
   const deps = typed.modules?.deps;
   if (typeof deps === "object") {
     const at = (key: string) => locate(sources, ["modules", "deps", key]);

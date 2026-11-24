@@ -114,6 +114,21 @@ export const configSchema = {
             dependabot_security_updates: flag,
             secret_scanning: flag,
             secret_scanning_push_protection: flag,
+            immutable_releases: flag,
+          },
+        },
+        // the repository's whole set of autolink references; GitHub puts the reference at <num>
+        autolinks: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["key_prefix", "url_template"],
+            properties: {
+              key_prefix: { type: "string", minLength: 1 },
+              url_template: { type: "string", pattern: "<num>" },
+              is_alphanumeric: flag,
+            },
           },
         },
         protect: {
