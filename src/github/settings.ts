@@ -63,8 +63,21 @@ export interface GithubSettings {
         /** The branches the ruleset covers, by name; left out, the default branch. */
         branches?: string[];
         allow_force_push?: boolean;
+        /**
+         * GitHub's "Automatically request Copilot code review" rule (`copilot_code_review`). `true`
+         * or the object adds it, `false` removes it; left out, a rule already there stays as it is.
+         * GitHub requests a review only when the pull request's author has Copilot code review.
+         */
+        copilot_review?: boolean | CopilotReview;
       }
     | false;
+}
+
+export interface CopilotReview {
+  /** Review each new push to the pull request, not only the first; left out, false. */
+  review_on_push?: boolean;
+  /** Review draft pull requests too; left out, false. */
+  review_draft_pull_requests?: boolean;
 }
 
 export interface Autolink {
@@ -142,6 +155,8 @@ interface RuleSummary {
   checks: string[];
   upToDate: boolean;
   forcePush: boolean;
+  /** The Copilot code review rule, or null when the ruleset has none. */
+  copilot: Required<CopilotReview> | null;
 }
 
 interface StatusCheck {
@@ -160,6 +175,8 @@ interface Rule {
 
 /** The rule types this ruleset manages; any other rule in it is kept as it is. */
 const MANAGED_RULES = new Set(["pull_request", "required_status_checks", "non_fast_forward"]);
+/** Managed only while `protect.copilot_review` is written. */
+const COPILOT_RULE = "copilot_code_review";
 
 const checkKey = (check: StatusCheck) => `${check.context}@${check.integration_id ?? "any"}`;
 
@@ -167,12 +184,20 @@ function summarize(rules: Rule[]): RuleSummary {
   const pr = rules.find((r) => r.type === "pull_request");
   const checks = rules.find((r) => r.type === "required_status_checks");
   const required = checks?.parameters?.required_status_checks ?? [];
+  const copilot = rules.find((r) => r.type === COPILOT_RULE);
   return {
     pullRequest: pr !== undefined,
     approvals: pr?.parameters?.required_approving_review_count ?? 0,
     checks: required.map(checkKey).sort(),
     upToDate: required.length > 0 && checks?.parameters?.strict_required_status_checks_policy === true,
     forcePush: !rules.some((r) => r.type === "non_fast_forward"),
+    // GitHub may leave out a parameter that is false
+    copilot: copilot
+      ? {
+          review_on_push: copilot.parameters?.review_on_push === true,
+          review_draft_pull_requests: copilot.parameters?.review_draft_pull_requests === true,
+        }
+      : null,
   };
 }
 
@@ -192,6 +217,13 @@ function describeRules(summary: RuleSummary | null, branches?: string[]): string
       : "no required checks",
     summary.forcePush ? "force push allowed" : "no force push",
   ];
+  if (summary.copilot) {
+    const extra = [
+      summary.copilot.review_on_push ? "each push" : "",
+      summary.copilot.review_draft_pull_requests ? "drafts" : "",
+    ].filter(Boolean);
+    parts.push(`Copilot review${extra.length > 0 ? ` (${extra.join(", ")})` : ""}`);
+  }
   // only when it is not the default branch alone, which is what every earlier repokeeper wrote
   if (branches?.some((b) => b !== DEFAULT_BRANCH)) {
     const names = branches.map((b) => (b === DEFAULT_BRANCH ? "the default branch" : b.replace(/^refs\/heads\//, "")));
@@ -242,7 +274,20 @@ function desiredRules(
     });
   }
   if (!(protect.allow_force_push ?? false)) rules.push({ type: "non_fast_forward" });
-  return [...rules, ...current.filter((rule) => !MANAGED_RULES.has(rule.type))];
+  const copilot = protect.copilot_review;
+  if (copilot !== undefined && copilot !== false) {
+    rules.push({
+      type: COPILOT_RULE,
+      parameters: {
+        review_on_push: false,
+        review_draft_pull_requests: false,
+        ...kept(COPILOT_RULE),
+        ...(copilot === true ? {} : copilot),
+      },
+    });
+  }
+  const managed = (type: string) => MANAGED_RULES.has(type) || (copilot !== undefined && type === COPILOT_RULE);
+  return [...rules, ...current.filter((rule) => !managed(rule.type))];
 }
 
 const sameSummary = (a: RuleSummary, b: RuleSummary) => JSON.stringify(a) === JSON.stringify(b);
@@ -474,14 +519,33 @@ export async function planGithub(
           // who may bypass it is the repository's own business
           ...(detail?.bypass_actors !== undefined ? { bypass_actors: detail.bypass_actors } : {}),
         };
+        const [method, path, what] = existing
+          ? (["PUT", `/rulesets/${existing.id}`, "updating the repokeeper ruleset"] as const)
+          : (["POST", "/rulesets", "creating the repokeeper ruleset"] as const);
+        const copilotAsked = settings.protect.copilot_review !== undefined && settings.protect.copilot_review !== false;
         changes.push({
           setting: "protect",
           from: describeRules(have, haveBranches),
           to: describeRules(want, branches),
-          apply: () =>
-            existing
-              ? send("PUT", `/rulesets/${existing.id}`, "updating the repokeeper ruleset", body)
-              : send("POST", "/rulesets", "creating the repokeeper ruleset", body),
+          apply: async () => {
+            const response = await api.request(method, `${base}${path}`, body);
+            if (response.status < 400 || response.status >= 500 || !copilotAsked) {
+              expect2xx(response, what, repo);
+              return;
+            }
+            // GitHub may refuse the Copilot rule (no Copilot on the account, an older server): write
+            // the rest of the ruleset, with the Copilot rule it had before, if any
+            const before = (detail?.rules ?? []).find((r) => r.type === COPILOT_RULE);
+            const rules = body.rules.filter((r) => r.type !== COPILOT_RULE).concat(before ? [before] : []);
+            const retry = await api.request(method, `${base}${path}`, { ...body, rules });
+            if (retry.status >= 400) expect2xx(response, what, repo);
+            const message = (response.data as { message?: string } | null)?.message ?? `HTTP ${response.status}`;
+            options.warn?.(
+              `protect.copilot_review: GitHub refused the Copilot code review rule (${message}); the ruleset ` +
+                "was written without the new rule. It may need Copilot code review on the account that owns " +
+                `${repo}; remove protect.copilot_review or set it to false to stop proposing it`,
+            );
+          },
         });
       }
     }
