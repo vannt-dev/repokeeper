@@ -163,6 +163,17 @@ export const configSchema = {
                 // branch names, or ~DEFAULT_BRANCH; left out, the default branch
                 branches: { type: "array", minItems: 1, uniqueItems: true, items: { type: "string", minLength: 1 } },
                 allow_force_push: flag,
+                // GitHub's copilot_code_review rule; off unless written
+                copilot_review: {
+                  anyOf: [
+                    flag,
+                    {
+                      type: "object",
+                      additionalProperties: false,
+                      properties: { review_on_push: flag, review_draft_pull_requests: flag },
+                    },
+                  ],
+                },
               },
             },
           ],

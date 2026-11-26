@@ -24,6 +24,7 @@ github:
     require_up_to_date: false        # whether a pull request must hold the latest base branch
     branches: [main, develop]        # left out: the default branch
     allow_force_push: false
+    copilot_review: true             # ask Copilot to review each pull request; off unless written, see below
 ```
 
 With `modules.ci` on, `required_checks` defaults to `["CI result"]`: the last job of the generated
@@ -81,6 +82,31 @@ of its own in the preview, removals included, so check them before you confirm.
 `merge.auto_merge` is the repository's "Allow auto-merge" setting. With `modules.automerge` on,
 `github apply` turns it on even when the line is not written (with Dependabot; Renovate merges by
 itself); see [Dependabot auto-merge](ci-and-releases.md#dependabot-auto-merge).
+
+## Copilot code review
+
+`protect.copilot_review` adds GitHub's "Automatically request Copilot code review" rule
+(`copilot_code_review`) to the `repokeeper` ruleset: each new pull request on the branches the
+ruleset covers gets a review from Copilot. It is off unless you write the key.
+
+```yaml
+github:
+  protect:
+    copilot_review:
+      review_on_push: true               # review each new push too, not only the pull request once
+      review_draft_pull_requests: false  # review drafts before they are marked ready
+```
+
+`true` adds the rule with both options off. An option you do not write stays as the ruleset's
+Copilot rule has it, when it has one. `false` removes the rule. Left out, the ruleset keeps whatever Copilot rule it has, one
+added by hand included.
+
+The rule is a request, not a check: it does not block a merge. GitHub requests the review only
+when the pull request's author has access to Copilot code review (through a Copilot plan or
+licence) and AI credits left. It may accept the rule on an account without Copilot and then
+request nothing. If GitHub refuses the rule, `github apply` writes the rest of the ruleset without
+it (keeping the Copilot rule it had before, if any), prints GitHub's answer as a warning and goes
+on. It then proposes the rule again on each run, until you remove the key or set it to `false`.
 
 ---
 
