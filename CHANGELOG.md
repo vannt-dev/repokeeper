@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.0](https://github.com/vannt-dev/repokeeper/compare/v0.21.0...v0.22.0) (2026-11-26)
+
+
+### Features
+
+* **github:** opt-in Copilot code review rule in the ruleset ([#122](https://github.com/vannt-dev/repokeeper/issues/122)) ([bc9ecdd](https://github.com/vannt-dev/repokeeper/commit/bc9ecdd1efd2816805e33124ca1db7d749765b76))
+
 ## [0.21.0](https://github.com/vannt-dev/repokeeper/compare/v0.20.0...v0.21.0) (2026-11-24)
 
 
