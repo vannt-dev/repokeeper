@@ -170,7 +170,7 @@ describe("github apply: Copilot code review rule", () => {
       expect(writes[0]?.body?.rules[0]).toMatchObject({ parameters: { required_approving_review_count: 1 } });
       expect(warnings).toEqual([
         expect.stringMatching(
-          /^protect\.copilot_review: GitHub refused the Copilot code review rule \(Validation Failed\); the ruleset was written without it\..*Copilot code review on the account that owns o\/r/,
+          /^protect\.copilot_review: GitHub refused the Copilot code review rule \(Validation Failed\); the ruleset was written without the new rule\. It may need Copilot code review on the account that owns o\/r/,
         ),
       ]);
     }

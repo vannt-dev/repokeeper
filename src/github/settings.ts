@@ -542,7 +542,7 @@ export async function planGithub(
             const message = (response.data as { message?: string } | null)?.message ?? `HTTP ${response.status}`;
             options.warn?.(
               `protect.copilot_review: GitHub refused the Copilot code review rule (${message}); the ruleset ` +
-                "was written without it. The rule needs Copilot code review on the account that owns " +
+                "was written without the new rule. It may need Copilot code review on the account that owns " +
                 `${repo}; remove protect.copilot_review or set it to false to stop proposing it`,
             );
           },
